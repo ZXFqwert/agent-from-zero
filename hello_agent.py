@@ -1,14 +1,25 @@
 messages = [
-    {"role": "system", "content": "你是一个耐心的 Python 助教。"},
-    {"role": "user", "content": "什么是 Python 列表？"},
-    {"role": "assistant", "content": "列表是按顺序存放多个元素的容器。"}
+    {"role": "system", "content": "你是一个耐心的 Python 助教。"}
 ]
-text = input("你：")
-messages.append({
-    "role": "user",
-    "content": text
-})
+while True:
+    text = input("你：").strip()
 
-
-for message in messages:
-    print(message["role"], ":", message["content"])
+    if text == "/exit":
+        # 退出循环
+        break
+    elif text == "/history":
+        # 把你之前的打印历史循环搬到这里
+        for message in messages:
+            print(message["role"], ":", message["content"])
+    elif text == "/clear":
+        # 只保留 messages 的第一条
+        messages = [messages[0]]
+    elif text == "":
+        # 跳过这一轮
+        continue
+    else:
+        # 把你之前的 append 搬到这里
+        messages.append({
+            "role": "user",
+            "content": text
+        })
