@@ -6,26 +6,25 @@
 
 1. 看 [当前进度](docs/PROGRESS.md)，确认停在哪里。
 2. 看 [学习方案](docs/PLAN.md)，了解当前阶段的目标。
-3. 从 [第 1 课：消息与模型调用](lessons/01-messages.md) 开始。
+3. 按进度中的“下一次具体操作”继续；[第 1 课](lessons/01-messages.md) 保留作回顾资料。
 
 下次可以直接说：**“读这个项目的 AGENTS.md 和 docs/PROGRESS.md，带我继续下一步。”**
 
 ## 当前状态
 
-已完成 `hello_agent.py` 的连续输入、消息历史和 /history、/clear、/exit 命令，运行验证通过。下一步由学习者接入真实模型。尚未实现模型调用、工具或 Agent 循环，也没有安装第三方依赖。
+已完成终端会话管理和 `.env` 配置读取，已导入 OpenAI SDK。当前暂停在客户端初始化：学习者称完成，但保存的文件尚未包含初始化语句，恢复后先确认。尚未发出真实模型请求。
 
 环境已检查：Windows、PowerShell、Python 3.13.2、Git 2.51.0。
 
 ## 运行约定
 
-后续在项目目录创建虚拟环境：
+当前使用系统 Python，运行：
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe --version
+python hello_agent.py
 ```
 
-直接使用虚拟环境中的 Python，不要求修改 PowerShell 执行策略。模型服务、模型名和接口地址在第 1 课确定；密钥仅放环境变量或被忽略的本地配置中。
+已选 `python-dotenv` + OpenAI Python SDK，通过 Chat Completions 连接兼容服务。`.env` 中设置 `MODEL_BASE_URL`、`MODEL_NAME`、`MODEL_API_KEY`，详见进度文档；密钥不进入 Git。项目尚未创建虚拟环境。
 
 ## 参考
 

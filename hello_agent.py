@@ -1,3 +1,14 @@
+import os
+from dotenv import load_dotenv
+from openai import OpenAI
+
+load_dotenv()
+
+base_url = os.getenv("MODEL_BASE_URL")
+model_name = os.getenv("MODEL_NAME")
+api_key = os.getenv("MODEL_API_KEY")
+print(base_url, model_name, bool(api_key))
+
 messages = [
     {"role": "system", "content": "你是一个耐心的 Python 助教。"}
 ]
