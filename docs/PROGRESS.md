@@ -1,6 +1,22 @@
 # 当前进度
 
-更新时间：2026-09-11（Asia/Shanghai）
+更新时间：2026-09-12（Asia/Shanghai）
+
+## 独立网站任务：Agent 实验局
+
+用户明确授权助教制作完整互动网站，并指定 `agent.li33.art`、通过逻辑局域网 SSH 部署到自有 VPS。本任务与下方手写 Python 的教学停点分开记录；未代为推进 S3，未修改已有 `hello_agent.py` 工作区改动。
+
+- 网站地址：https://agent.li33.art/ 。已部署至 VPS 原有 Nginx 的独立虚拟主机。
+- 源码位于 `website/`；纯静态 HTML/CSS/ES modules，无 npm 运行依赖、无外部字体/CDN依赖，不接入根项目 `.env`。
+- 完成八关完整课程、三个交互实验、七款 Agent 图鉴与并排比较、六组社会映射、答题反馈/XP去重、本地笔记与进度、最终流程排序挑战、Python 教学模拟下载。
+- 图鉴包括 Codex、Claude Code、OpenClaw、Hermes Agent、OpenCode、Pi、DeepSeek Harness；一手资料在 2026-09-12 核查，详情页附来源。架构取舍与社会类比标明为教学解读。
+- 浏览器实验使用确定规则，不调用真实模型、不读取用户文件。可下载 Python 示例使用标准库、真实读取专用样例文件、确定规则模型替身；已跑通预算 2 成功、预算 1 部分完成两条路径。
+- JavaScript 语法检查通过；Playwright 检查 24 个页面，1440 / 390 像素宽度无横向溢出，运行错误 0。答题、刷新持久化、实验成功与失败分支、比较、排序、下载、菜单和重置确认均通过。
+- VPS 发布目录 `/var/www/agent.li33.art/releases/20260912-01`，`current` 符号链接指向该 release；只发布五个公开站点文件，其 SHA-256 与本地一致。
+- HTTPS 已签发并验证，证书到期日 2026-12-11；HTTP 301 跳转到 HTTPS，HTTPS 返回 200。沿用现有 Certbot timer，新增仅在此域名续期时触发的 Nginx 检查与平滑重载 hook，并已检查该 hook。
+- 已用公开 HTTPS 域名打开浏览器，首屏与资源正常。原有其他 VPS 站点配置未修改。
+- WebMCP 导航为可选功能，因未提供原生支持的测试环境，未列为已验收。
+- 本次实现不代表学习者已掌握八关或通过真实模型能力评估。下一次若继续网站，先查看线上反馈；若恢复 Python 教学，从下方 S3 的工具 schema 开始。
 
 ## 接续摘要
 
