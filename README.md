@@ -14,7 +14,7 @@
 
 独立网站 **[Agent 实验局](https://agent.li33.art/)** 已上线：八关课程、三个互动实验、七款 Agent 图鉴、社会映射与学习档案。网站源码和运行方式见 [website/README.md](website/README.md)。网站使用独立静态实现，不访问下面 Python 练习的模型配置。
 
-已完成 S1 单次模型调用和 S2 多轮聊天：程序从 `.env` 读取兼容服务配置，通过 OpenAI SDK 的 Chat Completions 发出真实请求，并将 assistant 回复写回消息历史。下一步进入 S3，学习第一个只读工具 `read_file` 的协议与数据流。
+已完成 S1 单次模型调用、S2 多轮聊天和 S3 第一个只读工具：程序能让模型请求 `read_file`，在工作目录边界内安全读取文件，并把工具结果回传模型生成最终回答。下一步进入 S4，把固定的一次工具往返改造成有结束条件的 Agent 循环。
 
 环境已检查：Windows、PowerShell、Python 3.13.2、Git 2.51.0。
 
