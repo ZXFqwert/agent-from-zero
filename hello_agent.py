@@ -110,12 +110,20 @@ while True:
             })
 
             for tool_call in assistant_message.tool_calls:
-                arguments = json.loads(tool_call.function.arguments)
-                print("执行工具：", tool_call.function.name, arguments)
-                if tool_call.function.name == "read_file":
-                    result = read_file(arguments["path"])
-                else:
-                    raise ValueError(f"未知工具：{tool_call.function.name}")
+                try:
+                    arguments = json.loads(tool_call.function.arguments)
+                    print("执行工具：", tool_call.function.name, arguments)
+
+                    if tool_call.function.name == "read_file":
+                        result = read_file(arguments["path"])
+                    else:
+                        raise ValueError(f"未知工具：{tool_call.function.name}")
+
+                except FileNotFoundError:
+                    result = f"错误：文件不存在：{arguments.get('path')}"
+
+                except (json.JSONDecodeError, KeyError, ValueError) as error:
+                    result = f"工具执行失败：{type(error).__name__}: {error}"
                 messages.append({
                     "role": "tool",
                     "tool_call_id": tool_call.id,
