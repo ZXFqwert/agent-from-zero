@@ -9,6 +9,7 @@ workspace = Path.cwd().resolve()
 base_url = os.getenv("MODEL_BASE_URL")
 model_name = os.getenv("MODEL_NAME")
 api_key = os.getenv("MODEL_API_KEY")
+MAX_STEPS = 5
 if not base_url or not model_name or not api_key:
     raise RuntimeError("缺少模型配置，请检查 .env 中的 MODEL_BASE_URL、MODEL_NAME、MODEL_API_KEY")
 client = OpenAI(
@@ -59,6 +60,7 @@ def read_file(path):
 messages = [
     {"role": "system", "content": "你是一个耐心的 Python 助教。"}
 ]
+
 while True:
     text = input("你：").strip()
 
@@ -81,41 +83,43 @@ while True:
             "role": "user",
             "content": text
         })
-        response = client.chat.completions.create(
-            model=model_name,
-            messages=messages,
-            tools=tools,
-        )
-        assistant_message = response.choices[0].message
-        tool_call = assistant_message.tool_calls[0]
-        arguments = json.loads(tool_call.function.arguments)
+        finished = False
+        for step in range(MAX_STEPS):
+            response = client.chat.completions.create(
+                model=model_name,
+                messages=messages,
+                tools=tools,
+            )
+            assistant_message = response.choices[0].message
+            if not assistant_message.tool_calls:
+                assistant_text = assistant_message.content.strip()
+                messages.append({
+                    "role": "assistant",
+                    "content": assistant_text
+                })
+                print("助手：", assistant_text)
+                finished = True
+                break
+            messages.append({
+                "role": "assistant",
+                "content": assistant_message.content,
+                "tool_calls": [
+                    call.model_dump()
+                    for call in assistant_message.tool_calls
+                ]
+            })
 
-        if tool_call.function.name == "read_file":
-            result = read_file(arguments["path"])
-        else:
-            raise ValueError(f"未知工具：{tool_call.function.name}")
-        messages.append({
-            "role": "assistant",
-            "content": assistant_message.content,
-            "tool_calls": [tool_call.model_dump()]
-        })
-
-        messages.append({
-            "role": "tool",
-            "tool_call_id": tool_call.id,
-            "content": result
-        })
-        final_response = client.chat.completions.create(
-            model=model_name,
-            messages=messages,
-            tools=tools,
-        )
-
-        final_message = final_response.choices[0].message
-        final_text = final_message.content.strip()
-
-        messages.append({
-            "role": "assistant",
-            "content": final_text
-        })
-        print("助手：", final_text)
+            for tool_call in assistant_message.tool_calls:
+                arguments = json.loads(tool_call.function.arguments)
+                print("执行工具：", tool_call.function.name, arguments)
+                if tool_call.function.name == "read_file":
+                    result = read_file(arguments["path"])
+                else:
+                    raise ValueError(f"未知工具：{tool_call.function.name}")
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": result
+                })
+        if not finished:
+            print(f"达到最大步数 {MAX_STEPS}，停止本轮。")
