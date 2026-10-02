@@ -1,0 +1,33 @@
+[Unit]
+Description=Agent Game optional virtual AI laboratory
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=agent-game-lab
+Group=agent-game-lab
+WorkingDirectory=/opt/agent-game-lab/current
+EnvironmentFile=-/etc/agent-game-lab.env
+Environment=LAB_DATABASE=/var/lib/agent-game-lab/lab.sqlite3
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/opt/agent-game-lab/venv/bin/python -m uvicorn agent_lab.app:app --host 127.0.0.1 --port 8788 --workers 1 --no-access-log
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=10
+UMask=0077
+StateDirectory=agent-game-lab
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/var/lib/agent-game-lab
+
+[Install]
+WantedBy=multi-user.target
