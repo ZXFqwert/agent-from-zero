@@ -290,3 +290,47 @@ PNG SHA-256：`9832e48a38acced4a7012f866d8f394fc48ac2480584d4ed1c150b693d36b97b`
 完整提示词：
 
 > Single original full-body boss character sprite for Echo Workshop mobile hand painted fantasy adventure, genuinely transparent alpha background. The Counterfeit Regent: theatrical dignified brass automaton in a sweeping dark teal indigo ceremonial robe with aged ivory blank scroll ribbons, a crooked three-point paper crown, a small pale porcelain mask with two glowing amber eyes, one hand showing a forged ornate seal, other holding a short ivory sceptre. A little unsettling but charming, not horror. Authority comes from props and posture, not real brand symbols. Storybook gouache watercolor with delicate ink edges, beautiful weathered brass details, strong clear silhouette on a phone. Three quarter front facing slightly left, whole crown, feet, ribbons and sceptre visible within frame with generous margins. Vertical portrait 2:3. One isolated character, no ground, environment or floor shadow, no text, numbers, letters, logos, labels, UI, watermark, borders. Transparent background required. Not 3D, not pixel art. Match deep teal and warm amber fantasy archive illustrations.
+
+## 第七章原创美术 · 2026-10-03
+
+内置 image_gen 原创生成桥区、同声桥匠、弥灯和砧舟。生成结果已实际查看；PNG 原稿复制至 art-source，Pillow 仅 quality=85/method=6 转为同尺寸 WebP。透明角色 Alpha 通道逐像素保留；颜色压缩有损。图像与动画不决定胜负，团队光环只表达已提交的任务/合并事件。浏览器与真机检查另行记录。
+
+### bridge-background
+
+原稿 `art-source/bridge-background.png`（3321556 字节），发布 `public/art/bridge-background.webp`（427154 字节）；1024×1536 RGB，Alpha 无。
+
+默认原件 `E:/CodexState/home/generated_images/01a09442-5f82-71c1-bdd3-70f8d293450b/exec-a5015d01-3557-4241-9e23-9c878ef4b08b.png`。PNG SHA-256 `7b41a08f2fea6d9c77ad97e51288d0935e9009947ea914a9210ee27e664d2241`；WebP SHA-256 `4d1d6ef4854ef0404fd1747097faad51bf4629cc8c119bf9c3bab409ebdda980`。新生成，transparent_background=false。
+
+完整提示词：
+
+> Production environment illustration for Echo Workshop, portrait mobile hand painted 2D fantasy adventure. A grand old magical bridge workshop suspended across a teal river gorge in the decaying but hopeful city. Two distinct workstations at left and right, delicate aged brass suspension cables, weathered stone arches, warm amber lamps, a blank translucent blueprint table in the far middle, tiny empty docks far below, distant layered rooftops and moss. The bridge in need of repair is partially visible behind the open central play area; lower quarter clear stone terrace for separately composited small golem characters. Beautiful storybook gouache watercolor and fine ink edges, rich dark indigo teal with warm brass accents, readable crisp shapes on phone. Environment only, no characters or monsters. Portrait 2:3. No text, letters, numbers, logos, interface, watermark, border. Not photorealistic, not 3D, not pixel art.
+
+### chorus-bridgewright
+
+原稿 `art-source/chorus-bridgewright.png`（2587010 字节），发布 `public/art/chorus-bridgewright.webp`（323718 字节）；1024×1536 RGBA，Alpha [0, 254]。
+
+默认原件 `E:/CodexState/home/generated_images/01a09442-5f82-71c1-bdd3-70f8d293450b/exec-8a8045c8-7da9-4f54-b742-7019fb6c01bc.png`。PNG SHA-256 `32430ce272454d19f1592faed42e83629506cd4cba9edac93e95cc9d992c54f8`；WebP SHA-256 `d91678b35cec3bbdff06ca7ba47e541137cf341d6f5b2926737a7d4413168f48`。新生成，transparent_background=true。
+
+完整提示词：
+
+> One isolated full body boss character sprite for Echo Workshop hand painted 2D fantasy mobile adventure. The Chorus Bridgewright: a dignified whimsical aged brass and carved wood automaton master builder with three overlapping porcelain mask faces, small separate amber glowing eyes, a layered robe of blank blueprint parchment, a fan of brass measuring compasses around head, two arms holding mismatched blank translucent bridge diagram sheets, several thin decorative articulated shoulder hands suggesting a chorus that all copies the same source. Intriguing and charming, not horror. Strong clear coherent silhouette for a small mobile sprite. Full head crown, tools and feet inside frame with generous margins. Three quarter facing slightly left. Storybook gouache watercolor with delicate ink edges, dark teal indigo aged brass warm amber accents. Portrait 2:3. Genuinely transparent alpha background, no ground or shadows outside character, no environment, no text, letters, numbers, logos, UI, watermark, border. Not 3D or pixel art.
+
+### mideng-companion
+
+原稿 `art-source/mideng-companion.png`（1629321 字节），发布 `public/art/mideng-companion.webp`（318434 字节）；1254×1254 RGBA，Alpha [0, 255]。
+
+默认原件 `E:/CodexState/home/generated_images/01a09442-5f82-71c1-bdd3-70f8d293450b/exec-0ade1efb-b7bc-4b12-8896-6dc17356e9b6.png`。PNG SHA-256 `b36b3147e6ef85faad7063bbbb36801211e7854541d9bf6493a31594abc92880`；WebP SHA-256 `d2b431f9c93195c7fc7d7adf83925cc156ff99cdbf2cbdc1178066d003d9ebf3`。新生成，transparent_background=true。
+
+完整提示词：
+
+> One original friendly recruitable companion sprite for Echo Workshop mobile 2D hand painted fantasy game. Mideng, a small brass and moss stone surveying golem, rounded compact body and expressive two amber eyes, soft teal explorer cape, holding a beautifully designed lantern which divides into two small warm measuring lights, a brass compass strapped to side. Thoughtful curious surveyor, unmistakably distinct from a bulky mechanic. Full body, clear charming silhouette readable at 90 pixels, three quarter front facing slightly right, generous transparent margin around head lantern and feet. Storybook gouache watercolor, fine ink edges, aged brass and dark teal with warm amber light, consistent painterly fairy tale craft. Square composition. Truly transparent alpha background, no scenery, ground or external shadow, no text, letters, numbers, logos, UI, watermark or border. Not 3D, not pixel art.
+
+### zhenzhou-companion
+
+原稿 `art-source/zhenzhou-companion.png`（1724403 字节），发布 `public/art/zhenzhou-companion.webp`（290434 字节）；1254×1254 RGBA，Alpha [0, 255]。
+
+默认原件 `E:/CodexState/home/generated_images/01a09442-5f82-71c1-bdd3-70f8d293450b/exec-0b67d49e-e886-4191-bfa5-ad06bbd07539.png`。PNG SHA-256 `b5f566f8b49970d06000f5733ce31a375928e9e39e3e537054092727ea13fcf7`；WebP SHA-256 `09d07ab0829fec03245540c30f60366fde1db300d27df3c5509f499f7f870068`。新生成，transparent_background=true。
+
+完整提示词：
+
+> One original friendly recruitable companion sprite for Echo Workshop mobile 2D hand painted fantasy game. Zhenzhou, a compact sturdy wooden and brass artisan golem, warm expressive amber eyes under a small practical ivory workshop cap, deep indigo work apron, brass jointed arms, a folding wooden ruler resting over shoulder and a short construction mallet in one hand. Patient capable builder, charming small broad body, clearly distinct from a slender surveying lantern golem. Full body with all tools and feet visible, clear silhouette readable at 90 pixels, three quarter front facing slightly left, generous transparent margins. Storybook gouache watercolor, fine ink edges, weathered brass wood and deep teal indigo with warm amber accents. Square composition. Truly transparent alpha background, no scenery, ground or external shadow, no text, letters, numbers, logos, UI, watermark or border. Not 3D, not pixel art.

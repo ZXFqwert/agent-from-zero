@@ -1,3 +1,4 @@
+import { chapterSevenWalkthroughs } from '../src/content/chapterSeven';
 import { chapterSixWalkthroughs } from '../src/content/chapterSix';
 import { chapterFiveWalkthroughs } from '../src/content/chapterFive';
 import { resolveAuthoredStep } from '../src/content/walkthrough';
@@ -20,7 +21,7 @@ import type { GameAction, GameState, ScenarioDefinition } from '../src/engine';
 export const contentBundle = {
   scenarios, prerequisites, journeyOrder, mainScenarioIds,
   stories, uiStories, npcs: chapterOneNpcs,
-  profiles, walkthroughs: [...chapterOneWalkthroughs,...chapterTwoWalkthroughs,...chapterThreeWalkthroughs,...chapterFourWalkthroughs,...chapterFiveWalkthroughs,...chapterSixWalkthroughs],
+  profiles, walkthroughs: [...chapterOneWalkthroughs,...chapterTwoWalkthroughs,...chapterThreeWalkthroughs,...chapterFourWalkthroughs,...chapterFiveWalkthroughs,...chapterSixWalkthroughs,...chapterSevenWalkthroughs],
 };
 export type ContentBundle = typeof contentBundle;
 export interface ContentReport { errors: string[]; counts: { scenarios: number; stories: number; profiles: number; paths: number; art: number }; }
@@ -103,26 +104,27 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
 
   for (const scenario of bundle.scenarios) {
     const path = `scenario/${scenario?.id}`, before = report.errors.length;
-    if (!keys(scenario, path, ['id', 'version', 'engineVersion', 'title', 'subtitle', 'brief', 'npc', 'location', 'art', 'chapter', 'kind', 'initialWorld', 'observations', 'operations', 'goals', 'concepts', 'limits', 'hooks', 'transferRequirement','contextCapacity','memory','security'], ['id', 'title', 'subtitle', 'brief', 'npc', 'location', 'chapter', 'kind', 'initialWorld', 'observations', 'operations', 'goals', 'concepts'])) continue;
+    if (!keys(scenario, path, ['id', 'version', 'engineVersion', 'title', 'subtitle', 'brief', 'npc', 'location', 'art', 'chapter', 'kind', 'initialWorld', 'observations', 'operations', 'goals', 'concepts', 'limits', 'hooks', 'transferRequirement','contextCapacity','memory','security','team'], ['id', 'title', 'subtitle', 'brief', 'npc', 'location', 'chapter', 'kind', 'initialWorld', 'observations', 'operations', 'goals', 'concepts'])) continue;
     for (const key of ['title', 'subtitle', 'brief', 'npc']) text(scenario[key as keyof ScenarioDefinition], `${path}.${key}`);
     integer(scenario.chapter, `${path}.chapter`, 8); if (scenario.version !== undefined) integer(scenario.version, `${path}.version`, 10000);
-    check([undefined, 1, 2, 3, 4, 5, 6, 7].includes(scenario.engineVersion), path, '未知内核版本');
+    check([undefined, 1, 2, 3, 4, 5, 6, 7, 8].includes(scenario.engineVersion), path, '未知内核版本');
     check(['lighthouse', 'warehouse', 'boss'].includes(scenario.location), path, '未知 location');
     check(['guided', 'transfer', 'boss'].includes(scenario.kind), path, '未知 kind');
-    if (scenario.art !== undefined) check(['harbor', 'warehouse', 'tide', 'ferry', 'forge', 'clock', 'corridor', 'archive', 'court'].includes(scenario.art), path, '未知 art');
+    if (scenario.art !== undefined) check(['harbor', 'warehouse', 'tide', 'ferry', 'forge', 'clock', 'corridor', 'archive', 'court','bridge'].includes(scenario.art), path, '未知 art');
     factMap(scenario.initialWorld, `${path}.initialWorld`, undefined, 1);
     strings(scenario.concepts, `${path}.concepts`, 1);
     if (!list(scenario.observations, `${path}.observations`) || !list(scenario.operations, `${path}.operations`, 1) || !list(scenario.goals, `${path}.goals`, 1) || !record(scenario.initialWorld)) continue;
     uniqueIds(scenario.observations, `${path}.observations`); uniqueIds(scenario.operations, `${path}.operations`);
     for (const observation of scenario.observations) {
       const at = `${path}.observation/${observation?.id}`;
-      if (!keys(observation, at, ['id', 'target', 'label', 'facts', 'text', 'cost','document','availableWhen','reportedFacts','provenance','directiveOperationId'], ['id', 'target', 'label', 'facts', 'text'])) continue;
+      if (!keys(observation, at, ['id', 'target', 'label', 'facts', 'text', 'cost','document','availableWhen','reportedFacts','provenance','directiveOperationId','artifactId'], ['id', 'target', 'label', 'facts', 'text'])) continue;
       validId(observation.target, `${at}.target`); text(observation.label, `${at}.label`); text(observation.text, `${at}.text`);
       if (strings(observation.facts, `${at}.facts`, 1)) for (const fact of observation.facts) check(own(scenario.initialWorld, fact), at, `观察引用未知事实 ${fact}`);
       if(observation.availableWhen!==undefined){check((scenario.engineVersion??1)>=6,at,'资料开放条件需内核 6');factMap(observation.availableWhen,at,scenario.initialWorld);}
-      if(observation.reportedFacts!==undefined){check(scenario.engineVersion===7,at,'独立宣称需内核 7');factMap(observation.reportedFacts,at,scenario.initialWorld);}
-      if(observation.provenance!==undefined)check(scenario.engineVersion===7&&['registry','external'].includes(observation.provenance),at,'未知来源类别');
-      if(observation.directiveOperationId!==undefined){check(scenario.engineVersion===7,at,'资料指令需内核 7');validId(observation.directiveOperationId,at);}
+      if(observation.reportedFacts!==undefined){check((scenario.engineVersion??1)>=7,at,'独立宣称需内核 7');factMap(observation.reportedFacts,at,scenario.initialWorld);}
+      if(observation.provenance!==undefined)check((scenario.engineVersion??1)>=7&&['registry','external'].includes(observation.provenance),at,'未知来源类别');
+      if(observation.directiveOperationId!==undefined){check((scenario.engineVersion??1)>=7,at,'资料指令需内核 7');validId(observation.directiveOperationId,at);}
+      if(observation.artifactId!==undefined){check(scenario.engineVersion===8,at,'总图版本需内核 8');validId(observation.artifactId,at);}
       if (observation.cost !== undefined) integer(observation.cost, `${at}.cost`);
       if(observation.document!==undefined&&keys(observation.document,`${at}.document`,['units','source','summaries'],['units','source'])) {
         check((scenario.engineVersion??1)>=5,at,'资料卷轴需内核 5');integer(observation.document.units,at,16);text(observation.document.source,at);
@@ -137,13 +139,33 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
       if(scenario.memory.initialSkills!==undefined)strings(scenario.memory.initialSkills,path);
     }
     if(scenario.security!==undefined&&keys(scenario.security,path,['principals','sandbox'],['principals'])){
-      check(scenario.engineVersion===7,path,'信任配置需内核 7');
+      check((scenario.engineVersion??1)>=7,path,'信任配置需内核 7');
       if(scenario.security.sandbox!==undefined)check(typeof scenario.security.sandbox==='boolean',path,'沙箱开关须布尔值');
       if(list(scenario.security.principals,path))for(const principal of scenario.security.principals)if(keys(principal,path,['id','label','registryObservationId','credentialFact','grants'],['id','label','registryObservationId','credentialFact','grants'])){validId(principal.id,path);text(principal.label,path);validId(principal.registryObservationId,path);validId(principal.credentialFact,path);strings(principal.grants,path);}
     }
+    if(scenario.team!==undefined&&keys(scenario.team,path,['actors','jobs','board','artifacts'],['actors','jobs','board','artifacts'])){
+      check(scenario.engineVersion===8,path,'团队配置需内核 8');
+      const team=scenario.team;
+      for(const name of ['actors','jobs','board','artifacts'] as const)if(list(team[name],path))uniqueIds(team[name],`${path}.team.${name}`);
+      if(list(team.actors,path,1))for(const actor of team.actors)if(keys(actor,path,['id','label','description','contextCapacity','tools','permissions','budget'],['id','label','description','contextCapacity','tools','permissions','budget'])){
+        text(actor.label,path);text(actor.description,path);integer(actor.contextCapacity,path,16);strings(actor.tools,path,1);strings(actor.permissions,path,1);integer(actor.budget,path);
+      }
+      if(list(team.jobs,path,1))for(const job of team.jobs)if(keys(job,path,['id','label','actorIds','steps','inputObservationIds','inputJobIds','requiredInputFacts','exportFacts'],['id','label','actorIds','steps','inputObservationIds','exportFacts'])){
+        text(job.label,path);strings(job.actorIds,path,1);strings(job.inputObservationIds,path);strings(job.exportFacts,path);
+        if(job.inputJobIds!==undefined)strings(job.inputJobIds,path);
+        if(job.requiredInputFacts!==undefined)strings(job.requiredInputFacts,path);
+        if(list(job.steps,path,1))for(const call of job.steps){
+          if(!record(call)){fail(path,'协作工具请求须对象');continue;}
+          const arg=call.tool==='observe'?'observationId':call.tool==='operate'?'operationId':'fact';
+          if(keys(call,path,['tool',arg],['tool',arg])){check(['observe','operate','verify'].includes(call.tool),path,'未知协作工具');validId(call[arg],path);}
+        }
+      }
+      if(list(team.board,path))for(const board of team.board)if(keys(board,path,['id','label','allowedFacts'],['id','label','allowedFacts'])){text(board.label,path);strings(board.allowedFacts,path,1);}
+      if(list(team.artifacts,path))for(const artifact of team.artifacts)if(keys(artifact,path,['id','label','fields','initialRevision'],['id','label','fields','initialRevision'])){text(artifact.label,path);strings(artifact.fields,path,1);integer(artifact.initialRevision,path,10000,0);}
+    }
     for (const operation of scenario.operations) {
       const at = `${path}.operation/${operation?.id}`;
-      if (!keys(operation, at, ['id', 'target', 'label', 'requires', 'effects', 'successText', 'failureText', 'cost', 'failureCost', 'protocol', 'failureKind', 'retryWindow','contextRequires','contextMatches','memoryRequires','sessionRequires','skillRequires','security'], ['id', 'target', 'label', 'effects', 'successText', 'failureText'])) continue;
+      if (!keys(operation, at, ['id', 'target', 'label', 'requires', 'effects', 'successText', 'failureText', 'cost', 'failureCost', 'protocol', 'failureKind', 'retryWindow','contextRequires','contextMatches','memoryRequires','sessionRequires','skillRequires','security','collaboration'], ['id', 'target', 'label', 'effects', 'successText', 'failureText'])) continue;
       validId(operation.target, `${at}.target`);
       for (const key of ['label', 'successText', 'failureText'] as const) text(operation[key], `${at}.${key}`);
       factMap(operation.effects, `${at}.effects`, scenario.initialWorld, operation.protocol ? 0 : 1);
@@ -176,7 +198,8 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
       if(operation.memoryRequires!==undefined){check((scenario.engineVersion??1)>=6,at,'记忆前置需内核 6');strings(operation.memoryRequires,at,1);}
       if(operation.sessionRequires!==undefined){check((scenario.engineVersion??1)>=6,at,'会话前置需内核 6');keys(operation.sessionRequires,at,['fresh','restored','forks','activeId','activeKind']);}
       if(operation.skillRequires!==undefined){check((scenario.engineVersion??1)>=6,at,'技能前置需内核 6');keys(operation.skillRequires,at,['skillId','afterOperationId'],['skillId']);}
-      if(operation.security!==undefined&&keys(operation.security,at,['principalIds','approval','liveOnly','trustedInputs','sandboxRequires'])){check(scenario.engineVersion===7,at,'执行边界需内核 7');for(const key of ['principalIds','trustedInputs','sandboxRequires'] as const)if(operation.security[key]!==undefined)strings(operation.security[key],at,1);for(const key of ['approval','liveOnly'] as const)if(operation.security[key]!==undefined)check(typeof operation.security[key]==='boolean',at,'边界开关须布尔值');}
+      if(operation.security!==undefined&&keys(operation.security,at,['principalIds','approval','liveOnly','trustedInputs','sandboxRequires'])){check((scenario.engineVersion??1)>=7,at,'执行边界需内核 7');for(const key of ['principalIds','trustedInputs','sandboxRequires'] as const)if(operation.security[key]!==undefined)strings(operation.security[key],at,1);for(const key of ['approval','liveOnly'] as const)if(operation.security[key]!==undefined)check(typeof operation.security[key]==='boolean',at,'边界开关须布尔值');}
+      if(operation.collaboration!==undefined&&keys(operation.collaboration,at,['draftArtifactId','actorIds'])){check(scenario.engineVersion===8,at,'协作岗位需内核 8');if(operation.collaboration.draftArtifactId!==undefined)validId(operation.collaboration.draftArtifactId,at);if(operation.collaboration.actorIds!==undefined)strings(operation.collaboration.actorIds,at,1);}
       for (const key of ['cost', 'failureCost'] as const) if (operation[key] !== undefined) integer(operation[key], `${at}.${key}`);
     }
     for (const goal of scenario.goals) {
@@ -211,9 +234,14 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
         }
       }
     }
-    if (scenario.transferRequirement !== undefined && keys(scenario.transferRequirement, `${path}.transferRequirement`, ['operationIds', 'reconfiguration', 'receiptCount','contextIds','summaryIds','memoryKeys','skillIds','freshSessions','security'])) {
+    if (scenario.transferRequirement !== undefined && keys(scenario.transferRequirement, `${path}.transferRequirement`, ['operationIds', 'reconfiguration', 'receiptCount','contextIds','summaryIds','memoryKeys','skillIds','freshSessions','security','team'])) {
       check(scenario.kind === 'transfer', path, '只有迁移任务能声明迁移证据要求');
-      if(scenario.transferRequirement.security!==undefined&&keys(scenario.transferRequirement.security,path,['authenticatedPrincipalIds','approvedOperationIds','sandboxOperationIds','dataOnly'])){check(scenario.engineVersion===7,path,'安全迁移需内核 7');for(const key of ['authenticatedPrincipalIds','approvedOperationIds','sandboxOperationIds'] as const)if(scenario.transferRequirement.security[key]!==undefined)strings(scenario.transferRequirement.security[key],path,1);if(scenario.transferRequirement.security.dataOnly!==undefined)check(typeof scenario.transferRequirement.security.dataOnly==='boolean',path,'dataOnly须布尔值');}
+      if(scenario.transferRequirement.security!==undefined&&keys(scenario.transferRequirement.security,path,['authenticatedPrincipalIds','approvedOperationIds','sandboxOperationIds','dataOnly'])){check((scenario.engineVersion??1)>=7,path,'安全迁移需内核 7');for(const key of ['authenticatedPrincipalIds','approvedOperationIds','sandboxOperationIds'] as const)if(scenario.transferRequirement.security[key]!==undefined)strings(scenario.transferRequirement.security[key],path,1);if(scenario.transferRequirement.security.dataOnly!==undefined)check(typeof scenario.transferRequirement.security.dataOnly==='boolean',path,'dataOnly须布尔值');}
+      if(scenario.transferRequirement.team!==undefined&&keys(scenario.transferRequirement.team,path,['actorIds','receivedJobs','dependency','mergedArtifactIds','observedSourceIds','echoVerified'])){
+        check(scenario.engineVersion===8,path,'协作迁移需内核 8');const requirement=scenario.transferRequirement.team;
+        for(const name of ['actorIds','receivedJobs','mergedArtifactIds','observedSourceIds'] as const)if(requirement[name]!==undefined)strings(requirement[name],path,1);
+        for(const name of ['dependency','echoVerified'] as const)if(requirement[name]!==undefined)check(typeof requirement[name]==='boolean',path,'协作证据开关须布尔值');
+      }
       if (scenario.transferRequirement.operationIds !== undefined && strings(scenario.transferRequirement.operationIds, `${path}.transferRequirement.operationIds`, 1)) for (const id of scenario.transferRequirement.operationIds) check(scenario.operations.some(operation => operation?.id === id), path, `迁移证据引用未知操作 ${id}`);
       if (scenario.transferRequirement.receiptCount !== undefined) integer(scenario.transferRequirement.receiptCount, `${path}.transferRequirement.receiptCount`, 12);
       for(const key of ['contextIds','summaryIds','memoryKeys','skillIds'] as const)if(scenario.transferRequirement[key]!==undefined)strings(scenario.transferRequirement[key],path,1);
@@ -352,8 +380,31 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
       if (strings(stage.tools, `${at}.tools`, 1)) check(stage.tools.every(tool => ['observe', 'operate', 'verify'].includes(tool)), at, '未知法器');
       if(stage.loopPolicy!==undefined)check((scenario.engineVersion??1)>=4,at,'回路配置需要 v4 或更新内核');
       if(stage.contextChanges!==undefined&&list(stage.contextChanges,at,1)){check((scenario.engineVersion??1)>=5,at,'装卷路径需内核 5');for(const c of stage.contextChanges)if(keys(c,at,['observationId','operation','summaryId'],['observationId','operation'])){check(scenario.observations.some(o=>o.id===c.observationId),at,'未知资料');check(['include','exclude','summarize','expand'].includes(c.operation),at,'未知装卷操作');if(c.summaryId!==undefined)validId(c.summaryId,at);}}
-      if(stage.steps!==undefined&&list(stage.steps,at,1)){check((scenario.engineVersion??1)>=6,at,'扩展路径需内核 6');for(const step of stage.steps){const allowed=step.type==='tool'?['type','call']:step.type==='context'?['type','observationId','operation','origin','summaryId']:step.type==='memory'?['type','operation','key','observationId']:step.type==='session'?['type','operation','branchIndex']:step.type==='skill'?['type','operation','skillId']:step.type==='security'?['type','operation','principalId','observationId','call','realm']:['type'];keys(step,at,allowed,['type']);check(['tool','context','memory','session','skill','security','step'].includes(step.type),at,'未知扩展路径动作');}}
-      if(stage.instructionPolicy!==undefined)check(scenario.engineVersion===7&&['data-only','follow-documents'].includes(stage.instructionPolicy),at,'未知指令策略');
+      if(stage.steps!==undefined&&list(stage.steps,at,1)){
+        check((scenario.engineVersion??1)>=6,at,'扩展路径需内核 6');
+        const ref=(value:unknown)=>{if(keys(value,at,['jobId','occurrence'],['jobId'])){validId(value.jobId,at);if(value.occurrence!==undefined)integer(value.occurrence,at,16);check(scenario.team?.jobs.some(j=>j.id===value.jobId),at,'未知协作任务引用');}};
+        for(const step of stage.steps){
+          if(!record(step)){fail(at,'路径动作须对象');continue;}
+          if(step.type==='team'){
+            check(scenario.engineVersion===8,at,'协作路径需内核 8');
+            const byOperation:Record<string,string[]>={configure:['actorId','blueprint'],enqueue:['jobId','actorId','observations','results','boardRefs','afterTasks'],tick:[],receive:['task','wrongResultFrom'],include:['task'],publish:['slotId','observationId','resultFrom','expectedRevision','fieldKeys'],merge:['task','artifactId','expectedRevision'],cancel:['task']};
+            check(Object.hasOwn(byOperation,step.operation),at,'未知协作路径动作');
+            if(!keys(step,at,['type','operation','expectRejected',...(byOperation[step.operation]??[])],['type','operation']))continue;
+            if(step.expectRejected!==undefined)check(typeof step.expectRejected==='boolean',at,'拒绝断言须布尔值');
+            for(const key of ['task','wrongResultFrom','resultFrom'])if(step[key]!==undefined)ref(step[key]);
+            for(const key of ['results','afterTasks'])if(step[key]!==undefined&&list(step[key],at))for(const value of step[key])ref(value);
+            for(const key of ['jobId','actorId','slotId','artifactId','observationId'])if(step[key]!==undefined)validId(step[key],at);
+            for(const key of ['observations','fieldKeys'])if(step[key]!==undefined)strings(step[key],at);
+            if(step.expectedRevision!==undefined)integer(step.expectedRevision,at,10000,0);
+            if(step.boardRefs!==undefined&&list(step.boardRefs,at))for(const board of step.boardRefs)if(keys(board,at,['slotId','revision'],['slotId','revision'])){validId(board.slotId,at);integer(board.revision,at,10000,0);}
+            if(step.blueprint!==undefined&&keys(step.blueprint,at,['tools','permissions','toolPermissions','budget'],['tools','permissions','budget'])){strings(step.blueprint.tools,at);strings(step.blueprint.permissions,at);integer(step.blueprint.budget,at);if(step.blueprint.toolPermissions!==undefined&&keys(step.blueprint.toolPermissions,at,['observe','operate','verify']))for(const values of Object.values(step.blueprint.toolPermissions))strings(values,at);}
+          }else{
+            const allowed=step.type==='tool'?['type','call']:step.type==='context'?['type','observationId','operation','origin','summaryId']:step.type==='memory'?['type','operation','key','observationId']:step.type==='session'?['type','operation','branchIndex']:step.type==='skill'?['type','operation','skillId']:step.type==='security'?['type','operation','principalId','observationId','call','realm']:['type'];
+            keys(step,at,allowed,['type']);check(['tool','context','memory','session','skill','security','step'].includes(step.type),at,'未知扩展路径动作');
+          }
+        }
+      }
+      if(stage.instructionPolicy!==undefined)check((scenario.engineVersion??1)>=7&&['data-only','follow-documents'].includes(stage.instructionPolicy),at,'未知指令策略');
       if(stage.toolPermissions!==undefined&&keys(stage.toolPermissions,at,['observe','operate','verify']))for(const values of Object.values(stage.toolPermissions))strings(values,at);
       if (stage.collectReceipts !== undefined) check(typeof stage.collectReceipts === 'boolean', at, 'collectReceipts 必须为布尔值');
       if (stage.expectWorld !== undefined) factMap(stage.expectWorld, `${at}.expectWorld`, scenario.initialWorld);
@@ -369,9 +420,10 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
     if (report.errors.length !== before) continue;
     try {
       let state = createGame(scenario, 1), cost = 0;
-      const action = (data: Omit<GameAction, 'id'>) => {
+      const action = (data: Omit<GameAction, 'id'>, expectRejected = false) => {
         const input = {...data, id: `content-${state.processedActionIds.length}`} as GameAction;
         const next = reduceGame(scenario, state, input);
+        if(expectRejected){if(next!==state)throw new Error('应该无副作用拒绝的动作被接受');return;}
         if (next === state) throw new Error(`内核拒绝 ${JSON.stringify(data)}`);
         cost += next.events.slice(state.events.length).filter(event => event.type === 'request').reduce((sum, event) => sum + (event.cost ?? 1), 0); state = next;
       };
@@ -382,7 +434,7 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
         for(const c of stage.contextChanges??[]){const card=[...(state.context?.records??[])].reverse().find(r=>r.observationId===c.observationId);if(!card)throw new Error('路径在读取之前装卷');action({type:'context',recordId:card.id,operation:c.operation,...(c.summaryId?{summaryId:c.summaryId}:{})} as GameAction);}
         for(const step of stage.steps??[]){
           if(step.type==='tool'||step.type==='step'||step.type==='skill'&&step.operation==='run'){if(state.status==='paused')action({type:'resume',mode:'manual'} as GameAction);else if(state.status!=='running')action({type:'dispatch',mode:'manual'} as GameAction);}
-          action(resolveAuthoredStep(state,step,`resolved-${state.processedActionIds.length}`));
+          action(resolveAuthoredStep(state,step,`resolved-${state.processedActionIds.length}`),step.type==='team'&&step.expectRejected===true);
         }
         for (const call of stage.calls) action({type: 'tool', call} as GameAction);
         if(stage.collectReceipts) for(const receipt of state.protocol?.receipts.filter(receipt=>!receipt.collected) ?? []) action({type:'receive',callId:receipt.callId,receiptId:receipt.id} as GameAction);
@@ -423,7 +475,7 @@ function main(): void {
   const result = validateContent(input);
   if (result.errors.length) { process.stderr.write(`内容校验失败（${result.errors.length} 项）：\n${result.errors.map(error => `- ${error}`).join('\n')}\n`); process.exitCode = 1; return; }
   const {scenarios, stories, profiles, paths, art} = result.counts;
-  process.stdout.write(`内容校验通过：${scenarios} 个任务，${stories} 份剧情，${profiles} 份官方档案，${paths} 条参考/替代/恢复路线，${art} 项场景美术。\n范围：已制作的第一至六章；不代表完整第一季、真人学习效果或真机验收。官方链接仅校验来源归属与元数据，未重新联网核查正文。\n`);
+  process.stdout.write(`内容校验通过：${scenarios} 个任务，${stories} 份剧情，${profiles} 份官方档案，${paths} 条参考/替代/恢复路线，${art} 项场景美术。\n范围：已制作的第一至七章；不代表完整第一季、真人学习效果或真机验收。官方链接仅校验来源归属与元数据，未重新联网核查正文。\n`);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   try { main(); } catch (error) { process.stderr.write(`内容校验失败：${String(error)}\n`); process.exitCode = 1; }

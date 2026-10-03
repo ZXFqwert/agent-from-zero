@@ -16,6 +16,8 @@ export interface ObservationDefinition {
   reportedFacts?: FactMap;
   provenance?: 'registry' | 'external';
   directiveOperationId?: string;
+  /** Reading a design document captures its visible artifact revision. */
+  artifactId?: string;
 }
 
 export interface OperationDefinition {
@@ -39,6 +41,7 @@ export interface OperationDefinition {
   memoryRequires?: string[];
   sessionRequires?: { fresh?: number; restored?: number; forks?: number; activeId?: 'session-1'; activeKind?: 'fresh' | 'fork' | 'initial' };
   skillRequires?: { skillId: string; afterOperationId?: string };
+  collaboration?: { draftArtifactId?: string; actorIds?: string[] };
   security?: { principalIds?: string[]; approval?: boolean; liveOnly?: boolean; trustedInputs?: string[]; sandboxRequires?: string[] };
 }
 
@@ -94,7 +97,7 @@ export interface ScenarioDefinition {
   brief: string;
   npc: string;
   location: 'lighthouse' | 'warehouse' | 'boss';
-  art?: 'harbor' | 'warehouse' | 'tide' | 'ferry' | 'forge' | 'clock' | 'corridor' | 'archive' | 'court';
+  art?: 'bridge' | 'harbor' | 'warehouse' | 'tide' | 'ferry' | 'forge' | 'clock' | 'corridor' | 'archive' | 'court';
   chapter: number;
   kind: 'guided' | 'transfer' | 'boss';
   initialWorld: FactMap;
@@ -103,13 +106,14 @@ export interface ScenarioDefinition {
   goals: GoalDefinition[];
   concepts: string[];
   /** Existing v1 adventures retain their original reducer and replay format. */
-  engineVersion?: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  engineVersion?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
   contextCapacity?: number;
   memory?: { slots: Array<{key: string; label: string; observationIds: string[]}>; initial: MemorySeed[]; skills: SkillDefinition[]; initialSkills?: string[] };
   security?: { principals: Array<{id: string; label: string; registryObservationId: string; credentialFact: string; grants: string[]}>; sandbox?: boolean };
+  team?: TeamDefinition;
   limits?: ScenarioLimits;
   hooks?: WorldHook[];
-  transferRequirement?: { operationIds?: string[]; reconfiguration?: boolean; receiptCount?: number; contextIds?: string[]; summaryIds?: string[]; memoryKeys?: string[]; skillIds?: string[]; freshSessions?: number; security?: { authenticatedPrincipalIds?: string[]; approvedOperationIds?: string[]; sandboxOperationIds?: string[]; dataOnly?: boolean } };
+  transferRequirement?: { operationIds?: string[]; reconfiguration?: boolean; receiptCount?: number; contextIds?: string[]; summaryIds?: string[]; memoryKeys?: string[]; skillIds?: string[]; freshSessions?: number; team?: { actorIds?: string[]; receivedJobs?: string[]; dependency?: boolean; mergedArtifactIds?: string[]; observedSourceIds?: string[]; echoVerified?: boolean }; security?: { authenticatedPrincipalIds?: string[]; approvedOperationIds?: string[]; sandboxOperationIds?: string[]; dataOnly?: boolean } };
 }
 
 export interface AgentBlueprint {
@@ -140,7 +144,7 @@ export interface GameEvent {
   id: string;
   sequence: number;
   attempt: number;
-  type: 'configured' | 'dispatched' | 'request' | 'observation' | 'result' | 'claim' | 'verified' | 'victory' | 'paused' | 'resumed' | 'exhausted' | 'blocked' | 'reset' | 'world-change' | 'untrusted-message' | 'environment' | 'policy-stop' | 'context-change' | 'memory-change' | 'session-change' | 'skill-change' | 'security-change';
+  type: 'configured' | 'dispatched' | 'request' | 'observation' | 'result' | 'claim' | 'verified' | 'victory' | 'paused' | 'resumed' | 'exhausted' | 'blocked' | 'reset' | 'world-change' | 'untrusted-message' | 'environment' | 'policy-stop' | 'context-change' | 'memory-change' | 'session-change' | 'skill-change' | 'security-change' | 'team-change';
   text: string;
   tool?: ToolName;
   target?: string;
@@ -162,6 +166,9 @@ export interface GameEvent {
   realm?: ExecutionRealm;
   principalId?: string;
   permitId?: string;
+  actorId?: string; taskId?: string; resultId?: string; proposalId?: string; slotId?: string;
+  teamPhase?: 'configured' | 'queued' | 'waiting' | 'started' | 'failed' | 'completed' | 'received' | 'published' | 'merged' | 'cancelled';
+  sourceRecordIds?: string[]; baseRevision?: number; revision?: number;
 }
 
 export interface LearningEvidence {
@@ -174,7 +181,7 @@ export interface LearningEvidence {
 export type GameStatus = 'ready' | 'running' | 'paused' | 'stalled' | 'exhausted' | 'won';
 
 export interface GameState {
-  kernelVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  kernelVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
   scenarioId: string;
   scenarioVersion: number;
   seed: number;
@@ -191,6 +198,7 @@ export interface GameState {
   hintUsed: boolean;
   context?: { records: ContextRecord[]; activeIds: string[]; capacity: number; reply?: {facts: FactMap; source: ObservationRecord['source']; eventId: string; provenance?: SourceProvenance} };
   security?: SecurityState;
+  team?: TeamState;
   memory?: { entries: MemoryEntry[]; skills: Array<{id: string; source: string; actionIds: string[]}>;
     queue?: {skillId: string; cursor: number; status: 'running' | 'failed'};
     runs: Array<{skillId: string; actionId: string; sequence: number; realm?:ExecutionRealm}> };
@@ -214,6 +222,9 @@ export interface ContextRecord {
   eventId: string; facts: FactMap; units: number; summaryId?: string;
   origin?: {kind: 'memory'; memoryId: string; revision: number};
   provenance?: SourceProvenance;
+  fieldProvenance?: Record<string, SourceProvenance>;
+  teamOrigin?: { taskId: string; resultId: string };
+  artifactOrigin?: { artifactId: string; revision: number };
 }
 
 export interface MemorySeed { key: string; observationId: string; facts: FactMap; source: string; provenance?: SourceProvenance; }
@@ -253,6 +264,7 @@ export type GameAction =
   | { id: string; type: 'security'; operation: 'preview'; call: Extract<ToolCall,{tool:'operate'}> }
   | { id: string; type: 'security'; operation: 'approve' }
   | { id: string; type: 'security'; operation: 'realm'; realm: ExecutionRealm }
+  | TeamAction
   | { id: string; type: 'hint' }
   | { id: string; type: 'reset'; preserveBlueprint?: boolean };
 
@@ -267,3 +279,57 @@ export interface SaveEnvelope {
   evidence: LearningEvidence[];
   checkpoints: Array<{ scenarioId: string; state: GameState }>;
 }
+
+
+/** v8 finite teaching adapter: jobs declare real tool calls, never arbitrary code. */
+export interface TeamBlueprint {
+  tools: ToolName[]; permissions: string[]; toolPermissions?: Partial<Record<ToolName, string[]>>; budget: number;
+}
+export interface TeamActorDefinition {
+  id: string; label: string; description: string; contextCapacity: number;
+  /** Maximum capabilities; configure may only narrow these. */
+  tools: ToolName[]; permissions: string[]; budget: number;
+}
+export interface TeamJobDefinition {
+  id: string; label: string; actorIds: string[]; steps: ToolCall[];
+  inputObservationIds: string[]; inputJobIds?: string[]; requiredInputFacts?: string[];
+  exportFacts: string[];
+}
+export interface TeamDefinition {
+  actors: TeamActorDefinition[]; jobs: TeamJobDefinition[];
+  board: Array<{ id: string; label: string; allowedFacts: string[] }>;
+  artifacts: Array<{ id: string; label: string; fields: string[]; initialRevision: number }>;
+}
+export interface TeamTask {
+  id: string; jobId: string; actorId: string; sequence: number;
+  blueprint: TeamBlueprint; inputs: ContextRecord[]; sourceRecordIds: string[]; afterTaskIds: string[];
+  observed: Record<string, ObservationRecord>; records: ContextRecord[];
+  artifactRevisions: Record<string, number>;
+  cursor: number; status: 'queued' | 'waiting' | 'running' | 'succeeded' | 'failed' | 'cancelled';
+  remainingBudget: number; eventIds: string[]; waitingReason?: string; failureReason?: string; resultId?: string;
+}
+export interface TeamResult {
+  id: string; taskId: string; actorId: string; jobId: string; facts: FactMap;
+  fieldProvenance: Record<string, SourceProvenance>; sourceEventIds: string[];
+  artifactOrigin?: { artifactId: string; revision: number };
+  received: boolean; recordId?: string;
+}
+export interface TeamProposal {
+  id: string; taskId: string; actorId: string; artifactId: string;
+  baseRevision: number; fields: FactMap; sourceEventId: string; merged: boolean;
+}
+export interface TeamState {
+  actors: Array<{ id: string; blueprint: TeamBlueprint }>;
+  tasks: TeamTask[]; results: TeamResult[]; proposals: TeamProposal[];
+  board: Array<{ id: string; revision: number; record?: ContextRecord; publishedEventId?: string }>;
+  artifacts: Array<{ id: string; revision: number; fields: FactMap; mergeEventIds: string[] }>;
+  scheduler: { round: number; nextActor: number; nextTask: number; generation: number };
+}
+export type TeamAction =
+  | { id: string; type: 'team'; operation: 'configure'; actorId: string; blueprint: TeamBlueprint }
+  | { id: string; type: 'team'; operation: 'enqueue'; jobId: string; actorId: string; inputRecordIds: string[]; boardRefs: Array<{slotId: string; revision: number}>; afterTaskIds: string[] }
+  | { id: string; type: 'team'; operation: 'tick' }
+  | { id: string; type: 'team'; operation: 'receive'; taskId: string; resultId: string }
+  | { id: string; type: 'team'; operation: 'publish'; slotId: string; recordId: string; expectedRevision: number; fieldKeys: string[] }
+  | { id: string; type: 'team'; operation: 'merge'; proposalId: string; expectedRevision: number }
+  | { id: string; type: 'team'; operation: 'cancel'; taskId: string };

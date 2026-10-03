@@ -3,6 +3,11 @@ import type { PlayerSave } from '../storage';
 import { uiStories } from '../content/stories';
 
 const landmarks = [
+  ['three-hands','南岸接头','测绘与施工通过实际交接修复了接头。'],
+  ['private-scrolls','私卷递送台','有限共享板把选定的尺寸交给了施工伙伴。'],
+  ['wet-foundation','桥墩施工台','下游等待的是这项成功接回的实际基础任务。'],
+  ['chorus-bridgewright','七匠之桥','总图按版本合并，桥面经过现场实测与验收。'],
+  ['sky-depot-handoff','空中货栈','陌生岗位也完成了交接、施工和实际送达。'],
   ['footer-order','物资递信窗','物资到达避难所，资料附言没有变成王令。'],
   ['glass-court','镜砂水闸','试验与现场各有执行和验收。'],
   ['counterfeit-regent','伪令王庭','撤销的凭证被重新核验，居民得到实际保护。'],
@@ -31,6 +36,7 @@ export default function CityLedger({save}:{save:PlayerSave}) {
   const choices=Object.entries(save.choices).map(([id,choice])=>({id,story:uiStories[id],choice})).filter(entry=>entry.story);
   const relics=[['borrowed-seal','核验镜','来源与身份分别查证'],['one-use-writ','单次门令','批准一个具体请求'],['glass-court','镜砂瓶','隔离世界与独立验收'],['counterfeit-regent','换印册','旧授权可以被撤销'],['night-handoff','记忆灯','保存与检索分开'],['saved-procedure','流程册','可再次执行的方法'],['palimpsest-keeper','修订钥匙','经验的范围与纠错'],['harbor-light','闭环印章','委托、行动与验收'],['tide-ledger','量潮卷轴','成本与现场证据'],['last-ferry','缆绳结','行动顺序'],['after-tide','回潮刻印','变化后的重新验收'],['etched-door','参数刻尺','结构与类型'],['paired-valves','风管回执','调用与结果配对'],['doubled-clerk','唯一订单印','重复请求与副作用'],['cooling-pulse','冷却晶石','有限重试'],['endless-warden','停刻保险盒','明确的停止条件'],['narrow-satchel','折卷扣','保留任务条件的压缩'],['many-faced-archivist','溯源镜','让旧快照重新接受检验']];
   return <section className="city-ledger">
+    {save.completedScenarioIds.includes('three-hands')&&<><div className="section-label"><Heart size={16}/>同行的伙伴</div><div className="relic-grid"><span><strong>弥灯 · 测绘伙伴</strong><small>南岸的实测让它加入工坊。把资料交到手里，才能看见同一个问题。</small></span>{save.completedScenarioIds.includes('private-scrolls')&&<span><strong>砧舟 · 工匠伙伴</strong><small>它在私卷递送台与你会合。任务、版本与岗位决定了怎样协作。</small></span>}</div></>}
     <div className="section-label"><Flame size={16}/>城区留下的变化</div>
     <div className="landmark-grid">{landmarks.map(([id,name,description])=><div className={save.completedScenarioIds.includes(id)?'restored':''} key={id}><CheckCircle2 size={16}/><strong>{name}</strong><small>{save.completedScenarioIds.includes(id)?description:'等待你的契约'}</small></div>)}</div>
     {save.completedScenarioIds.flatMap(id=>(uiStories[id]?.outcomes ?? []).filter(outcome=>save.completedGames[id]?.world[outcome.fact]===outcome.equals).map(outcome=><p className="relationship-note" key={`${id}:${outcome.fact}`}>{outcome.text}</p>))}

@@ -65,6 +65,17 @@
         "court-background",
         "counterfeit-regent"
       ]
+    },
+    {
+      "number": 7,
+      "chapterId": "chapter-07",
+      "title": "七匠之桥",
+      "art": [
+        "bridge-background",
+        "chorus-bridgewright",
+        "mideng-companion",
+        "zhenzhou-companion"
+      ]
     }
   ]
 }

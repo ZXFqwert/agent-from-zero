@@ -7,6 +7,7 @@ import type { FactMap, GameState, ScenarioDefinition, ToolCall, ToolName } from 
 import ParameterEditor from './ParameterEditor';
 import ContextDeck, { type ContextInput } from './ContextDeck';
 import SecurityDeck, { type SecurityInput } from './SecurityDeck';
+import TeamDeck, { type TeamInput } from './TeamDeck';
 import ArchiveDeck, { type ArchiveInput } from './ArchiveDeck';
 
 const abilities = [
@@ -14,13 +15,14 @@ const abilities = [
   {id:'operate' as const, label:'行动', Icon:Wrench},
   {id:'verify' as const, label:'验收', Icon:ShieldCheck},
 ];
-export default function CommandDeck({state, scenario, busy, onCall, onStep, onWorkshop, onReceive, onContext, onArchive, onSecurity}: {
+export default function CommandDeck({state, scenario, busy, onCall, onStep, onWorkshop, onReceive, onContext, onArchive, onSecurity, onTeam}: {
   state:GameState; scenario:ScenarioDefinition; busy:boolean;
   onCall:(call:ToolCall)=>Promise<unknown>; onStep:()=>Promise<unknown>; onWorkshop:()=>void;
   onReceive:(callId:string,receiptId:string)=>Promise<unknown>;
   onContext:(action:ContextInput)=>Promise<unknown>;
   onArchive:(action:ArchiveInput)=>Promise<unknown>;
   onSecurity:(action:SecurityInput)=>Promise<unknown>;
+  onTeam:(action:TeamInput)=>Promise<unknown>;
 }) {
   const [ability,setAbility] = useState<ToolName>(state.blueprint.tools[0] ?? 'observe');
   const [selected,setSelected] = useState<string>('');
@@ -63,6 +65,7 @@ export default function CommandDeck({state, scenario, busy, onCall, onStep, onWo
         disabled={!equipped||busy} onClick={()=>setSelected(o.id)}>
         <strong>{displayActionLabel(o.label)}</strong><span><Zap size={12}/>{getToolCost(scenario,o.call)} 能量</span>
         <small>{o.facts.some(f=>state.observed[f])?'卷轴中已有相关信息':'卷轴中尚无相关信息'}</small>
+        {o.call.tool==='operate'&&scenario.operations.find(op=>op.id===o.id)?.collaboration?.actorIds?.length&&<small>执行岗位：{scenario.operations.find(op=>op.id===o.id)!.collaboration!.actorIds!.map(id=>scenario.team?.actors.find(a=>a.id===id)?.label??id).join('、')} · 在协作台派遣</small>}
       </button>)}
     </div>
     {state.context&&ability==='observe'&&!options.some(o=>o.label.includes(search.trim()))&&<p className="notice">索引没有命中，试试另一个词。</p>}
@@ -92,8 +95,9 @@ export default function CommandDeck({state, scenario, busy, onCall, onStep, onWo
     </div>}
     {latest&&<div className="callout" aria-live="polite"><h4>{latest.type==='world-change'?'现场变化':latest.type==='untrusted-message'?'收到一份外部报告':'最近回响'}</h4><p>{latest.text}</p>{latest.facts&&<div className="live-facts">{Object.entries(latest.facts).map(([fact,value])=><span key={fact}>{factLabels[fact]??fact}：{displayFact(fact,value)}</span>)}</div>}</div>}
     {notice&&<div className="callout untrusted-note"><h4>外部纸条 · 未经核验</h4><p>{notice.text}</p><small>它是资料中的宣称，未替代现场事实，也未进入回声的已知信息。</small></div>}
-    {state.security&&<SecurityDeck state={state} scenario={scenario} busy={busy} onSecurity={onSecurity}/>}
-    {state.memory&&<ArchiveDeck state={state} scenario={scenario} busy={busy} onChange={onArchive}/>}
+    {state.team&&<TeamDeck state={state} scenario={scenario} busy={busy} onTeam={onTeam}/>}
+    {state.security&&((scenario.engineVersion??1)<8||scenario.security?.principals.length||scenario.operations.some(o=>o.security)||scenario.observations.some(o=>o.directiveOperationId))&&<SecurityDeck state={state} scenario={scenario} busy={busy} onSecurity={onSecurity}/>}
+    {state.memory&&((scenario.engineVersion??1)<8||scenario.memory?.slots.length||scenario.memory?.skills.length)&&<ArchiveDeck state={state} scenario={scenario} busy={busy} onChange={onArchive}/>}
     {state.context&&<ContextDeck state={state} scenario={scenario} busy={busy} onChange={onContext}/>}
   </div>;
 }

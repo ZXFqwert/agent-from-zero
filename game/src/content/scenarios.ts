@@ -1,3 +1,4 @@
+import { chapterSevenScenarios, chapterSevenFactLabels } from './chapterSeven';
 import { chapterSixScenarios, chapterSixFactLabels } from './chapterSix';
 import { chapterFiveScenarios, chapterFiveFactLabels } from './chapterFive';
 import type { ScenarioDefinition } from "../engine/types";
@@ -223,7 +224,7 @@ export const scenarios: ScenarioDefinition[] = [
   ...chapterOneScenarios,
   ...chapterTwoScenarios,
   ...chapterThreeScenarios,
-  ...chapterFourScenarios, ...chapterFiveScenarios,...chapterSixScenarios,
+  ...chapterFourScenarios, ...chapterFiveScenarios,...chapterSixScenarios,...chapterSevenScenarios,
 ];
 
 export const chapters = [
@@ -409,7 +410,7 @@ export const profiles: AgentProfile[] = [
 export const factLabels: Record<string, string> = {
   ...chapterOneFactLabels,
   ...chapterTwoFactLabels,
-  ...chapterThreeFactLabels, ...chapterFiveFactLabels,...chapterSixFactLabels,...chapterFourFactLabels,
+  ...chapterThreeFactLabels, ...chapterFiveFactLabels,...chapterSixFactLabels,...chapterSevenFactLabels,...chapterFourFactLabels,
   power: "备用电源",
   light: "灯塔发光",
   latch: "门闩释放",

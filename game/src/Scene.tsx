@@ -30,6 +30,8 @@ export default function Scene({ state, scenario, reducedMotion }: {
       background!: Phaser.GameObjects.Image;
       oldBackground!: Phaser.GameObjects.Image;
       echo!: Phaser.GameObjects.Image;
+      mideng?: Phaser.GameObjects.Image;
+      zhenzhou?: Phaser.GameObjects.Image;
       phantom!: Phaser.GameObjects.Image;
       glow!: Phaser.GameObjects.Graphics;
       previousCount = 0;
@@ -44,10 +46,12 @@ export default function Scene({ state, scenario, reducedMotion }: {
           ["forge", "forge-background"], ["clerk", "paper-clerk"],
           ["clock", "clock-background"], ["warden", "endless-warden"],
           ["court", "court-background"], ["regent", "counterfeit-regent"],
+          ["bridge", "bridge-background"], ["chorus", "chorus-bridgewright"],
+          ["mideng", "mideng-companion"], ["zhenzhou", "zhenzhou-companion"],
           ["archive", "archive-background"], ["keeper", "palimpsest-keeper"],
           ["corridor", "corridor-background"], ["archivist", "many-faced-archivist"],
         ]) {
-          const allowed=({1:['harbor','warehouse','warehouse-open','tide','ferry','ferry-far','ferry-far-empty','ferry-loaded','phantom'],2:['forge','clerk'],3:['clock','warden'],4:['corridor','archivist'],5:['archive','keeper'],6:['court','regent']} as Record<number,string[]>)[latest.current.scenario.chapter]??[];
+          const allowed=({1:['harbor','warehouse','warehouse-open','tide','ferry','ferry-far','ferry-far-empty','ferry-loaded','phantom'],2:['forge','clerk'],3:['clock','warden'],4:['corridor','archivist'],5:['archive','keeper'],6:['court','regent'],7:['bridge','chorus','mideng','zhenzhou']} as Record<number,string[]>)[latest.current.scenario.chapter]??[];
           if(key!=='echo'&&!allowed.includes(key))continue;
           this.load.image(key, `${import.meta.env.BASE_URL}art/${file}.webp`);
         }
@@ -57,8 +61,9 @@ export default function Scene({ state, scenario, reducedMotion }: {
         this.background = this.add.image(0, 0, sceneTexture(latest.current.scenario,latest.current.state)).setOrigin(0.5, 0);
         this.oldBackground = this.add.image(0, 0, sceneTexture(latest.current.scenario,latest.current.state)).setOrigin(0.5, 0).setAlpha(0);
         this.glow = this.add.graphics();
-        this.phantom = this.add.image(0, 0, latest.current.scenario.chapter===6?"regent":latest.current.scenario.chapter===5?"keeper":latest.current.scenario.chapter===4?"archivist":latest.current.scenario.chapter===3?"warden":latest.current.scenario.chapter===2?"clerk":"phantom");
+        this.phantom = this.add.image(0, 0, latest.current.scenario.chapter===7?"chorus":latest.current.scenario.chapter===6?"regent":latest.current.scenario.chapter===5?"keeper":latest.current.scenario.chapter===4?"archivist":latest.current.scenario.chapter===3?"warden":latest.current.scenario.chapter===2?"clerk":"phantom");
         this.echo = this.add.image(0, 0, "echo").setOrigin(0.5, 1);
+        if(latest.current.scenario.chapter===7){this.mideng=this.add.image(0,0,'mideng').setOrigin(0.5,1);this.zhenzhou=this.add.image(0,0,'zhenzhou').setOrigin(0.5,1);}
         if (!latest.current.reducedMotion) {
           this.tweens.add({ targets: this.echo, angle: { from: -1, to: 1 }, duration: 2400, yoyo: true, repeat: -1, ease: "Sine.inOut" });
           for (let i = 0; i < 10; i++) {
@@ -98,10 +103,25 @@ export default function Scene({ state, scenario, reducedMotion }: {
         }
         this.background.setPosition(w / 2, 0).setDisplaySize(w, backdropHeight).setTint(boss ? 0xadb6d5 : 0xffffff);
         this.oldBackground.setPosition(w / 2, 0).setDisplaySize(w, backdropHeight).setTint(boss ? 0xadb6d5 : 0xffffff);
-        this.echo.setPosition(w * (boss || art === "ferry" ? 0.23 : 0.28), h * 0.8).setDisplaySize(w * 0.28, w * 0.315);
-        this.phantom.setVisible(boss && s.status !== "won").setPosition(w * 0.65, h * ((art === "archive"||art === "court")?0.47:0.39)).setDisplaySize(w * (art === "clock"?0.5:art === "forge"?0.43:0.53), w * ((art === "corridor"||art === "archive"||art === "court")?0.8:art === "clock"?0.557:art === "forge"?0.645:0.555));
+        this.echo.setPosition(w * (art==='bridge'?0.2:boss || art === "ferry" ? 0.23 : 0.28), h * (art==='bridge'?0.64:0.8)).setDisplaySize(w * (art==='bridge'?0.24:0.28), w * (art==='bridge'?0.27:0.315));
+        this.mideng?.setPosition(w*0.49,h*0.64).setDisplaySize(w*0.2,w*0.2);
+        this.zhenzhou?.setPosition(w*0.78,h*0.64).setDisplaySize(w*0.2,w*0.2);
+        this.phantom.setVisible(boss && s.status !== "won").setPosition(w * 0.65, h * ((art === "archive"||art === "court"||art==='bridge')?0.47:0.39)).setDisplaySize(w * (art === "clock"?0.5:art === "forge"?0.43:0.53), w * ((art === "corridor"||art === "archive"||art === "court"||art==='bridge')?0.8:art === "clock"?0.557:art === "forge"?0.645:0.555));
         this.phantom.setAlpha(Math.max(0.35, 1 - s.verifiedGoals.length * 0.28));
         this.glow.clear();
+        if(art==='bridge'){
+          const artifact=s.team?.artifacts[0];
+          if(artifact){
+            for(const [i,field] of artifact.fields.northControl!==undefined?['northControl','southControl'].entries():['liftPlanReady'].entries())this.ring(px(0.43+i*0.16),h*0.38,artifact.fields[field]===true?0xe5be75:0x9a91b9,11);
+            if(s.team?.proposals.some(p=>!p.merged&&p.baseRevision!==artifact.revision))this.ring(px(0.5),h*0.47,0xe09b82,21);
+          }
+          if(s.world.bridgeConnected===true){
+            const endX=s.world.installedRoute==='east'?0.76:0.26;
+            this.glow.lineStyle(3,s.world.wholeBridgeSafe===true?0x95d7c3:0xd8bc7b,0.85).beginPath().moveTo(px(0.5),h*0.58).lineTo(px(endX),h*0.3).strokePath();
+          }
+          for(const [fact,x]of [['jointRepaired',0.32],['gangwayReady',0.66],['foundationReady',0.48],['railingReady',0.58],['littleLampReady',0.5],['cargoDelivered',0.74]] as const)if(s.world[fact]===true)this.aura(px(x),h*0.52,0x95d7c3,0.75);
+          if(s.world.wholeBridgeSafe===true||s.world.deliveryTested===true)this.ring(px(0.5),h*0.45,0x95d7c3,25);
+        }
         if(art==='court'){
           const sandbox=s.security?.realm==='sandbox';
           if(sandbox)this.glow.fillStyle(0x779ee9,0.13).fillRect(0,0,w,h);
@@ -195,6 +215,10 @@ export default function Scene({ state, scenario, reducedMotion }: {
           if (far) this.aura(px(0.82), py(0.31), s.world.cargoDelivered === true ? 0xffdc94 : 0x9cd0d7, 0.85);
         }
         const newEvents = changedScenario ? [] : s.events.slice(this.previousCount);
+        if(s.team){
+          for(const [i,actor] of s.team.actors.entries())if(s.team.tasks.some(task=>task.actorId===actor.id&&['queued','running'].includes(task.status)))this.ring(w*(i===0?0.49:0.78),h*0.6,0xe8c793,12);
+          for(const [i,artifact] of s.team.artifacts.entries())if(artifact.mergeEventIds.length)this.ring(w*(0.44+i*0.08),h*0.46,0x95d7c3,12);
+        }
         if (newEvents.length && !reduce) {
           const won = newEvents.some((event) => event.type === "victory");
           const changedWorld = newEvents.some((event) => event.type === "world-change");
@@ -209,6 +233,7 @@ export default function Scene({ state, scenario, reducedMotion }: {
             const failed = newEvents.some((event) => event.type === "result" && !event.success);
             this.pulse(this.echo.x, this.echo.y - w * 0.12, failed ? 0xe0a36e : 0x95d7c3, 13);
           }
+          for(const event of newEvents.filter(e=>e.type==='team-change'))this.pulse(w*(event.actorId==='mideng'?0.49:event.actorId==='zhenzhou'?0.78:0.2),h*0.54,event.success===false?0xe0a36e:0x95d7c3,12);
         }
         this.previousCount = s.events.length;
         this.previousScenario = q.id;

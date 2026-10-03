@@ -31,6 +31,7 @@ export default function Journal({
     [actions, cursor, scenario, state.seed],
   );
   const types: Record<string, string> = {
+    "team-change":"协作交接",
     "security-change":"信任与门令",
     "memory-change":"持久档案",
     "session-change":"会话树",
@@ -168,6 +169,7 @@ export default function Journal({
                 blueprint: replay.blueprint,
                 context: replay.observed,
                 events: replay.events.slice(-8),
+                ...(replay.team ? {team:replay.team} : {}),
               },
               null,
               2,
@@ -191,6 +193,8 @@ export default function Journal({
                   <div className="event-meta">
                     <b>{types[e.type]}</b>
                     {e.realm && <span>{e.realm === 'sandbox' ? '镜砂沙箱' : '城市现场'}</span>}
+                    {e.actorId && <span>{scenario.team?.actors.find(actor=>actor.id===e.actorId)?.label??'回声'}</span>}
+                    {e.taskId && <span>任务 {e.taskId.split(':').at(-1)}</span>}
                     {e.tool && <span>{e.tool}</span>}
                     {e.delivered === false && (
                       <span className="warning">未送入回声上下文</span>

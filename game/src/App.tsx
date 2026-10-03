@@ -467,12 +467,12 @@ export default function App() {
             以及，你写下的第一份契约。
           </p>
           <div className="aside-line" />
-          <span className="aside-chapter">前六章 / 港口至伪令王庭</span>
+          <span className="aside-chapter">前七章 / 港口至七匠之桥</span>
           <p className="muted">从一句“完成了”，到真正改变世界。</p>
         </div>
         <div className="aside-bottom">
           <span>单人剧情 × 伙伴构筑 × Agent 学习</span>
-          <span>失序之城 · v0.7</span>
+          <span>失序之城 · v0.8</span>
           <a href="/archive/v1/" target="_blank" rel="noreferrer">
             旧学习档案 ↗
           </a>
@@ -638,7 +638,7 @@ export default function App() {
               {scenario.kind === "boss" && (
                 <div className="boss-hud">
                   <span>
-                    <Shield size={14} /> {scenario.chapter===6?"僭令护盾":scenario.chapter===5?"旧律护甲":scenario.chapter===4?"旧知面具":scenario.chapter===3?"续刻护盾":scenario.chapter===2?"纸甲护盾":"空言护盾"}
+                    <Shield size={14} /> {scenario.chapter===7?"同声护盾":scenario.chapter===6?"僭令护盾":scenario.chapter===5?"旧律护甲":scenario.chapter===4?"旧知面具":scenario.chapter===3?"续刻护盾":scenario.chapter===2?"纸甲护盾":"空言护盾"}
                   </span>
                   <div>
                     {scenario.goals.map((g) => (
@@ -916,7 +916,7 @@ export default function App() {
           onClose={() => setPanel(null)}
         >
           <p className="muted">
-            已制作六章，共三十六场主线与十二条支线。支线可以晚些回来；已修好的设施与旅途记录会保留。
+            已制作七章，共四十二场主线与十四条支线。支线可以晚些回来；已修好的设施与旅途记录会保留。
           </p>
           <details className="city-fold"><summary>城区变化与旅途收藏</summary><CityLedger save={save}/></details>
           <div className="chapter-map">
@@ -1035,7 +1035,7 @@ export default function App() {
         </Dialog>
       )}
       {panel === "manual" && <Dialog title="探索与指挥" kicker="能力 → 目标 → 成本 → 执行" onClose={()=>setPanel(null)}>
-        <CommandDeck onSecurity={data=>act(data)} onArchive={async data=>{if(data.type==='skill'&&data.operation==='run'&&state.status!=='running'&&!(await launch(false)))return;await act(data);}} onContext={data=>act(data)} onReceive={(callId,receiptId)=>act({type:'receive',callId,receiptId})} state={state} scenario={scenario} busy={busy} onWorkshop={()=>void open('workshop')}
+        <CommandDeck onTeam={async data=>{if(data.operation==='tick'&&state.status==='paused'&&!(await launch(false)))return;await act(data);}} onSecurity={data=>act(data)} onArchive={async data=>{if(data.type==='skill'&&data.operation==='run'&&state.status!=='running'&&!(await launch(false)))return;await act(data);}} onContext={data=>act(data)} onReceive={(callId,receiptId)=>act({type:'receive',callId,receiptId})} state={state} scenario={scenario} busy={busy} onWorkshop={()=>void open('workshop')}
           onStep={async()=>{if(state.status!=='running'&&!(await launch(false)))return;await act({type:'step',source:'player'});}}
           onCall={async(call)=>{if(state.status!=='running'&&!(await launch(false)))return;await act({type:'tool',call});}}/>
       </Dialog>}
@@ -1225,7 +1225,7 @@ export default function App() {
             打开旧学习档案 ↗
           </a>
           <p className="fine-print">
-            旧站笔记保留在档案中。目前开放六章共四十八场冒险，后续章节继续制作。
+            旧站笔记保留在档案中。目前开放七章共五十六场冒险，后续章节继续制作。
           </p>
         </Dialog>
       )}

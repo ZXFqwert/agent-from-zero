@@ -2203,3 +2203,55 @@ summary {
 .security-deck-feedback>strong{font-size:13px;color:#d2d6ae}
 .security-deck-feedback p{margin:8px 0 0}
 @media(max-width:360px){.security-deck-realm,.security-deck-principal,.security-deck-preview{padding:11px}.security-deck .button{font-size:12px}.security-deck-realm-buttons{gap:7px}}
+
+/* v8 collaboration: one dispatch flow; private inputs and visible handoffs remain distinct. */
+.team-deck{margin-top:24px;padding-top:20px;border-top:1px solid var(--line);overflow-wrap:anywhere;min-width:0}
+.team-deck .section-label{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.team-deck p{font-size:13px;line-height:1.75;margin:10px 0}
+.team-deck h4{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px;line-height:1.6;color:#e4d3b0;margin:0 0 12px}
+.team-deck small{display:block;font-size:11px;line-height:1.7;color:var(--muted)}
+.team-deck strong{color:#d9cfac}
+.team-deck label{display:grid;gap:7px;font-size:13px;line-height:1.7;margin:12px 0;min-width:0}
+.team-deck select,.team-deck input[type="number"]{display:block;width:100%;max-width:100%;min-width:0;min-height:44px;padding:10px;border:1px solid #6f654d;border-radius:9px;background:#122b2c;color:#eee1c5;font:inherit}
+.team-deck .button{min-height:44px;max-width:100%;width:100%;white-space:normal;line-height:1.6;font-size:13px;overflow-wrap:anywhere;margin:12px 0 8px}
+.team-deck fieldset{min-width:0;margin:16px 0;padding:10px;border:1px solid #53645b;border-radius:9px}
+.team-deck legend{padding:0 5px;font-size:12px;color:#d2c29e;line-height:1.8}
+.team-deck label.team-deck-check{display:flex;align-items:flex-start;gap:10px;min-height:44px;margin:4px 0;padding:10px 0;cursor:pointer}
+.team-deck-check>input[type="checkbox"]{appearance:auto;width:19px;height:19px;min-width:19px;margin:2px 0 0;accent-color:#c6a168;flex-shrink:0}
+.team-deck-check>span{min-width:0;flex:1}
+.team-deck-check>span>small{margin-top:4px}
+.team-deck details{margin:12px 0;font-size:13px;line-height:1.7;min-width:0}
+.team-deck summary{cursor:pointer;min-height:44px;padding:10px 0;line-height:1.8;color:#d2c29e}
+.team-deck-dispatch,.team-deck-receive,.team-deck-artifact,.team-deck-board-slot{margin:14px 0;padding:14px;border:1px solid #53645b;border-radius:12px;background:#162b2b;min-width:0}
+.team-deck-overview{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0}
+.team-deck-overview>span{flex:1 1 95px;border:1px solid #4d5a50;padding:8px;border-radius:8px;font-size:11px;line-height:1.7;text-align:center;background:#1c302d}
+.team-deck-overview strong{display:inline-block;margin-left:4px;font-size:14px;color:#e4d1a7}
+.team-deck-job-rules{display:grid;gap:6px;border-left:2px solid #a38559;padding:10px;margin:14px 0;background:#2c302480;font-size:12px;line-height:1.8}
+.team-deck-job-steps ol{padding-left:22px;margin:8px 0 12px}
+.team-deck-job-steps li{margin:8px 0}
+.team-deck-scheduler{padding:12px;margin:18px 0;background:#25342c;border:1px solid #647256;border-radius:12px}
+.team-deck-scheduler>.button{margin-top:0}
+.team-deck-queue{margin:20px 0}
+.team-deck-task{padding:0 12px;border:1px solid #526052;border-radius:10px;background:#172729}
+.team-deck-task>summary{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.team-deck-task>summary>span{display:block;min-width:0;flex:1}
+.team-deck-task>summary>b{flex-shrink:0;font-size:11px;font-weight:500;color:#bdd0ae}
+.team-deck-status-failed,.team-deck-conflict{border-color:#94705b;background:#342b2680}
+.team-deck-status-failed>summary>b,.team-deck-status-cancelled>summary>b{color:#d5a88f}
+.team-deck-status-waiting>summary>b{color:#cbbb88}
+.team-deck .team-deck-reason{border-left:2px solid #b78a60;padding:8px 10px;background:#332d2180;color:#dac5a6;font-size:12px}
+.team-deck-facts{display:grid;gap:7px;padding:0;list-style:none;margin:10px 0}
+.team-deck-facts>li{display:grid;gap:3px;padding:8px;border:1px solid #4b5a504d;border-radius:7px;background:#20302b80;font-size:12px;min-width:0}
+.team-deck-facts>li>small{color:#a4c1b4;font-size:10px}
+.team-deck-private-card,.team-deck-result{padding:10px;border:1px solid #4b5a50;border-radius:9px;margin:10px 0;min-width:0}
+.team-deck-subtitle{display:block;font-size:12px;margin-top:14px}
+.team-deck-artifacts{margin:22px 0}
+.team-deck-proposal{border:1px solid #7b715a;border-radius:9px;padding:12px;margin-top:14px}
+.team-deck-proposal p{font-size:12px}
+.team-deck-proposal b{color:#e5c696}
+.team-deck-board,.team-deck-contract{border-top:1px solid var(--line);padding-top:8px;margin-top:22px}
+.team-deck-feedback{padding:14px;background:#24372b;border:1px solid #5d7155;border-radius:12px;margin-top:16px}
+.team-deck-feedback>strong{font-size:13px;color:#d2d6ae}
+.team-deck-feedback p{margin-bottom:0}
+.team-deck-error{padding:12px;border:1px solid #a47e5b;border-radius:10px;background:#3b2d2280;color:#e0c9ad}
+@media(max-width:360px){.team-deck-dispatch,.team-deck-receive,.team-deck-artifact,.team-deck-board-slot{padding:10px}.team-deck .button{font-size:12px}.team-deck-task>summary{align-items:flex-start;flex-direction:column;gap:4px}.team-deck-overview>span{flex-basis:70px}.team-deck fieldset{padding:8px}.team-deck-proposal{padding:9px}}
