@@ -1,3 +1,4 @@
+import { chapterSixWalkthroughs } from '../src/content/chapterSix';
 import { chapterFiveWalkthroughs } from '../src/content/chapterFive';
 import { resolveAuthoredStep } from '../src/content/walkthrough';
 import { readFileSync, statSync } from 'node:fs';
@@ -19,7 +20,7 @@ import type { GameAction, GameState, ScenarioDefinition } from '../src/engine';
 export const contentBundle = {
   scenarios, prerequisites, journeyOrder, mainScenarioIds,
   stories, uiStories, npcs: chapterOneNpcs,
-  profiles, walkthroughs: [...chapterOneWalkthroughs,...chapterTwoWalkthroughs,...chapterThreeWalkthroughs,...chapterFourWalkthroughs,...chapterFiveWalkthroughs],
+  profiles, walkthroughs: [...chapterOneWalkthroughs,...chapterTwoWalkthroughs,...chapterThreeWalkthroughs,...chapterFourWalkthroughs,...chapterFiveWalkthroughs,...chapterSixWalkthroughs],
 };
 export type ContentBundle = typeof contentBundle;
 export interface ContentReport { errors: string[]; counts: { scenarios: number; stories: number; profiles: number; paths: number; art: number }; }
@@ -102,23 +103,26 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
 
   for (const scenario of bundle.scenarios) {
     const path = `scenario/${scenario?.id}`, before = report.errors.length;
-    if (!keys(scenario, path, ['id', 'version', 'engineVersion', 'title', 'subtitle', 'brief', 'npc', 'location', 'art', 'chapter', 'kind', 'initialWorld', 'observations', 'operations', 'goals', 'concepts', 'limits', 'hooks', 'transferRequirement','contextCapacity','memory'], ['id', 'title', 'subtitle', 'brief', 'npc', 'location', 'chapter', 'kind', 'initialWorld', 'observations', 'operations', 'goals', 'concepts'])) continue;
+    if (!keys(scenario, path, ['id', 'version', 'engineVersion', 'title', 'subtitle', 'brief', 'npc', 'location', 'art', 'chapter', 'kind', 'initialWorld', 'observations', 'operations', 'goals', 'concepts', 'limits', 'hooks', 'transferRequirement','contextCapacity','memory','security'], ['id', 'title', 'subtitle', 'brief', 'npc', 'location', 'chapter', 'kind', 'initialWorld', 'observations', 'operations', 'goals', 'concepts'])) continue;
     for (const key of ['title', 'subtitle', 'brief', 'npc']) text(scenario[key as keyof ScenarioDefinition], `${path}.${key}`);
     integer(scenario.chapter, `${path}.chapter`, 8); if (scenario.version !== undefined) integer(scenario.version, `${path}.version`, 10000);
-    check([undefined, 1, 2, 3, 4, 5, 6].includes(scenario.engineVersion), path, '未知内核版本');
+    check([undefined, 1, 2, 3, 4, 5, 6, 7].includes(scenario.engineVersion), path, '未知内核版本');
     check(['lighthouse', 'warehouse', 'boss'].includes(scenario.location), path, '未知 location');
     check(['guided', 'transfer', 'boss'].includes(scenario.kind), path, '未知 kind');
-    if (scenario.art !== undefined) check(['harbor', 'warehouse', 'tide', 'ferry', 'forge', 'clock', 'corridor', 'archive'].includes(scenario.art), path, '未知 art');
+    if (scenario.art !== undefined) check(['harbor', 'warehouse', 'tide', 'ferry', 'forge', 'clock', 'corridor', 'archive', 'court'].includes(scenario.art), path, '未知 art');
     factMap(scenario.initialWorld, `${path}.initialWorld`, undefined, 1);
     strings(scenario.concepts, `${path}.concepts`, 1);
     if (!list(scenario.observations, `${path}.observations`) || !list(scenario.operations, `${path}.operations`, 1) || !list(scenario.goals, `${path}.goals`, 1) || !record(scenario.initialWorld)) continue;
     uniqueIds(scenario.observations, `${path}.observations`); uniqueIds(scenario.operations, `${path}.operations`);
     for (const observation of scenario.observations) {
       const at = `${path}.observation/${observation?.id}`;
-      if (!keys(observation, at, ['id', 'target', 'label', 'facts', 'text', 'cost','document','availableWhen'], ['id', 'target', 'label', 'facts', 'text'])) continue;
+      if (!keys(observation, at, ['id', 'target', 'label', 'facts', 'text', 'cost','document','availableWhen','reportedFacts','provenance','directiveOperationId'], ['id', 'target', 'label', 'facts', 'text'])) continue;
       validId(observation.target, `${at}.target`); text(observation.label, `${at}.label`); text(observation.text, `${at}.text`);
       if (strings(observation.facts, `${at}.facts`, 1)) for (const fact of observation.facts) check(own(scenario.initialWorld, fact), at, `观察引用未知事实 ${fact}`);
-      if(observation.availableWhen!==undefined){check(scenario.engineVersion===6,at,'资料开放条件需内核 6');factMap(observation.availableWhen,at,scenario.initialWorld);}
+      if(observation.availableWhen!==undefined){check((scenario.engineVersion??1)>=6,at,'资料开放条件需内核 6');factMap(observation.availableWhen,at,scenario.initialWorld);}
+      if(observation.reportedFacts!==undefined){check(scenario.engineVersion===7,at,'独立宣称需内核 7');factMap(observation.reportedFacts,at,scenario.initialWorld);}
+      if(observation.provenance!==undefined)check(scenario.engineVersion===7&&['registry','external'].includes(observation.provenance),at,'未知来源类别');
+      if(observation.directiveOperationId!==undefined){check(scenario.engineVersion===7,at,'资料指令需内核 7');validId(observation.directiveOperationId,at);}
       if (observation.cost !== undefined) integer(observation.cost, `${at}.cost`);
       if(observation.document!==undefined&&keys(observation.document,`${at}.document`,['units','source','summaries'],['units','source'])) {
         check((scenario.engineVersion??1)>=5,at,'资料卷轴需内核 5');integer(observation.document.units,at,16);text(observation.document.source,at);
@@ -126,15 +130,20 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
       }
     }
     if(scenario.memory!==undefined&&keys(scenario.memory,path,['slots','initial','skills','initialSkills'],['slots','initial','skills'])){
-      check(scenario.engineVersion===6,path,'记忆与会话只由内核 6 执行');
+      check((scenario.engineVersion??1)>=6,path,'记忆与会话只由内核 6 执行');
       if(list(scenario.memory.slots,path))for(const slot of scenario.memory.slots)if(keys(slot,path,['key','label','observationIds'],['key','label','observationIds'])){validId(slot.key,path);text(slot.label,path);strings(slot.observationIds,path,1);}
       if(list(scenario.memory.initial,path))for(const seed of scenario.memory.initial)if(keys(seed,path,['key','observationId','facts','source'],['key','observationId','facts','source'])){validId(seed.key,path);factMap(seed.facts,path,scenario.initialWorld);text(seed.source,path);}
       if(list(scenario.memory.skills,path))for(const skill of scenario.memory.skills)if(keys(skill,path,['id','label','description','applicability','steps'],['id','label','description','applicability','steps'])){validId(skill.id,path);text(skill.label,path);text(skill.description,path);factMap(skill.applicability,path,scenario.initialWorld);list(skill.steps,path,1);}
       if(scenario.memory.initialSkills!==undefined)strings(scenario.memory.initialSkills,path);
     }
+    if(scenario.security!==undefined&&keys(scenario.security,path,['principals','sandbox'],['principals'])){
+      check(scenario.engineVersion===7,path,'信任配置需内核 7');
+      if(scenario.security.sandbox!==undefined)check(typeof scenario.security.sandbox==='boolean',path,'沙箱开关须布尔值');
+      if(list(scenario.security.principals,path))for(const principal of scenario.security.principals)if(keys(principal,path,['id','label','registryObservationId','credentialFact','grants'],['id','label','registryObservationId','credentialFact','grants'])){validId(principal.id,path);text(principal.label,path);validId(principal.registryObservationId,path);validId(principal.credentialFact,path);strings(principal.grants,path);}
+    }
     for (const operation of scenario.operations) {
       const at = `${path}.operation/${operation?.id}`;
-      if (!keys(operation, at, ['id', 'target', 'label', 'requires', 'effects', 'successText', 'failureText', 'cost', 'failureCost', 'protocol', 'failureKind', 'retryWindow','contextRequires','contextMatches','memoryRequires','sessionRequires','skillRequires'], ['id', 'target', 'label', 'effects', 'successText', 'failureText'])) continue;
+      if (!keys(operation, at, ['id', 'target', 'label', 'requires', 'effects', 'successText', 'failureText', 'cost', 'failureCost', 'protocol', 'failureKind', 'retryWindow','contextRequires','contextMatches','memoryRequires','sessionRequires','skillRequires','security'], ['id', 'target', 'label', 'effects', 'successText', 'failureText'])) continue;
       validId(operation.target, `${at}.target`);
       for (const key of ['label', 'successText', 'failureText'] as const) text(operation[key], `${at}.${key}`);
       factMap(operation.effects, `${at}.effects`, scenario.initialWorld, operation.protocol ? 0 : 1);
@@ -164,9 +173,10 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
       if (operation.requires !== undefined) factMap(operation.requires, `${at}.requires`, scenario.initialWorld);
       if(operation.contextRequires!==undefined){check((scenario.engineVersion??1)>=5,at,'资料输入需内核 5');factMap(operation.contextRequires,at,scenario.initialWorld,1);}
       if(operation.contextMatches!==undefined&&strings(operation.contextMatches,at,1)){check((scenario.engineVersion??1)>=5,at,'动态资料输入需内核 5');for(const f of operation.contextMatches)check(own(scenario.initialWorld,f),at,'未知动态字段');}
-      if(operation.memoryRequires!==undefined){check(scenario.engineVersion===6,at,'记忆前置需内核 6');strings(operation.memoryRequires,at,1);}
-      if(operation.sessionRequires!==undefined){check(scenario.engineVersion===6,at,'会话前置需内核 6');keys(operation.sessionRequires,at,['fresh','restored','forks','activeId','activeKind']);}
-      if(operation.skillRequires!==undefined){check(scenario.engineVersion===6,at,'技能前置需内核 6');keys(operation.skillRequires,at,['skillId','afterOperationId'],['skillId']);}
+      if(operation.memoryRequires!==undefined){check((scenario.engineVersion??1)>=6,at,'记忆前置需内核 6');strings(operation.memoryRequires,at,1);}
+      if(operation.sessionRequires!==undefined){check((scenario.engineVersion??1)>=6,at,'会话前置需内核 6');keys(operation.sessionRequires,at,['fresh','restored','forks','activeId','activeKind']);}
+      if(operation.skillRequires!==undefined){check((scenario.engineVersion??1)>=6,at,'技能前置需内核 6');keys(operation.skillRequires,at,['skillId','afterOperationId'],['skillId']);}
+      if(operation.security!==undefined&&keys(operation.security,at,['principalIds','approval','liveOnly','trustedInputs','sandboxRequires'])){check(scenario.engineVersion===7,at,'执行边界需内核 7');for(const key of ['principalIds','trustedInputs','sandboxRequires'] as const)if(operation.security[key]!==undefined)strings(operation.security[key],at,1);for(const key of ['approval','liveOnly'] as const)if(operation.security[key]!==undefined)check(typeof operation.security[key]==='boolean',at,'边界开关须布尔值');}
       for (const key of ['cost', 'failureCost'] as const) if (operation[key] !== undefined) integer(operation[key], `${at}.${key}`);
     }
     for (const goal of scenario.goals) {
@@ -201,8 +211,9 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
         }
       }
     }
-    if (scenario.transferRequirement !== undefined && keys(scenario.transferRequirement, `${path}.transferRequirement`, ['operationIds', 'reconfiguration', 'receiptCount','contextIds','summaryIds','memoryKeys','skillIds','freshSessions'])) {
+    if (scenario.transferRequirement !== undefined && keys(scenario.transferRequirement, `${path}.transferRequirement`, ['operationIds', 'reconfiguration', 'receiptCount','contextIds','summaryIds','memoryKeys','skillIds','freshSessions','security'])) {
       check(scenario.kind === 'transfer', path, '只有迁移任务能声明迁移证据要求');
+      if(scenario.transferRequirement.security!==undefined&&keys(scenario.transferRequirement.security,path,['authenticatedPrincipalIds','approvedOperationIds','sandboxOperationIds','dataOnly'])){check(scenario.engineVersion===7,path,'安全迁移需内核 7');for(const key of ['authenticatedPrincipalIds','approvedOperationIds','sandboxOperationIds'] as const)if(scenario.transferRequirement.security[key]!==undefined)strings(scenario.transferRequirement.security[key],path,1);if(scenario.transferRequirement.security.dataOnly!==undefined)check(typeof scenario.transferRequirement.security.dataOnly==='boolean',path,'dataOnly须布尔值');}
       if (scenario.transferRequirement.operationIds !== undefined && strings(scenario.transferRequirement.operationIds, `${path}.transferRequirement.operationIds`, 1)) for (const id of scenario.transferRequirement.operationIds) check(scenario.operations.some(operation => operation?.id === id), path, `迁移证据引用未知操作 ${id}`);
       if (scenario.transferRequirement.receiptCount !== undefined) integer(scenario.transferRequirement.receiptCount, `${path}.transferRequirement.receiptCount`, 12);
       for(const key of ['contextIds','summaryIds','memoryKeys','skillIds'] as const)if(scenario.transferRequirement[key]!==undefined)strings(scenario.transferRequirement[key],path,1);
@@ -337,11 +348,13 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
     if (route.purpose === 'recovery') check(route.stages.some(stage => stage.expectWorld && Object.keys(stage.expectWorld).length), path, '恢复路线必须断言失败后的中间世界状态');
     for (const [index, stage] of route.stages.entries()) {
       const at = `${path}.stages[${index}]`;
-      if (!keys(stage, at, ['tools', 'calls', 'collectReceipts', 'expectWorld', 'absentProofs', 'loopPolicy','contextChanges','steps'], ['tools', 'calls'])) continue;
+      if (!keys(stage, at, ['tools', 'calls', 'collectReceipts', 'expectWorld', 'absentProofs', 'loopPolicy','contextChanges','steps','instructionPolicy','toolPermissions'], ['tools', 'calls'])) continue;
       if (strings(stage.tools, `${at}.tools`, 1)) check(stage.tools.every(tool => ['observe', 'operate', 'verify'].includes(tool)), at, '未知法器');
       if(stage.loopPolicy!==undefined)check((scenario.engineVersion??1)>=4,at,'回路配置需要 v4 或更新内核');
       if(stage.contextChanges!==undefined&&list(stage.contextChanges,at,1)){check((scenario.engineVersion??1)>=5,at,'装卷路径需内核 5');for(const c of stage.contextChanges)if(keys(c,at,['observationId','operation','summaryId'],['observationId','operation'])){check(scenario.observations.some(o=>o.id===c.observationId),at,'未知资料');check(['include','exclude','summarize','expand'].includes(c.operation),at,'未知装卷操作');if(c.summaryId!==undefined)validId(c.summaryId,at);}}
-      if(stage.steps!==undefined&&list(stage.steps,at,1)){check(scenario.engineVersion===6,at,'扩展路径需内核 6');for(const step of stage.steps){const allowed=step.type==='tool'?['type','call']:step.type==='context'?['type','observationId','operation','origin']:step.type==='memory'?['type','operation','key','observationId']:step.type==='session'?['type','operation','branchIndex']:step.type==='skill'?['type','operation','skillId']:['type'];keys(step,at,allowed,['type']);check(['tool','context','memory','session','skill','step'].includes(step.type),at,'未知扩展路径动作');}}
+      if(stage.steps!==undefined&&list(stage.steps,at,1)){check((scenario.engineVersion??1)>=6,at,'扩展路径需内核 6');for(const step of stage.steps){const allowed=step.type==='tool'?['type','call']:step.type==='context'?['type','observationId','operation','origin','summaryId']:step.type==='memory'?['type','operation','key','observationId']:step.type==='session'?['type','operation','branchIndex']:step.type==='skill'?['type','operation','skillId']:step.type==='security'?['type','operation','principalId','observationId','call','realm']:['type'];keys(step,at,allowed,['type']);check(['tool','context','memory','session','skill','security','step'].includes(step.type),at,'未知扩展路径动作');}}
+      if(stage.instructionPolicy!==undefined)check(scenario.engineVersion===7&&['data-only','follow-documents'].includes(stage.instructionPolicy),at,'未知指令策略');
+      if(stage.toolPermissions!==undefined&&keys(stage.toolPermissions,at,['observe','operate','verify']))for(const values of Object.values(stage.toolPermissions))strings(values,at);
       if (stage.collectReceipts !== undefined) check(typeof stage.collectReceipts === 'boolean', at, 'collectReceipts 必须为布尔值');
       if (stage.expectWorld !== undefined) factMap(stage.expectWorld, `${at}.expectWorld`, scenario.initialWorld);
       if (stage.absentProofs !== undefined && strings(stage.absentProofs, `${at}.absentProofs`)) for (const fact of stage.absentProofs) check(scenario.goals.some(goal => goal.fact === fact), at, 'absentProofs 引用未知完成条件');
@@ -364,7 +377,7 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
       };
       for (const stage of route.stages) {
         if (state.status === 'running') action({type: 'pause'});
-        action({type: 'configure', blueprint: {tools: stage.tools, feedback: true, verification: true, budget: scenario.limits?.maxBudget ?? 12, permissions: ['*'],...(stage.loopPolicy?{loopPolicy:stage.loopPolicy}:{})}} as GameAction);
+        action({type: 'configure', blueprint: {tools: stage.tools, feedback: true, verification: true, budget: scenario.limits?.maxBudget ?? 12, permissions: ['*'],...(stage.loopPolicy?{loopPolicy:stage.loopPolicy}:{}),...(stage.instructionPolicy?{instructionPolicy:stage.instructionPolicy}:{}),...(stage.toolPermissions?{toolPermissions:stage.toolPermissions}:{})}} as GameAction);
         action({type: 'dispatch', mode: 'manual'} as GameAction);
         for(const c of stage.contextChanges??[]){const card=[...(state.context?.records??[])].reverse().find(r=>r.observationId===c.observationId);if(!card)throw new Error('路径在读取之前装卷');action({type:'context',recordId:card.id,operation:c.operation,...(c.summaryId?{summaryId:c.summaryId}:{})} as GameAction);}
         for(const step of stage.steps??[]){
@@ -410,7 +423,7 @@ function main(): void {
   const result = validateContent(input);
   if (result.errors.length) { process.stderr.write(`内容校验失败（${result.errors.length} 项）：\n${result.errors.map(error => `- ${error}`).join('\n')}\n`); process.exitCode = 1; return; }
   const {scenarios, stories, profiles, paths, art} = result.counts;
-  process.stdout.write(`内容校验通过：${scenarios} 个任务，${stories} 份剧情，${profiles} 份官方档案，${paths} 条参考/替代/恢复路线，${art} 项场景美术。\n范围：已制作的第一至五章；不代表完整第一季、真人学习效果或真机验收。官方链接仅校验来源归属与元数据，未重新联网核查正文。\n`);
+  process.stdout.write(`内容校验通过：${scenarios} 个任务，${stories} 份剧情，${profiles} 份官方档案，${paths} 条参考/替代/恢复路线，${art} 项场景美术。\n范围：已制作的第一至六章；不代表完整第一季、真人学习效果或真机验收。官方链接仅校验来源归属与元数据，未重新联网核查正文。\n`);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   try { main(); } catch (error) { process.stderr.write(`内容校验失败：${String(error)}\n`); process.exitCode = 1; }

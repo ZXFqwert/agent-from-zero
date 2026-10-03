@@ -43,10 +43,11 @@ export default function Scene({ state, scenario, reducedMotion }: {
           ["echo", "echo-companion"], ["phantom", "hollow-herald"],
           ["forge", "forge-background"], ["clerk", "paper-clerk"],
           ["clock", "clock-background"], ["warden", "endless-warden"],
+          ["court", "court-background"], ["regent", "counterfeit-regent"],
           ["archive", "archive-background"], ["keeper", "palimpsest-keeper"],
           ["corridor", "corridor-background"], ["archivist", "many-faced-archivist"],
         ]) {
-          const allowed=({1:['harbor','warehouse','warehouse-open','tide','ferry','ferry-far','ferry-far-empty','ferry-loaded','phantom'],2:['forge','clerk'],3:['clock','warden'],4:['corridor','archivist'],5:['archive','keeper']} as Record<number,string[]>)[latest.current.scenario.chapter]??[];
+          const allowed=({1:['harbor','warehouse','warehouse-open','tide','ferry','ferry-far','ferry-far-empty','ferry-loaded','phantom'],2:['forge','clerk'],3:['clock','warden'],4:['corridor','archivist'],5:['archive','keeper'],6:['court','regent']} as Record<number,string[]>)[latest.current.scenario.chapter]??[];
           if(key!=='echo'&&!allowed.includes(key))continue;
           this.load.image(key, `${import.meta.env.BASE_URL}art/${file}.webp`);
         }
@@ -56,7 +57,7 @@ export default function Scene({ state, scenario, reducedMotion }: {
         this.background = this.add.image(0, 0, sceneTexture(latest.current.scenario,latest.current.state)).setOrigin(0.5, 0);
         this.oldBackground = this.add.image(0, 0, sceneTexture(latest.current.scenario,latest.current.state)).setOrigin(0.5, 0).setAlpha(0);
         this.glow = this.add.graphics();
-        this.phantom = this.add.image(0, 0, latest.current.scenario.chapter===5?"keeper":latest.current.scenario.chapter===4?"archivist":latest.current.scenario.chapter===3?"warden":latest.current.scenario.chapter===2?"clerk":"phantom");
+        this.phantom = this.add.image(0, 0, latest.current.scenario.chapter===6?"regent":latest.current.scenario.chapter===5?"keeper":latest.current.scenario.chapter===4?"archivist":latest.current.scenario.chapter===3?"warden":latest.current.scenario.chapter===2?"clerk":"phantom");
         this.echo = this.add.image(0, 0, "echo").setOrigin(0.5, 1);
         if (!latest.current.reducedMotion) {
           this.tweens.add({ targets: this.echo, angle: { from: -1, to: 1 }, duration: 2400, yoyo: true, repeat: -1, ease: "Sine.inOut" });
@@ -82,7 +83,8 @@ export default function Scene({ state, scenario, reducedMotion }: {
       }
       paint() {
         if (!this.background) return;
-        const { state: s, scenario: q, reducedMotion: reduce } = latest.current;
+        const { state: original, scenario: q, reducedMotion: reduce } = latest.current;
+        const s=original.security?.realm==='sandbox'?{...original,world:original.security.sandboxWorld,verifiedGoals:original.security.sandboxVerifiedGoals}:original;
         const w = this.scale.width, h = this.scale.height, backdropHeight = Math.max(h, w * 1.5);
         const art = sceneArt(q), boss = q.kind === "boss", changedScenario = this.previousScenario !== q.id;
         const px = (x: number) => x * w, py = (y: number) => y * backdropHeight;
@@ -97,9 +99,16 @@ export default function Scene({ state, scenario, reducedMotion }: {
         this.background.setPosition(w / 2, 0).setDisplaySize(w, backdropHeight).setTint(boss ? 0xadb6d5 : 0xffffff);
         this.oldBackground.setPosition(w / 2, 0).setDisplaySize(w, backdropHeight).setTint(boss ? 0xadb6d5 : 0xffffff);
         this.echo.setPosition(w * (boss || art === "ferry" ? 0.23 : 0.28), h * 0.8).setDisplaySize(w * 0.28, w * 0.315);
-        this.phantom.setVisible(boss && s.status !== "won").setPosition(w * 0.65, h * (art === "archive"?0.47:0.39)).setDisplaySize(w * (art === "clock"?0.5:art === "forge"?0.43:0.53), w * ((art === "corridor"||art === "archive")?0.8:art === "clock"?0.557:art === "forge"?0.645:0.555));
+        this.phantom.setVisible(boss && s.status !== "won").setPosition(w * 0.65, h * ((art === "archive"||art === "court")?0.47:0.39)).setDisplaySize(w * (art === "clock"?0.5:art === "forge"?0.43:0.53), w * ((art === "corridor"||art === "archive"||art === "court")?0.8:art === "clock"?0.557:art === "forge"?0.645:0.555));
         this.phantom.setAlpha(Math.max(0.35, 1 - s.verifiedGoals.length * 0.28));
         this.glow.clear();
+        if(art==='court'){
+          const sandbox=s.security?.realm==='sandbox';
+          if(sandbox)this.glow.fillStyle(0x779ee9,0.13).fillRect(0,0,w,h);
+          for(let i=0;i<q.goals.length;i++)this.ring(px(0.38+i*0.11),h*0.59,s.verifiedGoals.includes(q.goals[i].fact)?0x91d6bd:0xd7b77b,12);
+          if(s.security?.identity)this.aura(px(0.17),h*0.61,0x93c5dc,0.7);
+          if(s.security?.permits.some(p=>!p.consumed))this.aura(px(0.53),h*0.66,0xe5be75,0.8);
+        }
         if(art==='archive') {
           const count=s.memory?.entries.filter(e=>e.status==='active').length??0;
           for(let i=0;i<count;i++)this.ring(px(0.42+i*0.1),py(0.37),0xe3bc78,9);
@@ -215,5 +224,5 @@ export default function Scene({ state, scenario, reducedMotion }: {
   const statusText = state.status === "won" ? "真实目标已验收" : state.status === "running" ? "回声正在行动" : "回声等待你的下一步指令";
   const visibleChange = sceneArt(scenario) === "ferry" && state.world.boatAt === "far" ? "，渡船已到达远岸" : sceneArt(scenario) === "warehouse" && state.world.gate === true ? "，仓库门已经开启" : "";
   const fallback = sceneTexture(scenario, state);
-  return <div ref={element} className="phaser-scene" role="img" aria-label={`${scenario.title}。${statusText}${visibleChange}。`} style={{ backgroundImage: `url(${import.meta.env.BASE_URL}art/${fallback}-background.webp)`, backgroundSize: "100% auto", backgroundPosition: "center top", backgroundRepeat: "no-repeat" }} />;
+  return <div ref={element} className="phaser-scene" role="img" aria-label={`${state.security?.realm==='sandbox'?'镜砂沙箱 · ':''}${scenario.title}。${statusText}${visibleChange}。`} style={{ backgroundImage: `url(${import.meta.env.BASE_URL}art/${fallback}-background.webp)`, backgroundSize: "100% auto", backgroundPosition: "center top", backgroundRepeat: "no-repeat" }} />;
 }

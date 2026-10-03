@@ -64,7 +64,7 @@ export default function Workshop({
   const targetName = (target: string) =>
     scenario.observations
       .find((o) => o.target === target)
-      ?.label.replace(/查看|检查|侦察/, "") ?? target;
+      ?.label.replace(/查看|检查|侦察/, "") ?? scenario.operations.find(o=>o.target===target)?.label ?? target;
   return (
     <div className="workshop">
       <div className="workshop-banner">
@@ -202,6 +202,12 @@ export default function Workshop({
         <label>短暂故障的额外重试 <select aria-label="短暂故障重试上限" value={build.loopPolicy?.maxRetries??0} onChange={event=>setBuild({...build,loopPolicy:{maxCalls:build.loopPolicy?.maxCalls??8,maxRetries:Number(event.target.value),permanentFailure:build.loopPolicy?.permanentFailure??'stop'}})}>{[0,1,2,3,4].map(number=><option key={number} value={number}>{number} 次</option>)}</select></label>
         <label>需要改方案的故障 <select aria-label="永久故障处理" value={build.loopPolicy?.permanentFailure??'stop'} onChange={event=>setBuild({...build,loopPolicy:{maxCalls:build.loopPolicy?.maxCalls??8,maxRetries:build.loopPolicy?.maxRetries??0,permanentFailure:event.target.value as 'stop'|'repair'}})}><option value="stop">停下来，交给我</option><option value="repair">依据已收到的条件寻找修复步骤</option></select></label>
         <p className="muted">调用上限、能量预算与重试次数分别约束不同的成本。暂停和换装会保留现场；不会退回已经消耗的能量。</p>
+      </div>}
+      {scenario.engineVersion===7&&<div className="loop-controls">
+        <div className="section-label">资料边界 · 谁能提出命令？</div>
+        <label>资料中的指令 <select aria-label="资料指令策略" value={build.instructionPolicy??'data-only'} onChange={e=>setBuild({...build,instructionPolicy:e.target.value as 'data-only'|'follow-documents'})}><option value="data-only">只提取任务数据</option><option value="follow-documents">实验：遵从资料附带的指令</option></select></label>
+        <p className="muted">提取地址不必服从页脚的命令。这是可观察的教学策略；执行器的权限检查始终独立。</p>
+        <details className="permissions"><summary>逐件法器权限</summary>{tools.map(({id,name})=>{const choices=[...new Set((id==='observe'?scenario.observations:scenario.operations).map(o=>o.target))];const allowed=build.toolPermissions?.[id]??build.permissions;return <fieldset key={id}><legend>{name}</legend>{choices.map(t=><label key={t}><input type="checkbox" aria-label={`${name}访问：${targetName(t)}`} checked={allowed.includes('*')||allowed.includes(t)} onChange={e=>{const prior=allowed.includes('*')?choices:allowed;setBuild({...build,toolPermissions:{...build.toolPermissions,[id]:e.target.checked?[...prior,t]:prior.filter(x=>x!==t)}});}}/>{targetName(t)}</label>)}</fieldset>;})}</details>
       </div>}
       <details className="permissions">
         <summary>

@@ -130,7 +130,7 @@ export interface ChapterOneWalkthrough {
   id: string;
   scenarioId: string;
   purpose: 'reference' | 'alternative' | 'recovery';
-  stages: Array<{tools: ToolName[]; calls: ToolCall[]; steps?: import('./walkthrough').AuthoredStep[]; contextChanges?: Array<{observationId: string; operation: 'include'|'exclude'|'summarize'|'expand'; summaryId?: string}>; collectReceipts?: boolean; loopPolicy?: import('../engine').LoopPolicy; expectWorld?: Record<string, string | number | boolean>; absentProofs?: string[]}>;
+  stages: Array<{tools: ToolName[]; calls: ToolCall[]; instructionPolicy?: import('../engine').AgentBlueprint['instructionPolicy']; toolPermissions?: import('../engine').AgentBlueprint['toolPermissions']; steps?: import('./walkthrough').AuthoredStep[]; contextChanges?: Array<{observationId: string; operation: 'include'|'exclude'|'summarize'|'expand'; summaryId?: string}>; collectReceipts?: boolean; loopPolicy?: import('../engine').LoopPolicy; expectWorld?: Record<string, string | number | boolean>; absentProofs?: string[]}>;
   expectedCost: number;
   expectedWorld: Record<string, string | number | boolean>;
 }

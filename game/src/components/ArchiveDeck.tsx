@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Archive, GitBranch, ScrollText } from 'lucide-react';
 import { reduceGame } from '../engine';
-import { savedSkillEvidence } from '../engine/memory';
+import { savedSkillEvidence as savedOldSkillEvidence } from '../engine/memory';
+import { savedSkillEvidence as savedSecureSkillEvidence } from '../engine/memory-v7';
+const savedSkillEvidence=(scenario:ScenarioDefinition,state:GameState,id:string)=>scenario.engineVersion===7?savedSecureSkillEvidence(scenario,state,id):savedOldSkillEvidence(scenario,state,id);
 import type { GameAction, GameState, ScenarioDefinition } from '../engine';
 import { factLabels } from '../content/scenarios';
 import { displayFact,displaySource } from '../content/presentation';

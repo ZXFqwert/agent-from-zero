@@ -31,6 +31,7 @@ export default function Journal({
     [actions, cursor, scenario, state.seed],
   );
   const types: Record<string, string> = {
+    "security-change":"信任与门令",
     "memory-change":"持久档案",
     "session-change":"会话树",
     "skill-change":"执行流程",
@@ -113,7 +114,7 @@ export default function Journal({
           </div>
           <div className="evidence-grid">
             <div>
-              <h4>世界实际状态</h4>
+              <h4>{replay.security ? "城市现场实际状态" : "世界实际状态"}</h4>
               {Object.entries(replay.world).map(([k, v]) => (
                 <p key={k}>
                   <span>{factLabels[k] ?? k}</span>
@@ -122,6 +123,10 @@ export default function Journal({
                   </b>
                 </p>
               ))}
+              {replay.security && scenario.security?.sandbox && <>
+                <h4>镜砂沙箱状态 · 不替代现场</h4>
+                {Object.entries(replay.security.sandboxWorld).map(([k, v]) => <p key={`sandbox-${k}`}><span>{factLabels[k] ?? k}</span><b>{displayFact(k, v)}</b></p>)}
+              </>}
             </div>
             <div>
               <h4>回声收到的信息</h4>
@@ -138,6 +143,7 @@ export default function Journal({
                         ? "未实现"
                         : String(v.value)}
                     <small>
+                      {v.provenance && `${v.provenance.realm === 'sandbox' ? '镜砂沙箱' : '城市现场'} · `}
                       {v.source === "receipt"
                         ? "行动回执"
                         : v.source === "verification"
@@ -184,6 +190,7 @@ export default function Journal({
                 <div>
                   <div className="event-meta">
                     <b>{types[e.type]}</b>
+                    {e.realm && <span>{e.realm === 'sandbox' ? '镜砂沙箱' : '城市现场'}</span>}
                     {e.tool && <span>{e.tool}</span>}
                     {e.delivered === false && (
                       <span className="warning">未送入回声上下文</span>

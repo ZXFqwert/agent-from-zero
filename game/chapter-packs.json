@@ -56,6 +56,15 @@
         "archive-background",
         "palimpsest-keeper"
       ]
+    },
+    {
+      "number": 6,
+      "chapterId": "chapter-06",
+      "title": "伪令王庭",
+      "art": [
+        "court-background",
+        "counterfeit-regent"
+      ]
     }
   ]
 }

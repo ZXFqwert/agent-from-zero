@@ -3,6 +3,10 @@ import type { PlayerSave } from '../storage';
 import { uiStories } from '../content/stories';
 
 const landmarks = [
+  ['footer-order','物资递信窗','物资到达避难所，资料附言没有变成王令。'],
+  ['glass-court','镜砂水闸','试验与现场各有执行和验收。'],
+  ['counterfeit-regent','伪令王庭','撤销的凭证被重新核验，居民得到实际保护。'],
+  ['river-relief','河谷救援营地','适当的身份与批准把物资交到营地。'],
   ['night-handoff','隔夜门禁','接班人从有来历的档案找回口令。'],
   ['saved-procedure','修泵工作间','保存的流程再次实际执行并验水。'],
   ['palimpsest-keeper','旧日档案炉','现行规则取代旧律，修订来历仍可查看。'],
@@ -25,7 +29,7 @@ const landmarks = [
 ];
 export default function CityLedger({save}:{save:PlayerSave}) {
   const choices=Object.entries(save.choices).map(([id,choice])=>({id,story:uiStories[id],choice})).filter(entry=>entry.story);
-  const relics=[['night-handoff','记忆灯','保存与检索分开'],['saved-procedure','流程册','可再次执行的方法'],['palimpsest-keeper','修订钥匙','经验的范围与纠错'],['harbor-light','闭环印章','委托、行动与验收'],['tide-ledger','量潮卷轴','成本与现场证据'],['last-ferry','缆绳结','行动顺序'],['after-tide','回潮刻印','变化后的重新验收'],['etched-door','参数刻尺','结构与类型'],['paired-valves','风管回执','调用与结果配对'],['doubled-clerk','唯一订单印','重复请求与副作用'],['cooling-pulse','冷却晶石','有限重试'],['endless-warden','停刻保险盒','明确的停止条件'],['narrow-satchel','折卷扣','保留任务条件的压缩'],['many-faced-archivist','溯源镜','让旧快照重新接受检验']];
+  const relics=[['borrowed-seal','核验镜','来源与身份分别查证'],['one-use-writ','单次门令','批准一个具体请求'],['glass-court','镜砂瓶','隔离世界与独立验收'],['counterfeit-regent','换印册','旧授权可以被撤销'],['night-handoff','记忆灯','保存与检索分开'],['saved-procedure','流程册','可再次执行的方法'],['palimpsest-keeper','修订钥匙','经验的范围与纠错'],['harbor-light','闭环印章','委托、行动与验收'],['tide-ledger','量潮卷轴','成本与现场证据'],['last-ferry','缆绳结','行动顺序'],['after-tide','回潮刻印','变化后的重新验收'],['etched-door','参数刻尺','结构与类型'],['paired-valves','风管回执','调用与结果配对'],['doubled-clerk','唯一订单印','重复请求与副作用'],['cooling-pulse','冷却晶石','有限重试'],['endless-warden','停刻保险盒','明确的停止条件'],['narrow-satchel','折卷扣','保留任务条件的压缩'],['many-faced-archivist','溯源镜','让旧快照重新接受检验']];
   return <section className="city-ledger">
     <div className="section-label"><Flame size={16}/>城区留下的变化</div>
     <div className="landmark-grid">{landmarks.map(([id,name,description])=><div className={save.completedScenarioIds.includes(id)?'restored':''} key={id}><CheckCircle2 size={16}/><strong>{name}</strong><small>{save.completedScenarioIds.includes(id)?description:'等待你的契约'}</small></div>)}</div>

@@ -2162,3 +2162,44 @@ summary {
 .document-heading{display:flex;align-items:center;gap:8px;margin-bottom:8px}.document-heading strong{flex:1}.document-heading span{white-space:nowrap;color:#d6b782}.document-card p{font-size:13px;line-height:1.6;margin:10px 0}.document-card>.button{width:100%;font-size:13px;margin-top:10px}.document-card small{display:block;line-height:1.6;color:#aaa89d}.live-facts .omitted{opacity:.5;text-decoration:line-through}.summary-options{margin-top:12px}.summary-options summary{cursor:pointer;display:flex;gap:6px;align-items:center;font-size:13px}.summary-options .text-button{display:block;text-align:left;margin:9px 0;line-height:1.6}.chosen-summary{color:#bce0c7}.working-reply{margin-top:16px;font-size:13px;line-height:1.6}.archive-search{display:grid;gap:6px;margin:12px 0;font-size:13px}.archive-search input{min-width:0;width:100%;padding:12px;border:1px solid #66563e;border-radius:9px;background:#191f23;color:#eadfc9;font:inherit}.archive-search small{color:#aaa89d}
 
 .archive-deck{border-top:1px solid var(--line);margin-top:24px;padding-top:20px}.archive-deck .document-card{margin:14px 0}.archive-deck select{width:100%;margin:8px 0;min-height:44px;background:#122b2c;color:#eee1c5;border:1px solid #6f654d;border-radius:8px;padding:8px}.archive-deck label{display:block}.memory-version{margin:12px 0;padding:12px;border-top:1px solid #5c5848}.memory-version>small{display:block;overflow-wrap:anywhere}.memory-version.retired{opacity:.65}.session-list{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}.skill-steps{padding-left:24px;line-height:1.9}.archive-deck .button-row{flex-wrap:wrap}.archive-deck .button{white-space:normal;min-height:44px}.archive-deck .section-label{flex-wrap:wrap}.archive-deck{overflow-wrap:anywhere}
+
+/* The trust panel keeps authority, approval and execution space visible on phones. */
+.security-deck{margin-top:24px;padding-top:20px;border-top:1px solid var(--line);overflow-wrap:anywhere}
+.security-deck .section-label{flex-wrap:wrap;justify-content:flex-start;gap:8px}
+.security-deck p{font-size:13px;line-height:1.75}
+.security-deck label{display:grid;gap:8px;font-size:13px;line-height:1.6;margin:12px 0}
+.security-deck select{display:block;width:100%;max-width:100%;min-width:0;min-height:44px;padding:10px;border:1px solid #6f654d;border-radius:9px;background:#122b2c;color:#eee1c5;font:inherit}
+.security-deck .button{min-height:44px;white-space:normal;line-height:1.6;font-size:13px;max-width:100%;overflow-wrap:anywhere}
+.security-deck small{display:block;font-size:11px;line-height:1.7;color:var(--muted)}
+.security-deck h4{font-size:14px;line-height:1.6;margin:0 0 10px;color:#e4d3b0}
+.security-deck-realm,.security-deck-principal,.security-deck-preview{padding:14px;border:1px solid #53645b;border-radius:12px;background:#162b2b;margin:14px 0}
+.security-deck-realm>span{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px;line-height:1.7;color:#c9d9bc}
+.security-deck-realm-buttons{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.security-deck-realm-buttons>.button{flex:1 1 140px}
+.security-deck-realm-buttons>[aria-pressed="true"]{border-color:#aabd9c;background:#384236;opacity:1;color:#c9d9bc}
+.security-deck-sandbox-note{border-left:3px solid #87b9bc;padding:8px 10px;margin:12px 0 0;background:#173c4180;color:#b9dcda}
+.security-deck-identity,.security-deck-approval{margin-top:24px}
+.security-deck-current-identity{margin:12px 0;padding:12px;background:#2d302780;border-radius:9px;color:#d6c49b}
+.security-deck-current-identity>small{margin-top:5px}
+.security-deck-principal>.button,.security-deck-preview>.button{width:100%;margin-top:12px}
+.security-deck details{margin-top:12px;font-size:13px;line-height:1.7}
+.security-deck summary{cursor:pointer;min-height:44px;padding:10px 0;line-height:1.8}
+.security-deck ul{padding-left:20px;margin:8px 0 12px}
+.security-deck-principal ul>li{margin:8px 0}
+.security-deck-request-rules{display:grid;gap:6px;padding:12px;border-left:2px solid #806640;background:#242a244d;margin:12px 0}
+.security-deck-preview{border-color:#a58253;background:#282d24}
+.security-deck-preview dl{display:grid;gap:8px;margin:10px 0 14px;font-size:13px;line-height:1.7}
+.security-deck-preview dl>div{display:grid;grid-template-columns:60px minmax(0,1fr);gap:8px}
+.security-deck-preview dt{color:#bbb5a1}
+.security-deck-preview dd{margin:0;min-width:0;color:#eadac0}
+.security-deck-preview>strong{display:block;margin:12px 0 8px;font-size:12px}
+.security-deck-preview .live-facts{font-size:11px;gap:7px;margin-bottom:12px}
+.security-deck-permits>ul,.security-deck-sources>ul{padding-left:0;list-style:none;display:grid;gap:10px}
+.security-deck-permits li,.security-deck-sources li{padding:12px;background:#172729;border:1px solid #526052;border-radius:10px;display:grid;gap:6px;font-size:12px;line-height:1.7}
+.security-deck-permits li>strong,.security-deck-sources li>strong{color:#d4c09c}
+.security-deck-sources li>span{color:#adc4b5}
+.security-deck .security-deck-directive{border-left:2px solid #b7836b;padding-left:9px;color:#d2b9a4}
+.security-deck-feedback{padding:14px;background:#24372b;border:1px solid #5d7155;border-radius:12px;margin-top:14px}
+.security-deck-feedback>strong{font-size:13px;color:#d2d6ae}
+.security-deck-feedback p{margin:8px 0 0}
+@media(max-width:360px){.security-deck-realm,.security-deck-principal,.security-deck-preview{padding:11px}.security-deck .button{font-size:12px}.security-deck-realm-buttons{gap:7px}}

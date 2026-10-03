@@ -12,6 +12,10 @@ export interface ObservationDefinition {
   cost?: number;
   document?: { units: number; source: string; summaries?: Array<{id: string; label: string; units: number; retain: string[]}> };
   availableWhen?: FactMap;
+  /** Authored statements are distinct from the actual world, including false self-claims. */
+  reportedFacts?: FactMap;
+  provenance?: 'registry' | 'external';
+  directiveOperationId?: string;
 }
 
 export interface OperationDefinition {
@@ -35,6 +39,7 @@ export interface OperationDefinition {
   memoryRequires?: string[];
   sessionRequires?: { fresh?: number; restored?: number; forks?: number; activeId?: 'session-1'; activeKind?: 'fresh' | 'fork' | 'initial' };
   skillRequires?: { skillId: string; afterOperationId?: string };
+  security?: { principalIds?: string[]; approval?: boolean; liveOnly?: boolean; trustedInputs?: string[]; sandboxRequires?: string[] };
 }
 
 export interface ParameterField {
@@ -89,7 +94,7 @@ export interface ScenarioDefinition {
   brief: string;
   npc: string;
   location: 'lighthouse' | 'warehouse' | 'boss';
-  art?: 'harbor' | 'warehouse' | 'tide' | 'ferry' | 'forge' | 'clock' | 'corridor' | 'archive';
+  art?: 'harbor' | 'warehouse' | 'tide' | 'ferry' | 'forge' | 'clock' | 'corridor' | 'archive' | 'court';
   chapter: number;
   kind: 'guided' | 'transfer' | 'boss';
   initialWorld: FactMap;
@@ -98,12 +103,13 @@ export interface ScenarioDefinition {
   goals: GoalDefinition[];
   concepts: string[];
   /** Existing v1 adventures retain their original reducer and replay format. */
-  engineVersion?: 1 | 2 | 3 | 4 | 5 | 6;
+  engineVersion?: 1 | 2 | 3 | 4 | 5 | 6 | 7;
   contextCapacity?: number;
   memory?: { slots: Array<{key: string; label: string; observationIds: string[]}>; initial: MemorySeed[]; skills: SkillDefinition[]; initialSkills?: string[] };
+  security?: { principals: Array<{id: string; label: string; registryObservationId: string; credentialFact: string; grants: string[]}>; sandbox?: boolean };
   limits?: ScenarioLimits;
   hooks?: WorldHook[];
-  transferRequirement?: { operationIds?: string[]; reconfiguration?: boolean; receiptCount?: number; contextIds?: string[]; summaryIds?: string[]; memoryKeys?: string[]; skillIds?: string[]; freshSessions?: number };
+  transferRequirement?: { operationIds?: string[]; reconfiguration?: boolean; receiptCount?: number; contextIds?: string[]; summaryIds?: string[]; memoryKeys?: string[]; skillIds?: string[]; freshSessions?: number; security?: { authenticatedPrincipalIds?: string[]; approvedOperationIds?: string[]; sandboxOperationIds?: string[]; dataOnly?: boolean } };
 }
 
 export interface AgentBlueprint {
@@ -118,6 +124,7 @@ export interface AgentBlueprint {
   toolArguments?: Record<string, FactMap>;
   stableRequestKeys?: boolean;
   loopPolicy?: LoopPolicy;
+  instructionPolicy?: 'data-only' | 'follow-documents';
 }
 
 export interface LoopPolicy { maxCalls: number; maxRetries: number; permanentFailure: 'stop' | 'repair'; }
@@ -126,13 +133,14 @@ export interface ObservationRecord {
   value: FactValue;
   source: 'observation' | 'receipt' | 'verification' | 'memory';
   eventId: string;
+  provenance?: SourceProvenance;
 }
 
 export interface GameEvent {
   id: string;
   sequence: number;
   attempt: number;
-  type: 'configured' | 'dispatched' | 'request' | 'observation' | 'result' | 'claim' | 'verified' | 'victory' | 'paused' | 'resumed' | 'exhausted' | 'blocked' | 'reset' | 'world-change' | 'untrusted-message' | 'environment' | 'policy-stop' | 'context-change' | 'memory-change' | 'session-change' | 'skill-change';
+  type: 'configured' | 'dispatched' | 'request' | 'observation' | 'result' | 'claim' | 'verified' | 'victory' | 'paused' | 'resumed' | 'exhausted' | 'blocked' | 'reset' | 'world-change' | 'untrusted-message' | 'environment' | 'policy-stop' | 'context-change' | 'memory-change' | 'session-change' | 'skill-change' | 'security-change';
   text: string;
   tool?: ToolName;
   target?: string;
@@ -151,6 +159,9 @@ export interface GameEvent {
   receiptId?: string;
   replayed?: boolean;
   failureKind?: 'temporary' | 'permanent';
+  realm?: ExecutionRealm;
+  principalId?: string;
+  permitId?: string;
 }
 
 export interface LearningEvidence {
@@ -163,7 +174,7 @@ export interface LearningEvidence {
 export type GameStatus = 'ready' | 'running' | 'paused' | 'stalled' | 'exhausted' | 'won';
 
 export interface GameState {
-  kernelVersion: 1 | 2 | 3 | 4 | 5 | 6;
+  kernelVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7;
   scenarioId: string;
   scenarioVersion: number;
   seed: number;
@@ -178,10 +189,11 @@ export interface GameState {
   processedActionIds: string[];
   learningEvidence: LearningEvidence[];
   hintUsed: boolean;
-  context?: { records: ContextRecord[]; activeIds: string[]; capacity: number; reply?: {facts: FactMap; source: ObservationRecord['source']; eventId: string} };
+  context?: { records: ContextRecord[]; activeIds: string[]; capacity: number; reply?: {facts: FactMap; source: ObservationRecord['source']; eventId: string; provenance?: SourceProvenance} };
+  security?: SecurityState;
   memory?: { entries: MemoryEntry[]; skills: Array<{id: string; source: string; actionIds: string[]}>;
     queue?: {skillId: string; cursor: number; status: 'running' | 'failed'};
-    runs: Array<{skillId: string; actionId: string; sequence: number}> };
+    runs: Array<{skillId: string; actionId: string; sequence: number; realm?:ExecutionRealm}> };
   sessions?: { activeId: string; branches: Array<{id: string; label: string; parentId?: string; context: NonNullable<GameState['context']>}>;
     fresh: number; restored: number; forks: number };
   protocol?: { receipts: ProtocolReceipt[]; ledger: ProtocolLedgerEntry[]; droppedOperations: string[] };
@@ -201,11 +213,24 @@ export interface ContextRecord {
   id: string; observationId: string; label: string; source: string; text: string;
   eventId: string; facts: FactMap; units: number; summaryId?: string;
   origin?: {kind: 'memory'; memoryId: string; revision: number};
+  provenance?: SourceProvenance;
 }
 
-export interface MemorySeed { key: string; observationId: string; facts: FactMap; source: string; }
+export interface MemorySeed { key: string; observationId: string; facts: FactMap; source: string; provenance?: SourceProvenance; }
 export interface MemoryEntry extends MemorySeed { id: string; label: string; units: number; revision: number; status: 'active' | 'retired'; sourceActionId?: string; }
 export interface SkillDefinition { id: string; label: string; description: string; applicability: FactMap; steps: ToolCall[]; }
+
+export type ExecutionRealm = 'live' | 'sandbox';
+export interface SourceProvenance { observationId: string; trust: 'registry' | 'external' | 'executor'; realm: ExecutionRealm; directiveOperationId?: string; }
+export interface SecurityPreview { call: Extract<ToolCall,{tool:'operate'}>; realm: ExecutionRealm; principalId: string; credential: FactValue; revision: number; }
+export interface SecurityState {
+  realm: ExecutionRealm; sandboxWorld: FactMap; sandboxVerifiedGoals: string[];
+  revision: number; sandboxRevision: number;
+  identity?: {principalId: string; credential: FactValue; recordId: string};
+  preview?: SecurityPreview;
+  permits: Array<SecurityPreview & {id: string; consumed: boolean}>;
+  followedRecordIds: string[];
+}
 
 export type ToolCall =
   | { tool: 'observe'; observationId: string }
@@ -224,6 +249,10 @@ export type GameAction =
   | { id: string; type: 'memory'; operation: 'write' | 'revise' | 'retire' | 'recall'; key: string; recordId?: string }
   | { id: string; type: 'session'; operation: 'fresh' | 'fork' | 'switch'; branchId?: string; label?: string }
   | { id: string; type: 'skill'; operation: 'save' | 'run' | 'cancel'; skillId: string }
+  | { id: string; type: 'security'; operation: 'authenticate'; principalId: string; recordId: string }
+  | { id: string; type: 'security'; operation: 'preview'; call: Extract<ToolCall,{tool:'operate'}> }
+  | { id: string; type: 'security'; operation: 'approve' }
+  | { id: string; type: 'security'; operation: 'realm'; realm: ExecutionRealm }
   | { id: string; type: 'hint' }
   | { id: string; type: 'reset'; preserveBlueprint?: boolean };
 

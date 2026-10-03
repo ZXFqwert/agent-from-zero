@@ -260,3 +260,33 @@ PNG SHA-256：`9832e48a38acced4a7012f866d8f394fc48ac2480584d4ed1c150b693d36b97b`
 最终提示词：
 
 > Create one production sprite for a portrait mobile fantasy adventure game Echo Workshop. A fantastical boss named the Palimpsest Keeper: a dignified brass and aged parchment automaton archivist, tall and slender, a hood-like fan of layered parchment pages behind its head, glowing amber eyes, two arms holding a cracked glass memory lantern and a small archive key. Its robe made of overlapping worn book covers, a few floating blank pages surrounding upper body. Theme old remembered rules layering over new evidence; beautiful melancholy, not horror. Hand painted 2D gouache/storybook fantasy, dark teal shadows, aged brass and warm amber accents, readable crisp silhouette for small mobile sprite. Full body from head to feet, centred, slight three-quarter front view, feet near bottom, portrait 2:3. One isolated character, truly transparent background and alpha, no floor or scene, no shadows outside subject, no text, letters, numbers, logos, watermark, borders or UI. Not 3D, not pixel art.
+
+
+## 第六章原创美术 · 2026-10-03
+
+本轮通过内置 `image_gen__imagegen` 原创生成王庭场景和伪令摄政王，生成 PNG 已由制作方以 `view_image` 检查。原件保存在默认生成目录，并复制归档到 `art-source/`；发布图在 `public/art/`。Pillow 仅以 `quality=85, method=6` 压缩为 WebP，不缩放、裁切、擦背景或修改图像内容；颜色压缩为有损，不能宣称逐像素无损。摄政王 PNG 与 WebP 的 Alpha 通道逐像素一致，实际范围均为 0–254。
+
+| 文件（相对 game） | 像素 | 模式 | 字节 | SHA-256 |
+|---|---:|---|---:|---|
+| art-source/court-background.png | 1024×1536 | RGB | 2981214 | `8118946413809d2b0d68c61ac4f60ba4026ea633a0c87d8be557dcc87ad78766` |
+| public/art/court-background.webp | 1024×1536 | RGB | 317058 | `5e3148583c30c738b75a2b8aa81e4c41c78ef26540a8a3e466b267cdd51f6715` |
+| art-source/counterfeit-regent.png | 1024×1536 | RGBA | 2825099 | `665662e8ab395d4514677151045c2707c8bee454fd7fccd78e395a5a507c6385` |
+| public/art/counterfeit-regent.webp | 1024×1536 | RGBA | 397572 | `32f9e23ddcc3ff4839f50a8e829c06fc419fbdc839848aed919763dac5448867` |
+
+`chapter-packs.json` 将两张 WebP 归入第六章，`Scene.tsx` 按章节预载。摄政王为静态透明精灵；场景的验收光环、身份与许可反馈及沙箱色调由程序绘制，现场或沙箱的已提交状态决定表现，图像和动画不能决定模拟胜负。这里记录资产来源与转换；浏览器与真机验收分别记入章节验收文档，不能由美术生成结果代替。
+
+### court-background
+
+生成模式：新生成，`transparent_background=false`。默认原件：`E:/CodexState/home/generated_images/01a09442-5f82-71c1-bdd3-70f8d293450b/exec-10fb529d-adf5-4e31-8ead-4cbc17c9cfa5.png`。
+
+完整提示词：
+
+> Production illustration for Echo Workshop, a portrait mobile hand painted fantasy adventure. Environment background only. A grand mysterious council court in a decaying magical city, deep ink teal and indigo stone, aged brass and warm amber lanterns, a raised empty ivory throne far upper centre beneath three tall pointed arches, beautiful weathered blank hanging banners, closed ornate side doors and a small brass document verification stand at lower left, circular gold contract mosaic on the floor. Social authority and forged orders theme. Storybook gouache and watercolor, delicate ink edges, atmospheric 2D painterly illustration, readable shapes on phone, match whimsical stone golem adventure. Portrait 2:3. Lower quarter open floor and central play area clear for independently composited sprites. No characters, people or monsters, no text, numbers, logos, UI, watermark or borders, not photorealistic or pixel art.
+
+### counterfeit-regent
+
+生成模式：新生成，`transparent_background=true`。默认原件：`E:/CodexState/home/generated_images/01a09442-5f82-71c1-bdd3-70f8d293450b/exec-7b28cc87-43a2-403d-b83f-984f7884ff51.png`。
+
+完整提示词：
+
+> Single original full-body boss character sprite for Echo Workshop mobile hand painted fantasy adventure, genuinely transparent alpha background. The Counterfeit Regent: theatrical dignified brass automaton in a sweeping dark teal indigo ceremonial robe with aged ivory blank scroll ribbons, a crooked three-point paper crown, a small pale porcelain mask with two glowing amber eyes, one hand showing a forged ornate seal, other holding a short ivory sceptre. A little unsettling but charming, not horror. Authority comes from props and posture, not real brand symbols. Storybook gouache watercolor with delicate ink edges, beautiful weathered brass details, strong clear silhouette on a phone. Three quarter front facing slightly left, whole crown, feet, ribbons and sceptre visible within frame with generous margins. Vertical portrait 2:3. One isolated character, no ground, environment or floor shadow, no text, numbers, letters, logos, labels, UI, watermark, borders. Transparent background required. Not 3D, not pixel art. Match deep teal and warm amber fantasy archive illustrations.
