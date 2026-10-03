@@ -3,6 +3,10 @@ import type { PlayerSave } from '../storage';
 import { uiStories } from '../content/stories';
 
 const landmarks = [
+  ['night-handoff','隔夜门禁','接班人从有来历的档案找回口令。'],
+  ['saved-procedure','修泵工作间','保存的流程再次实际执行并验水。'],
+  ['palimpsest-keeper','旧日档案炉','现行规则取代旧律，修订来历仍可查看。'],
+  ['flooded-scriptorium','水围书房','跨会话找回条件，让读者重新使用书房。'],
   ['harbor-light','西岸灯塔','归船有了可见的引航信号。'],
   ['warehouse-gate','药箱仓库','门已经打开，药师开始整理配送。'],
   ['last-ferry','渡船码头','药箱已经随船抵达对岸。'],
@@ -21,7 +25,7 @@ const landmarks = [
 ];
 export default function CityLedger({save}:{save:PlayerSave}) {
   const choices=Object.entries(save.choices).map(([id,choice])=>({id,story:uiStories[id],choice})).filter(entry=>entry.story);
-  const relics=[['harbor-light','闭环印章','委托、行动与验收'],['tide-ledger','量潮卷轴','成本与现场证据'],['last-ferry','缆绳结','行动顺序'],['after-tide','回潮刻印','变化后的重新验收'],['etched-door','参数刻尺','结构与类型'],['paired-valves','风管回执','调用与结果配对'],['doubled-clerk','唯一订单印','重复请求与副作用'],['cooling-pulse','冷却晶石','有限重试'],['endless-warden','停刻保险盒','明确的停止条件'],['narrow-satchel','折卷扣','保留任务条件的压缩'],['many-faced-archivist','溯源镜','让旧快照重新接受检验']];
+  const relics=[['night-handoff','记忆灯','保存与检索分开'],['saved-procedure','流程册','可再次执行的方法'],['palimpsest-keeper','修订钥匙','经验的范围与纠错'],['harbor-light','闭环印章','委托、行动与验收'],['tide-ledger','量潮卷轴','成本与现场证据'],['last-ferry','缆绳结','行动顺序'],['after-tide','回潮刻印','变化后的重新验收'],['etched-door','参数刻尺','结构与类型'],['paired-valves','风管回执','调用与结果配对'],['doubled-clerk','唯一订单印','重复请求与副作用'],['cooling-pulse','冷却晶石','有限重试'],['endless-warden','停刻保险盒','明确的停止条件'],['narrow-satchel','折卷扣','保留任务条件的压缩'],['many-faced-archivist','溯源镜','让旧快照重新接受检验']];
   return <section className="city-ledger">
     <div className="section-label"><Flame size={16}/>城区留下的变化</div>
     <div className="landmark-grid">{landmarks.map(([id,name,description])=><div className={save.completedScenarioIds.includes(id)?'restored':''} key={id}><CheckCircle2 size={16}/><strong>{name}</strong><small>{save.completedScenarioIds.includes(id)?description:'等待你的契约'}</small></div>)}</div>

@@ -47,6 +47,15 @@
         "corridor-background",
         "many-faced-archivist"
       ]
+    },
+    {
+      "number": 5,
+      "chapterId": "chapter-05",
+      "title": "旧日档案馆",
+      "art": [
+        "archive-background",
+        "palimpsest-keeper"
+      ]
     }
   ]
 }

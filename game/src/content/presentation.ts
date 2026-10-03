@@ -1,6 +1,7 @@
 import type { FactValue, GameState } from '../engine';
 
 const values: Record<string, string> = {
+  'water-pump':'水泵','book-lift':'救书机','double-seal':'双封炉','single-seal':'旧单封炉','check-each-batch':'逐批核对','always-trust':'总是相信熟人',
   north: '北汊', south: '南汊', near: '本岸', far: '对岸',
   none: '尚未选择', unset: '尚未选择', main: '主钟', chain: '沿岸三铃',
   depot: '仓库', dock: '码头', midway: '半路',
@@ -17,6 +18,8 @@ export function displayFact(fact: string, value: FactValue): string {
 export function displayActionLabel(label: string): string {
   return label.replace(/\s*·\s*\d+\s*$/, '');
 }
+
+export const displaySource=(source:string)=>source.replace(/\b[a-z][a-z0-9-]*:event:(\d+)/g,'读取 $1');
 
 export function budgetExplanation(state: GameState): string {
   const remaining = state.runtime?.missionRemaining;

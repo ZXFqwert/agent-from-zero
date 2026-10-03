@@ -11,6 +11,7 @@ export interface ObservationDefinition {
   text: string;
   cost?: number;
   document?: { units: number; source: string; summaries?: Array<{id: string; label: string; units: number; retain: string[]}> };
+  availableWhen?: FactMap;
 }
 
 export interface OperationDefinition {
@@ -31,6 +32,9 @@ export interface OperationDefinition {
   /** Inputs extracted from the active documents, distinct from physical prerequisites. */
   contextRequires?: FactMap;
   contextMatches?: string[];
+  memoryRequires?: string[];
+  sessionRequires?: { fresh?: number; restored?: number; forks?: number; activeId?: 'session-1'; activeKind?: 'fresh' | 'fork' | 'initial' };
+  skillRequires?: { skillId: string; afterOperationId?: string };
 }
 
 export interface ParameterField {
@@ -85,7 +89,7 @@ export interface ScenarioDefinition {
   brief: string;
   npc: string;
   location: 'lighthouse' | 'warehouse' | 'boss';
-  art?: 'harbor' | 'warehouse' | 'tide' | 'ferry' | 'forge' | 'clock' | 'corridor';
+  art?: 'harbor' | 'warehouse' | 'tide' | 'ferry' | 'forge' | 'clock' | 'corridor' | 'archive';
   chapter: number;
   kind: 'guided' | 'transfer' | 'boss';
   initialWorld: FactMap;
@@ -94,11 +98,12 @@ export interface ScenarioDefinition {
   goals: GoalDefinition[];
   concepts: string[];
   /** Existing v1 adventures retain their original reducer and replay format. */
-  engineVersion?: 1 | 2 | 3 | 4 | 5;
+  engineVersion?: 1 | 2 | 3 | 4 | 5 | 6;
   contextCapacity?: number;
+  memory?: { slots: Array<{key: string; label: string; observationIds: string[]}>; initial: MemorySeed[]; skills: SkillDefinition[]; initialSkills?: string[] };
   limits?: ScenarioLimits;
   hooks?: WorldHook[];
-  transferRequirement?: { operationIds?: string[]; reconfiguration?: boolean; receiptCount?: number; contextIds?: string[]; summaryIds?: string[] };
+  transferRequirement?: { operationIds?: string[]; reconfiguration?: boolean; receiptCount?: number; contextIds?: string[]; summaryIds?: string[]; memoryKeys?: string[]; skillIds?: string[]; freshSessions?: number };
 }
 
 export interface AgentBlueprint {
@@ -119,7 +124,7 @@ export interface LoopPolicy { maxCalls: number; maxRetries: number; permanentFai
 
 export interface ObservationRecord {
   value: FactValue;
-  source: 'observation' | 'receipt' | 'verification';
+  source: 'observation' | 'receipt' | 'verification' | 'memory';
   eventId: string;
 }
 
@@ -127,7 +132,7 @@ export interface GameEvent {
   id: string;
   sequence: number;
   attempt: number;
-  type: 'configured' | 'dispatched' | 'request' | 'observation' | 'result' | 'claim' | 'verified' | 'victory' | 'paused' | 'resumed' | 'exhausted' | 'blocked' | 'reset' | 'world-change' | 'untrusted-message' | 'environment' | 'policy-stop' | 'context-change';
+  type: 'configured' | 'dispatched' | 'request' | 'observation' | 'result' | 'claim' | 'verified' | 'victory' | 'paused' | 'resumed' | 'exhausted' | 'blocked' | 'reset' | 'world-change' | 'untrusted-message' | 'environment' | 'policy-stop' | 'context-change' | 'memory-change' | 'session-change' | 'skill-change';
   text: string;
   tool?: ToolName;
   target?: string;
@@ -158,7 +163,7 @@ export interface LearningEvidence {
 export type GameStatus = 'ready' | 'running' | 'paused' | 'stalled' | 'exhausted' | 'won';
 
 export interface GameState {
-  kernelVersion: 1 | 2 | 3 | 4 | 5;
+  kernelVersion: 1 | 2 | 3 | 4 | 5 | 6;
   scenarioId: string;
   scenarioVersion: number;
   seed: number;
@@ -174,6 +179,11 @@ export interface GameState {
   learningEvidence: LearningEvidence[];
   hintUsed: boolean;
   context?: { records: ContextRecord[]; activeIds: string[]; capacity: number; reply?: {facts: FactMap; source: ObservationRecord['source']; eventId: string} };
+  memory?: { entries: MemoryEntry[]; skills: Array<{id: string; source: string; actionIds: string[]}>;
+    queue?: {skillId: string; cursor: number; status: 'running' | 'failed'};
+    runs: Array<{skillId: string; actionId: string; sequence: number}> };
+  sessions?: { activeId: string; branches: Array<{id: string; label: string; parentId?: string; context: NonNullable<GameState['context']>}>;
+    fresh: number; restored: number; forks: number };
   protocol?: { receipts: ProtocolReceipt[]; ledger: ProtocolLedgerEntry[]; droppedOperations: string[] };
   control?: { dispatchCalls: number; failures: Record<string, number>; attempts: Record<string, number>;
     lastFailure?: { operationId: string; call: ToolCall; kind: 'temporary' | 'permanent'; eventId: string };
@@ -190,7 +200,12 @@ export interface GameState {
 export interface ContextRecord {
   id: string; observationId: string; label: string; source: string; text: string;
   eventId: string; facts: FactMap; units: number; summaryId?: string;
+  origin?: {kind: 'memory'; memoryId: string; revision: number};
 }
+
+export interface MemorySeed { key: string; observationId: string; facts: FactMap; source: string; }
+export interface MemoryEntry extends MemorySeed { id: string; label: string; units: number; revision: number; status: 'active' | 'retired'; sourceActionId?: string; }
+export interface SkillDefinition { id: string; label: string; description: string; applicability: FactMap; steps: ToolCall[]; }
 
 export type ToolCall =
   | { tool: 'observe'; observationId: string }
@@ -206,6 +221,9 @@ export type GameAction =
   | { id: string; type: 'tool'; call: ToolCall }
   | { id: string; type: 'receive'; callId: string; receiptId: string }
   | { id: string; type: 'context'; operation: 'include' | 'exclude' | 'summarize' | 'expand'; recordId: string; summaryId?: string }
+  | { id: string; type: 'memory'; operation: 'write' | 'revise' | 'retire' | 'recall'; key: string; recordId?: string }
+  | { id: string; type: 'session'; operation: 'fresh' | 'fork' | 'switch'; branchId?: string; label?: string }
+  | { id: string; type: 'skill'; operation: 'save' | 'run' | 'cancel'; skillId: string }
   | { id: string; type: 'hint' }
   | { id: string; type: 'reset'; preserveBlueprint?: boolean };
 

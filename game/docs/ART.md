@@ -239,3 +239,24 @@ PNG SHA-256：`9832e48a38acced4a7012f866d8f394fc48ac2480584d4ed1c150b693d36b97b`
 最终提示词：
 
 > Single full-body character asset on transparent background, no text, no letters, no UI. 'The Many-Faced Archivist', a whimsical menacing 2D fantasy boss for a hand-painted mobile adventure. An animated tall stack of aged parchment scrolls and bronze archive rings, forming a floating magician silhouette with six overlapping ivory theatrical masks, each with different small glowing blue eyes. Main central mask looks thoughtfully sly, not horror. Coiled scroll ribbons create arms, holding a luminous turquoise crystal seal and a blank rolled scroll. Weathered dark teal fabric, bronze and amber details, violet magical wisps. Strong compact readable silhouette, hand-painted storybook gouache texture, soft dimensional illustration, charming mysterious personality. Full body centered, entire silhouette and all scroll ribbons fit with clear padding, facing slightly left, 2:3 character ratio. No floor, no environment, genuinely transparent cutout. Match warm parchment/dark teal stone fantasy archive scene.
+
+
+## 第五章原创美术 · 2026-10-03
+
+内置 imagegen 生成并查看；Pillow 仅以 quality=85、method=6 转 WebP，未语义修改。生成原件保留；文字与可执行状态由 React/Phaser 绘制。
+
+### archive-background
+
+原稿 `art-source/archive-background.png`，发布 `public/art/archive-background.webp`；1024×1536 RGB，发布 262750 字节。默认原件 `E:/CodexState/home/generated_images/01a09442-5f82-71c1-bdd3-70f8d293450b/exec-699a6ebb-e4f9-4324-b0c8-8fe266af8fbb.png`。PNG SHA-256 `41aa3392ff15ffa4e9109341ec071f5c1af5b4d3796f770ac480bfade123fec3`。
+
+最终提示词：
+
+> Create a production background illustration for a portrait mobile fantasy adventure game Echo Workshop. Hand painted 2D gouache/storybook fantasy, dark blue teal shadows and warm amber light, beautiful weathered brass machinery and organic wood, restrained detailed painterly texture. Scene: a vast old archive interior, shelves of thick weathered books receding upwards, a circular brass memory cabinet and branching two stairways, a quiet amber worktable foreground, a glass memory lantern illuminating floating tiny blank parchment fragments. A low shallow flood channel at bottom, mysterious and inviting not horror. Environment only, no people or monsters. Portrait 2:3 aspect. Keep central lower-middle play area uncluttered, background is behind character sprites and game UI. No text, letters, logos, borders, watermark, UI. Crisp silhouette shapes readable on phone. Rich storybook craftsmanship, not 3D render, not pixel art.
+
+### palimpsest-keeper
+
+原稿 `art-source/palimpsest-keeper.png`，发布 `public/art/palimpsest-keeper.webp`；1024×1536 RGBA，实际 Alpha 0–254，发布 330116 字节，转换保留透明度。默认原件 `E:/CodexState/home/generated_images/01a09442-5f82-71c1-bdd3-70f8d293450b/exec-f94aed6c-bfeb-4a2d-8003-e872084a7f85.png`。PNG SHA-256 `454ebda68e26257b6feaaecea3d21a7443e385e4fb0c1891c97050f4cbc7bbf5`。
+
+最终提示词：
+
+> Create one production sprite for a portrait mobile fantasy adventure game Echo Workshop. A fantastical boss named the Palimpsest Keeper: a dignified brass and aged parchment automaton archivist, tall and slender, a hood-like fan of layered parchment pages behind its head, glowing amber eyes, two arms holding a cracked glass memory lantern and a small archive key. Its robe made of overlapping worn book covers, a few floating blank pages surrounding upper body. Theme old remembered rules layering over new evidence; beautiful melancholy, not horror. Hand painted 2D gouache/storybook fantasy, dark teal shadows, aged brass and warm amber accents, readable crisp silhouette for small mobile sprite. Full body from head to feet, centred, slight three-quarter front view, feet near bottom, portrait 2:3. One isolated character, truly transparent background and alpha, no floor or scene, no shadows outside subject, no text, letters, numbers, logos, watermark, borders or UI. Not 3D, not pixel art.

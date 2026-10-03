@@ -4,7 +4,7 @@ import { reduceGame } from '../engine';
 import { contextUnits } from '../engine/v5';
 import type { GameAction, GameState, ScenarioDefinition } from '../engine';
 import { factLabels } from '../content/scenarios';
-import { displayFact } from '../content/presentation';
+import { displayFact,displaySource } from '../content/presentation';
 export type ContextInput=Omit<Extract<GameAction,{type:'context'}>,'id'>;
 export default function ContextDeck({state,scenario,busy,onChange}:{state:GameState;scenario:ScenarioDefinition;busy:boolean;onChange:(action:ContextInput)=>Promise<unknown>}) {
   const [error,setError]=useState('');
@@ -22,7 +22,7 @@ export default function ContextDeck({state,scenario,busy,onChange}:{state:GameSt
       const summary=definition.document?.summaries?.find(s=>s.id===card.summaryId);
       return <article aria-label={`${card.label} · 读取事件 ${card.eventId.split(':').at(-1)}`} className={`document-card ${active?'in-context':''}`} key={card.id}>
         <div className="document-heading"><Archive size={16}/><strong>{card.label.replace('检索：','')}</strong><span>{summary?.units??card.units} 格</span></div>
-        <small>{card.source} · 读取事件 {card.eventId.split(':').at(-1)} · {active?'本轮携带':'仅在档案'}</small>
+        <small>{displaySource(card.source)} · 读取事件 {card.eventId.split(':').at(-1)} · {active?'本轮携带':'仅在档案'}</small>
         <p>{card.text}</p>
         <div className="live-facts">{Object.entries(card.facts).map(([fact,value])=><span className={summary&&!summary.retain.includes(fact)?'omitted':''} key={fact}>{summary&&!summary.retain.includes(fact)?'已省略：':''}{factLabels[fact]??fact}：{displayFact(fact,value)}</span>)}</div>
         <button className={`button ${active?'':'primary'}`} disabled={busy||state.status==='won'} onClick={()=>change({type:'context',recordId:card.id,operation:active?'exclude':'include'})}>{active?'移回档案':'装入卷轴'} · {card.label.replace('检索：','')}</button>

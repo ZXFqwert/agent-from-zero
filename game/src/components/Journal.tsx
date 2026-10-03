@@ -31,6 +31,9 @@ export default function Journal({
     [actions, cursor, scenario, state.seed],
   );
   const types: Record<string, string> = {
+    "memory-change":"持久档案",
+    "session-change":"会话树",
+    "skill-change":"执行流程",
     configured: "构筑",
     dispatched: "派遣",
     request: "请求",
