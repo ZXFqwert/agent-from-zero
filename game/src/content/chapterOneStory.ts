@@ -20,11 +20,11 @@ export interface StoryChoice {
     /** Describes the form of trust, not a universal good/bad score. */
     trustFlags: Partial<Record<NpcId, string>>;
     visibleResult: string;
-    nextAppearance: ChapterOneTaskId | 'harbor-hub' | 'chapter-2';
+    nextAppearance: string;
   };
 }
 export interface ChapterOneStory {
-  id: ChapterOneTaskId;
+  id: string;
   title: string;
   track: 'main' | 'side';
   leadNpc: NpcId;
@@ -34,7 +34,7 @@ export interface ChapterOneStory {
   choicePrompt: string;
   choiceTiming: 'after-success' | 'before-dispatch';
   choices: [StoryChoice, StoryChoice];
-  unlock: { allCompleted: ChapterOneTaskId[] };
+  unlock: { allCompleted: string[] };
   legacyScenario?: { id: 'harbor-light' | 'warehouse-gate' | 'hollow-regent'; version: 1 };
 }
 
@@ -80,7 +80,7 @@ export const chapterOneNpcs = [
     arc: '从认印章，走向验证请求者、目标和授权范围。',
   },
   {
-    id: 'oren' as const, name: '奥伦', role: '钟匠', firstChapter: 3,
+    id: 'oren' as const, name: '奥伦', role: '钟匠与公会联络人', firstChapter: 2,
     voice: '会把抽象争论变成一件能拆开看的小东西。',
     wants: '让钟楼停在该停的时刻，而不是永远响下去。',
     fear: '承认该停手，会被当成承认技艺不够好。',
@@ -340,7 +340,7 @@ const joinDialogue = (lines: StoryLine[]) => lines.map(line => speakerNames[line
 /** Stable UI contract. Every chapter task has exactly two post-success values. */
 export const chapterOneStory: Record<string, ChapterOneUiStory> = Object.fromEntries(
   chapterOneStories.map(story => [story.id, {
-    ...chapterOneUiDetails[story.id],
+    ...chapterOneUiDetails[story.id as ChapterOneTaskId],
     opening: joinDialogue(story.opening),
     success: joinDialogue(story.success),
     choices: story.choices.map(choice => ({

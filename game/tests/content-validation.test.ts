@@ -5,7 +5,7 @@ import { contentBundle,validateContent } from '../scripts/validate-content';
 test('registered authored content passes the production gate',()=>{
   const report=validateContent(contentBundle);
   assert.deepEqual(report.errors,[]);
-  assert.deepEqual(report.counts,{scenarios:8,stories:8,profiles:7,paths:12,art:10});
+  assert.deepEqual(report.counts,{scenarios:16,stories:16,profiles:7,paths:28,art:12});
 });
 test('authoring gate rejects cyclic progression and false reference costs',()=>{
   const cycle=structuredClone(contentBundle);

@@ -186,7 +186,7 @@ test('a real v0.1 browser export migrates its envelope without altering any hist
   const before=JSON.stringify(legacy);
   const migrated=validateSave(legacy);
   assert.equal(JSON.stringify(legacy),before,'migration never changes the backup file snapshot');
-  assert.equal(migrated.contentVersion,'harbor-0.2.0');
+  assert.equal(migrated.contentVersion,'season-0.3.0');
   for(const key of ['games','completedGames','actions','choices','evidence','checkpoints']) assert.deepEqual(migrated[key as keyof PlayerSave],legacy[key]);
   assert.equal(migrated.completedScenarioIds.length,3);
   assert.deepEqual(validateSave(migrated),migrated);

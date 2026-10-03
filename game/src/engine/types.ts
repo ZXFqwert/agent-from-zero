@@ -23,7 +23,28 @@ export interface OperationDefinition {
   cost?: number;
   /** Actual cost when physical prerequisites fail; defaults to the normal cost. */
   failureCost?: number;
+  protocol?: ToolProtocol;
 }
+
+export interface ParameterField {
+  name: string; label: string; type: 'string' | 'integer' | 'boolean'; required: boolean;
+  choices: Array<{label: string; value: FactValue}>;
+  enum?: FactValue[]; minimum?: number; maximum?: number;
+}
+export interface ToolProtocol {
+  parameters: ParameterField[];
+  defaults: FactMap;
+  delivery?: 'immediate' | 'deferred' | 'lost-once';
+  /** Effects of matching a real receipt into the local coordination register. */
+  receiptEffects?: FactMap;
+  variants: Array<{when: FactMap; effects?: FactMap; deltas?: Record<string, number>;
+    guards?: Array<{fact: string; atLeast: number}>; text?: string}>;
+}
+export interface ProtocolReceipt {
+  id: string; callId: string; operationId: string; success: boolean; text: string; facts: FactMap;
+  receiptEffects: FactMap; collected: boolean;
+}
+export interface ProtocolLedgerEntry { key: string; fingerprint: string; receipt: ProtocolReceipt; }
 
 export interface GoalDefinition {
   fact: string;
@@ -57,7 +78,7 @@ export interface ScenarioDefinition {
   brief: string;
   npc: string;
   location: 'lighthouse' | 'warehouse' | 'boss';
-  art?: 'harbor' | 'warehouse' | 'tide' | 'ferry';
+  art?: 'harbor' | 'warehouse' | 'tide' | 'ferry' | 'forge';
   chapter: number;
   kind: 'guided' | 'transfer' | 'boss';
   initialWorld: FactMap;
@@ -66,10 +87,10 @@ export interface ScenarioDefinition {
   goals: GoalDefinition[];
   concepts: string[];
   /** Existing v1 adventures retain their original reducer and replay format. */
-  engineVersion?: 1 | 2;
+  engineVersion?: 1 | 2 | 3;
   limits?: ScenarioLimits;
   hooks?: WorldHook[];
-  transferRequirement?: { operationIds?: string[]; reconfiguration?: boolean };
+  transferRequirement?: { operationIds?: string[]; reconfiguration?: boolean; receiptCount?: number };
 }
 
 export interface AgentBlueprint {
@@ -81,6 +102,8 @@ export interface AgentBlueprint {
   permissions: string[];
   goalOrder?: string[];
   toolPermissions?: Partial<Record<ToolName, string[]>>;
+  toolArguments?: Record<string, FactMap>;
+  stableRequestKeys?: boolean;
 }
 
 export interface ObservationRecord {
@@ -107,6 +130,10 @@ export interface GameEvent {
   hookId?: string;
   cost?: number;
   reportedFacts?: FactMap;
+  arguments?: FactMap;
+  requestKey?: string;
+  receiptId?: string;
+  replayed?: boolean;
 }
 
 export interface LearningEvidence {
@@ -119,7 +146,7 @@ export interface LearningEvidence {
 export type GameStatus = 'ready' | 'running' | 'paused' | 'stalled' | 'exhausted' | 'won';
 
 export interface GameState {
-  kernelVersion: 1 | 2;
+  kernelVersion: 1 | 2 | 3;
   scenarioId: string;
   scenarioVersion: number;
   seed: number;
@@ -134,6 +161,7 @@ export interface GameState {
   processedActionIds: string[];
   learningEvidence: LearningEvidence[];
   hintUsed: boolean;
+  protocol?: { receipts: ProtocolReceipt[]; ledger: ProtocolLedgerEntry[]; droppedOperations: string[] };
   runtime?: {
     missionRemaining: number;
     toolCalls: number;
@@ -145,7 +173,7 @@ export interface GameState {
 
 export type ToolCall =
   | { tool: 'observe'; observationId: string }
-  | { tool: 'operate'; operationId: string }
+  | { tool: 'operate'; operationId: string; arguments?: FactMap; requestKey?: string }
   | { tool: 'verify'; fact: string };
 
 export type GameAction =
@@ -155,6 +183,7 @@ export type GameAction =
   | { id: string; type: 'pause' }
   | { id: string; type: 'resume'; mode?: 'manual' | 'automatic' }
   | { id: string; type: 'tool'; call: ToolCall }
+  | { id: string; type: 'receive'; callId: string; receiptId: string }
   | { id: string; type: 'hint' }
   | { id: string; type: 'reset'; preserveBlueprint?: boolean };
 

@@ -13,19 +13,20 @@ export interface OfflineStatus {
   bytes: number;
   totalAssets: number;
   updateAvailable: boolean;
+  chapterStatuses: Record<string,boolean>;
   error?: string;
 }
 
-type WorkerStatus = Pick<OfflineStatus, 'chapterAvailable' | 'version' | 'bytes' | 'totalAssets'>;
+type WorkerStatus = Pick<OfflineStatus, 'chapterAvailable' | 'version' | 'bytes' | 'totalAssets' | 'chapterStatuses'>;
 type WorkerReply = { type: string; status?: WorkerStatus; progress?: OfflineProgress; error?: string };
 let registration: ServiceWorkerRegistration | undefined;
 let registering: Promise<OfflineStatus> | undefined;
 let downloading = false;
 const updateListeners = new Set<(available: boolean) => void>();
 const supported = () => typeof window !== 'undefined' && 'serviceWorker' in navigator && window.isSecureContext;
-const empty = (): OfflineStatus => ({ supported: supported(), registered: false, chapterAvailable: false, version: null, bytes: 0, totalAssets: 0, updateAvailable: false });
+const empty = (): OfflineStatus => ({ supported: supported(), registered: false, chapterAvailable: false, version: null, bytes: 0, totalAssets: 0, updateAvailable: false, chapterStatuses:{} });
 
-function send(worker: ServiceWorker, type: string, onProgress?: (progress: OfflineProgress) => void): Promise<WorkerReply> {
+function send(worker: ServiceWorker, type: string, onProgress?: (progress: OfflineProgress) => void, chapterId = 'chapter-01'): Promise<WorkerReply> {
   return new Promise((resolve, reject) => {
     const channel = new MessageChannel();
     let timer: ReturnType<typeof setTimeout>;
@@ -48,7 +49,7 @@ function send(worker: ServiceWorker, type: string, onProgress?: (progress: Offli
     };
     channel.port1.onmessageerror = () => finish(new Error('离线服务返回了无效消息。'));
     armTimeout();
-    worker.postMessage({ type }, [channel.port2]);
+    worker.postMessage({ type, chapterId }, [channel.port2]);
   });
 }
 
@@ -103,13 +104,13 @@ export async function registerOffline(onUpdate?: (available: boolean) => void): 
   return registering;
 }
 
-export async function getOfflineStatus(): Promise<OfflineStatus> {
+export async function getOfflineStatus(chapterId = 'chapter-01'): Promise<OfflineStatus> {
   if (!supported() || !import.meta.env.PROD) return empty();
   const reg = registration || await navigator.serviceWorker.getRegistration('/play/');
   if (!reg?.active || !reg.scope.endsWith('/play/')) return empty();
   registration = reg;
   try {
-    const data = await send(reg.active, 'GET_OFFLINE_STATUS');
+    const data = await send(reg.active, 'GET_OFFLINE_STATUS', undefined, chapterId);
     return { ...empty(), ...data.status, registered: true, updateAvailable: Boolean(reg.waiting) };
   } catch (error) {
     return { ...empty(), registered: true, updateAvailable: Boolean(reg.waiting), error: error instanceof Error ? error.message : '无法读取离线状态。' };
@@ -117,14 +118,14 @@ export async function getOfflineStatus(): Promise<OfflineStatus> {
 }
 
 /** Explicit user action. Mainline play never depends on this download succeeding. */
-export async function downloadChapter(onProgress?: (progress: OfflineProgress) => void): Promise<OfflineStatus> {
+export async function downloadChapter(onProgress?: (progress: OfflineProgress) => void, chapterId = 'chapter-01'): Promise<OfflineStatus> {
   if (downloading) throw new Error('章节正在下载，请稍候。');
   downloading = true;
   try {
     const current = await registerOffline();
     if (!registration?.active) throw new Error(current.error || '请在 HTTPS 正式游戏页面下载离线章节。');
     onProgress?.({ completed: 0, total: current.totalAssets, bytes: 0, totalBytes: current.bytes });
-    const data = await send(registration.active, 'DOWNLOAD_CHAPTER', onProgress);
+    const data = await send(registration.active, 'DOWNLOAD_CHAPTER', onProgress, chapterId);
     return { ...empty(), ...data.status, registered: true, updateAvailable: Boolean(registration.waiting) };
   } finally { downloading = false; }
 }

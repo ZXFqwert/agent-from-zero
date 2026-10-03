@@ -15,6 +15,7 @@ import type {
   ToolName,
 } from "../engine/types";
 import { validateBlueprint } from "../engine";
+import ParameterEditor from "./ParameterEditor";
 const tools = [
   {
     id: "observe" as ToolName,
@@ -106,7 +107,7 @@ export default function Workshop({
             </span>
             <span className="tool-title">{name}</span>
             <small>{label}</small>
-            {scenario.engineVersion === 2 && <small className="tool-cost">通常消耗 {scenario.limits?.toolCosts?.[id] ?? 1} 能量</small>}
+            {(scenario.engineVersion ?? 1) >= 2 && <small className="tool-cost">通常消耗 {scenario.limits?.toolCosts?.[id] ?? 1} 能量</small>}
             <p>{text}</p>
             <span className="equip-state">
               {build.tools.includes(id) ? (
@@ -156,7 +157,7 @@ export default function Workshop({
       <div className="section-label">
         <span>03 / 行动契约</span>
         <span>
-          <Zap size={12} /> {scenario.engineVersion === 2 ? `任务余量 ${state.runtime?.missionRemaining ?? scenario.limits?.missionBudget} 能量` : '每个工具请求消耗 1 点'}
+          <Zap size={12} /> {(scenario.engineVersion ?? 1) >= 2 ? `任务余量 ${state.runtime?.missionRemaining ?? scenario.limits?.missionBudget} 能量` : '每个工具请求消耗 1 点'}
         </span>
       </div>
       <label className="budget-control">
@@ -171,9 +172,9 @@ export default function Workshop({
             setBuild({ ...build, budget: Number(e.target.value) })
           }
         />
-        <small>{scenario.engineVersion === 2 ? '单次预算只决定何时停下来。任务总能量用完后，须回到整个委托的起点重试。' : '用尽即停止。调低它，观察回声会在哪一步停下。'}</small>
+        <small>{(scenario.engineVersion ?? 1) >= 2 ? '单次预算只决定何时停下来。任务总能量用完后，须回到整个委托的起点重试。' : '用尽即停止。调低它，观察回声会在哪一步停下。'}</small>
       </label>
-      {scenario.goals.length > 1 && scenario.engineVersion === 2 && <div className="goal-order">
+      {scenario.goals.length > 1 && (scenario.engineVersion ?? 1) >= 2 && <div className="goal-order">
         <div className="section-label">04 / 伙伴先处理哪个目标？</div>
         {order.map((fact, index) => <div key={fact}>
           <span>{index + 1}. {scenario.goals.find(g => g.fact === fact)?.label}</span>
@@ -183,6 +184,17 @@ export default function Workshop({
           }}>提前</button>
         </div>)}
         <small>顺序会改变资源消耗；完成条件仍须全部验收。</small>
+      </div>}
+      {scenario.engineVersion === 3 && <div className="protocol-presets">
+        <div className="section-label">{scenario.goals.length>1?"05":"04"} / 保存法器刻度</div>
+        <p className="muted">伙伴自动决定行动时，会使用这里保存的实际参数。错误预设仍会产生真实的参数错误。</p>
+        {scenario.operations.filter(operation=>operation.protocol?.parameters.length).map(operation=><details key={operation.id}><summary>{operation.label} · 参数预设</summary>
+          <ParameterEditor protocol={operation.protocol!} value={build.toolArguments?.[operation.id]??operation.protocol!.defaults} prefix={`preset-${operation.id}`}
+            onChange={value=>setBuild({...build,toolArguments:{...build.toolArguments,[operation.id]:value}})}/>
+        </details>)}
+        <button role="switch" aria-checked={build.stableRequestKeys??false} className="switch-row" onClick={()=>setBuild({...build,stableRequestKeys:!build.stableRequestKeys})}>
+          <Repeat2/><span><strong>重试保留同一业务凭证</strong><small>当前每种操作代表一笔业务。自动重试保留凭证；参数改变会触发冲突，需要你介入。</small></span><i className={build.stableRequestKeys?'switch on':'switch'}/>
+        </button>
       </div>}
       <details className="permissions">
         <summary>

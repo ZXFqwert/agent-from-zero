@@ -43,15 +43,27 @@ for (const match of index.matchAll(/(?:src|href)=["']([^"']+)["']/g)) {
 if (!urls.has(basePath + 'index.html')) throw new Error('Built index.html is missing.');
 if (!assets.some((asset) => asset.url.endsWith('.webp'))) throw new Error('The game art bundle is missing.');
 
-const version = sha256(JSON.stringify(assets) + '\n' + template).slice(0, 24);
+const packs=JSON.parse(await readFile(join(root,'chapter-packs.json'),'utf8'));
+if(packs.schema!==1 || !Array.isArray(packs.commonArt) || !Array.isArray(packs.chapters) || !packs.chapters.length)throw new Error('Invalid chapter pack definition.');
+const chapterIds=new Set(),allArt=new Set();
+for(const pack of packs.chapters){
+  if(!Number.isSafeInteger(pack.number)||pack.chapterId!==`chapter-${String(pack.number).padStart(2,'0')}`||chapterIds.has(pack.chapterId)||!Array.isArray(pack.art)||typeof pack.title!=='string')throw new Error('Invalid chapter pack identity.');
+  chapterIds.add(pack.chapterId);
+  for(const name of [...packs.commonArt,...pack.art]){if(typeof name!=='string'||!/^[a-z0-9-]+$/.test(name)||!urls.has(`${basePath}art/${name}.webp`))throw new Error(`Missing or invalid chapter asset: ${name}`);allArt.add(`${basePath}art/${name}.webp`);}
+}
+for(const asset of assets.filter(asset=>asset.url.includes('/art/')))if(!allArt.has(asset.url))throw new Error(`Unassigned chapter asset: ${asset.url}`);
+const version = sha256(JSON.stringify(assets) + '\n' + template + JSON.stringify(packs)).slice(0, 24);
 const manifest = {
-  schema: 1,
-  chapterId: 'chapter-01',
+  schema: 2,
   basePath,
   version,
   totalBytes: assets.reduce((sum, asset) => sum + asset.bytes, 0),
   assets,
+  chapters: packs.chapters.map(pack => {
+    const selected=assets.filter(asset => !asset.url.includes('/art/') || [...packs.commonArt,...pack.art].some(name=>asset.url.endsWith(`/art/${name}.webp`)));
+    return {...pack,assets:selected.map(asset=>asset.url),totalBytes:selected.reduce((sum,asset)=>sum+asset.bytes,0)};
+  }),
 };
 await writeFile(join(dist, 'offline-manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 await writeFile(join(dist, 'sw.js'), template.replace(placeholder, JSON.stringify(manifest)));
-process.stdout.write(`Offline chapter ${version}: ${assets.length} files, ${(manifest.totalBytes / 1024 / 1024).toFixed(2)} MiB.\n`);
+process.stdout.write(`Offline release ${version}: ${assets.length} files, ${(manifest.totalBytes / 1024 / 1024).toFixed(2)} MiB.\n`);

@@ -1,5 +1,6 @@
 import type { ScenarioDefinition } from "../engine/types";
 import { chapterOneScenarios, chapterOneFactLabels } from './chapterOne';
+import { chapterTwoScenarios, chapterTwoFactLabels } from './chapterTwo';
 
 export const scenarios: ScenarioDefinition[] = [
   {
@@ -216,6 +217,7 @@ export const scenarios: ScenarioDefinition[] = [
     concepts: ["输出不等于行动", "反馈闭环", "状态验收", "预算与停止"],
   },
   ...chapterOneScenarios,
+  ...chapterTwoScenarios,
 ];
 
 export const chapters = [
@@ -400,6 +402,7 @@ export const profiles: AgentProfile[] = [
 
 export const factLabels: Record<string, string> = {
   ...chapterOneFactLabels,
+  ...chapterTwoFactLabels,
   power: "备用电源",
   light: "灯塔发光",
   latch: "门闩释放",

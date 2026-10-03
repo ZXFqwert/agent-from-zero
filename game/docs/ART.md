@@ -160,3 +160,33 @@ PNG SHA-256：`8f6d520e552a824ad8be9b9c902f0b7401f171a8dbbf3437291dde4e8a7ea048`
 ## 验证界限
 
 已验证文件存在、尺寸、颜色模式、透明度与人工视觉内容。未在本任务内验证真实手机上的最终裁切、性能或动画，需由页面集成与真机体验进一步检查。首领与回声目前为静态透明精灵，位移、呼吸、光晕与攻击效果应由表现层制作；不能宣称已有逐帧动画。
+
+## 第二章原创美术 · 2026-10-03
+
+使用内置 imagegen，实际查看生成图并在手机界面检查。PNG 原件复制入项目，以 Pillow 做 WebP 格式压缩（quality=85, method=6），没有用脚本重绘或抠图。
+
+### forge-background
+
+原稿：`art-source/forge-background.png`；发布：`public/art/forge-background.webp`。尺寸 1024×1536，模式 RGB，透明背景请求 False；发布 274214 字节。
+
+默认原件：`E:/CodexState/home/generated_images/01a09442-5f82-71c1-bdd3-70f8d293450b/exec-a02906fc-1f92-410b-9d28-26e4a7cb71eb.png`。
+
+PNG SHA-256：`e6ecad118084b22d69b58b6fc0acc93899adf2fe40dec1453db4d486501617f6`。
+
+最终提示词：
+
+> Create an original 2D hand-painted mobile fantasy adventure background for Echo Workshop, chapter 'street of broken instruments'. Portrait composition. A moody small enchanted workshop street at dusk: teal blue stone walls and brass pipes, a glowing copper furnace with cooling pipe upper left, a small wooden medicine-crate hoist and guild counter on the right, two brass pneumatic receipt tubes above a workbench with a few pale blank paper receipts drifting. No characters. Empty usable foreground lower third for a small companion sprite. Expressive storybook gouache and watercolor texture, warm amber golden lamp accents, muted dark petroleum teal and dusty indigo shadows, readable silhouettes, restrained details. Environment occupies full image, cinematic vertical depth, not an isometric diagram or a UI mockup. No text, letters, logos, numbers, watermark or interface. All paper blank. Main central focus a brass workbench with instruments. This background is for a thoughtful Chinese mobile fantasy RPG, charming and mysterious, cozy not horror.
+
+### paper-clerk
+
+原稿：`art-source/paper-clerk.png`；发布：`public/art/paper-clerk.webp`。尺寸 1024×1536，模式 RGBA，透明背景请求 True；发布 384158 字节。
+
+默认原件：`E:/CodexState/home/generated_images/01a09442-5f82-71c1-bdd3-70f8d293450b/exec-49eafb39-1fa9-47fe-9fb1-5e3d11edc42e.png`。
+
+PNG SHA-256：`9832e48a38acced4a7012f866d8f394fc48ac2480584d4ed1c150b693d36b97b`。
+
+最终提示词：
+
+> Original 2D fantasy mobile RPG enemy sprite, full body, isolated on genuinely transparent background. A magical guild clerk made of folded parchment and drifting blank receipt slips. A crooked brass stamp helmet, small narrow glowing violet eye slits, floating paper robe, bent arms holding a big quill and a wax seal stamp, paper receipt plates orbiting like a shield. Mysterious mischievous bureaucrat, not horror, no human face. Storybook hand-painted gouache and watercolor with fine ink contours. Dusty cream and ochre parchment, dark teal shaded creases, small purple and warm golden magic accents. Single character fills frame vertically, clean readable silhouette, three-quarter front view facing slightly left toward the protagonist, feet and all accessories included. No backdrop, no ground, no shadow outside character, no interface, no letters, words, numbers, logos or watermark; all papers blank. Designed to overlay a moody teal enchanted workshop street. Keep asymmetrical personality and small exaggerated hands.
+
+纸甲书记原稿具有实际 Alpha 通道，保留转换后的透明度。纸盾、库存和光环由 Phaser 按实际世界与验收事实绘制；精灵是静态原画，呼吸/位移与脉冲由场景动画提供，不宣称逐帧手绘动画。

@@ -1,13 +1,14 @@
 /* Replaced by scripts/prepare-offline.mjs after Vite builds. */
 const RELEASE = null /* ECHO_OFFLINE_MANIFEST */;
-const CACHE_PREFIX = 'echo-workshop-chapter-01-';
-const CACHE_NAME = CACHE_PREFIX + (RELEASE?.version || 'unbuilt');
+const CACHE_PREFIX = 'echo-workshop-pack-';
+const cacheName = (chapterId) => CACHE_PREFIX + (RELEASE?.version || 'unbuilt') + '-' + chapterId;
 const BASE = '/play/';
-const MARKER = new URL(BASE + '__offline_complete__', self.location.origin).href;
+const markerUrl = (chapterId) => new URL(BASE + '__offline_complete__/' + chapterId, self.location.origin).href;
+const chapterFor = (chapterId) => {const chapter=RELEASE?.chapters.find(chapter=>chapter.chapterId===chapterId);if(!chapter)throw new Error('未知章节离线包。');return chapter;};
 let downloadTask = null;
 
 function assertRelease() {
-  if (!RELEASE || RELEASE.schema !== 1 || RELEASE.basePath !== BASE || !Array.isArray(RELEASE.assets)) {
+  if (!RELEASE || RELEASE.schema !== 2 || RELEASE.basePath !== BASE || !Array.isArray(RELEASE.assets) || !Array.isArray(RELEASE.chapters)) {
     throw new Error('离线清单尚未构建。');
   }
 }
@@ -16,43 +17,45 @@ function reply(port, data) {
   try { port?.postMessage(data); } catch { /* The requesting page can close during a download. */ }
 }
 
-async function status() {
+async function status(chapterId = 'chapter-01') {
   assertRelease();
-  const cache = await caches.open(CACHE_NAME);
-  const response = await cache.match(MARKER);
+  const chapter = chapterFor(chapterId);
+  const cache = await caches.open(cacheName(chapterId));
+  const response = await cache.match(markerUrl(chapterId));
   let chapterAvailable = false;
   if (response) {
     try {
       const marker = await response.json();
-      chapterAvailable = marker.version === RELEASE.version && marker.files === RELEASE.assets.length;
+      chapterAvailable = marker.version === RELEASE.version && marker.files === chapter.assets.length;
       // A completion marker alone cannot hide partial browser eviction.
       if (chapterAvailable) {
-        for (const asset of RELEASE.assets) {
-          if (!(await cache.match(new URL(asset.url, self.location.origin).href))) {
+        for (const url of chapter.assets) {
+          if (!(await cache.match(new URL(url, self.location.origin).href))) {
             chapterAvailable = false;
-            await cache.delete(MARKER);
+            await cache.delete(markerUrl(chapterId));
             break;
           }
         }
       }
     } catch { chapterAvailable = false; }
   }
-  return { version: RELEASE.version, chapterAvailable, bytes: RELEASE.totalBytes, totalAssets: RELEASE.assets.length };
+  return { version: RELEASE.version, chapterAvailable, bytes: chapter.totalBytes, totalAssets: chapter.assets.length };
 }
 
-async function download(port) {
+async function download(port, chapterId) {
+  const chapter = chapterFor(chapterId);
   assertRelease();
   if (downloadTask) throw new Error('另一处窗口正在下载本章节，请稍后再试。');
   const run = async () => {
-    const existing = await status();
+    const existing = await status(chapterId);
     if (existing.chapterAvailable) return existing;
     // Only this release's incomplete cache is replaced. Previous complete releases survive.
-    await caches.delete(CACHE_NAME);
-    const cache = await caches.open(CACHE_NAME);
+    await caches.delete(cacheName(chapterId));
+    const cache = await caches.open(cacheName(chapterId));
     let bytes = 0;
     let completed = 0;
     try {
-      for (const asset of RELEASE.assets) {
+      for (const asset of RELEASE.assets.filter(asset=>chapter.assets.includes(asset.url))) {
         const url = new URL(asset.url, self.location.origin);
         if (url.origin !== self.location.origin || !url.pathname.startsWith(BASE)) throw new Error('离线资源超出了游戏范围。');
         const controller = new AbortController();
@@ -73,12 +76,12 @@ async function download(port) {
         await cache.put(url.href, new Response(body, { status: 200, headers }));
         bytes += body.byteLength;
         completed += 1;
-        reply(port, { type: 'DOWNLOAD_PROGRESS', progress: { completed, total: RELEASE.assets.length, bytes, totalBytes: RELEASE.totalBytes } });
+        reply(port, { type: 'DOWNLOAD_PROGRESS', progress: { completed, total: chapter.assets.length, bytes, totalBytes: chapter.totalBytes } });
       }
-      await cache.put(MARKER, new Response(JSON.stringify({ version: RELEASE.version, files: completed }), { headers: { 'content-type': 'application/json' } }));
-      return await status();
+      await cache.put(markerUrl(chapterId), new Response(JSON.stringify({ version: RELEASE.version, files: completed }), { headers: { 'content-type': 'application/json' } }));
+      return await status(chapterId);
     } catch (error) {
-      await caches.delete(CACHE_NAME);
+      await caches.delete(cacheName(chapterId));
       throw error;
     }
   };
@@ -99,11 +102,12 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('message', (event) => {
   const port = event.ports[0];
   const type = event.data?.type;
+  const chapterId = event.data?.chapterId ?? 'chapter-01';
   if (!['GET_OFFLINE_STATUS', 'DOWNLOAD_CHAPTER', 'ACTIVATE_UPDATE'].includes(type)) return;
   event.waitUntil((async () => {
     try {
-      if (type === 'GET_OFFLINE_STATUS') reply(port, { type: 'OFFLINE_STATUS', status: await status() });
-      if (type === 'DOWNLOAD_CHAPTER') reply(port, { type: 'DOWNLOAD_COMPLETE', status: await download(port) });
+      if (type === 'GET_OFFLINE_STATUS') reply(port, { type: 'OFFLINE_STATUS', status: {...await status(chapterId),chapterStatuses:Object.fromEntries(await Promise.all(RELEASE.chapters.map(async chapter=>[chapter.chapterId,(await status(chapter.chapterId)).chapterAvailable]))) } });
+      if (type === 'DOWNLOAD_CHAPTER') reply(port, { type: 'DOWNLOAD_COMPLETE', status: {...await download(port, chapterId),chapterStatuses:Object.fromEntries(await Promise.all(RELEASE.chapters.map(async chapter=>[chapter.chapterId,(await status(chapter.chapterId)).chapterAvailable]))) } });
       if (type === 'ACTIVATE_UPDATE') {
         // Only the UI's safe-checkpoint action sends this message.
         await self.skipWaiting();
@@ -115,9 +119,16 @@ self.addEventListener('message', (event) => {
   })());
 });
 
-async function completeCache() {
-  const cache = await caches.open(CACHE_NAME);
-  return (await cache.match(MARKER)) ? cache : null;
+async function completeCaches() {
+  const result=[];
+  for(const chapter of RELEASE.chapters) {
+    const cache=await caches.open(cacheName(chapter.chapterId));
+    if(await cache.match(markerUrl(chapter.chapterId)))result.push(cache);
+  }
+  return result;
+}
+async function savedResponse(url) {
+  for(const cache of await completeCaches()){const response=await cache.match(url);if(response)return response;}
 }
 
 self.addEventListener('fetch', (event) => {
@@ -131,19 +142,16 @@ self.addEventListener('fetch', (event) => {
       try {
         const response = await fetch(request);
         if (response.ok) return response;
-        const cache = await completeCache();
-        return (await cache?.match(new URL(BASE + 'index.html', self.location.origin).href)) || response;
+        return (await savedResponse(new URL(BASE + 'index.html', self.location.origin).href)) || response;
       } catch {
-        const cache = await completeCache();
-        return (await cache?.match(new URL(BASE + 'index.html', self.location.origin).href)) || new Response('本章节尚未下载。联网后打开游戏，在旅程菜单下载离线章节。', { status: 503, headers: { 'content-type': 'text/plain;charset=utf-8' } });
+        return (await savedResponse(new URL(BASE + 'index.html', self.location.origin).href)) || new Response('本章节尚未下载。联网后打开游戏，在旅程菜单下载离线章节。', { status: 503, headers: { 'content-type': 'text/plain;charset=utf-8' } });
       }
     })());
     return;
   }
   if (!RELEASE?.assets.some((asset) => asset.url === url.pathname)) return;
   event.respondWith((async () => {
-    const cache = await completeCache();
-    const saved = await cache?.match(url.origin + url.pathname);
+    const saved = await savedResponse(url.origin + url.pathname);
     return saved || fetch(request);
   })());
 });

@@ -41,14 +41,18 @@ export default function Scene({ state, scenario, reducedMotion }: {
           ["ferry", "ferry-background"], ["ferry-far", "ferry-far-background"],
           ["ferry-far-empty", "ferry-far-empty-background"], ["ferry-loaded", "ferry-loaded-background"],
           ["echo", "echo-companion"], ["phantom", "hollow-herald"],
-        ]) this.load.image(key, `${import.meta.env.BASE_URL}art/${file}.webp`);
+          ["forge", "forge-background"], ["clerk", "paper-clerk"],
+        ]) {
+          if(latest.current.scenario.chapter===1 ? ['forge','clerk'].includes(key) : !['forge','clerk','echo'].includes(key))continue;
+          this.load.image(key, `${import.meta.env.BASE_URL}art/${file}.webp`);
+        }
       }
       create() {
         liveScene = this;
-        this.background = this.add.image(0, 0, "harbor").setOrigin(0.5, 0);
-        this.oldBackground = this.add.image(0, 0, "harbor").setOrigin(0.5, 0).setAlpha(0);
+        this.background = this.add.image(0, 0, sceneTexture(latest.current.scenario,latest.current.state)).setOrigin(0.5, 0);
+        this.oldBackground = this.add.image(0, 0, sceneTexture(latest.current.scenario,latest.current.state)).setOrigin(0.5, 0).setAlpha(0);
         this.glow = this.add.graphics();
-        this.phantom = this.add.image(0, 0, "phantom");
+        this.phantom = this.add.image(0, 0, latest.current.scenario.chapter===2?"clerk":"phantom");
         this.echo = this.add.image(0, 0, "echo").setOrigin(0.5, 1);
         if (!latest.current.reducedMotion) {
           this.tweens.add({ targets: this.echo, angle: { from: -1, to: 1 }, duration: 2400, yoyo: true, repeat: -1, ease: "Sine.inOut" });
@@ -89,9 +93,26 @@ export default function Scene({ state, scenario, reducedMotion }: {
         this.background.setPosition(w / 2, 0).setDisplaySize(w, backdropHeight).setTint(boss ? 0xadb6d5 : 0xffffff);
         this.oldBackground.setPosition(w / 2, 0).setDisplaySize(w, backdropHeight).setTint(boss ? 0xadb6d5 : 0xffffff);
         this.echo.setPosition(w * (boss || art === "ferry" ? 0.23 : 0.28), h * 0.8).setDisplaySize(w * 0.28, w * 0.315);
-        this.phantom.setVisible(boss && s.status !== "won").setPosition(w * 0.65, h * 0.39).setDisplaySize(w * 0.53, w * 0.555);
+        this.phantom.setVisible(boss && s.status !== "won").setPosition(w * 0.65, h * 0.39).setDisplaySize(w * (art === "forge"?0.43:0.53), w * (art === "forge"?0.645:0.555));
         this.phantom.setAlpha(Math.max(0.35, 1 - s.verifiedGoals.length * 0.28));
         this.glow.clear();
+        if(art==='forge') {
+          // These are visible physical objects; the policy still only reads its received context.
+          if('depotCrates' in s.world)for(const [fact,x] of [['depotCrates',0.64],['clinicCrates',0.87]] as const) {
+            for(let i=0;i<Number(s.world[fact]);i++) {
+              const cx=px(x),cy=h*0.58-i*18;
+              this.glow.fillStyle(fact==='clinicCrates'?0xb8d3b3:0xc8a475,0.9).fillRoundedRect(cx-9,cy-9,18,16,2);
+              this.glow.lineStyle(1,0x533e2c,0.8).strokeRect(cx-7,cy-7,14,12);
+            }
+          }
+          if(s.world.coolantReady===true)this.aura(px(0.22),py(0.19),0x91dedc);
+          if(s.world.furnaceSafe===true)this.ring(px(0.22),py(0.19),0x91dedc,27);
+          for(const [fact,x] of [['frontOpen',0.3],['northValve',0.44],['southValve',0.59],['documentStamped',0.72]] as const)if(s.world[fact]===true)this.aura(px(x),h*0.48,0xf1d18b,0.7);
+          if(boss)for(let i=0;i<q.goals.length;i++)if(!s.verifiedGoals.includes(q.goals[i].fact)) {
+            this.glow.fillStyle(0xe9ddc1,0.7).fillRoundedRect(px(0.58)+i*13,h*0.35+i*8,26,34,2);
+            this.glow.lineStyle(1,0x716451,0.6).strokeRect(px(0.58)+i*13+5,h*0.35+i*8+8,15,2);
+          }
+        }
         if (art === "harbor") {
           const lamps: [boolean, number, number][] = boss
             ? [[s.world.westLight === true, 0.24, 0.2], [s.world.eastLight === true, 0.76, 0.2]]
@@ -162,7 +183,7 @@ export default function Scene({ state, scenario, reducedMotion }: {
     const render = () => liveScene?.paint();
     renderer.events.on("echo-state", render);
     return () => { renderer.events.off("echo-state", render); renderer.destroy(true); game.current = null; };
-  }, []);
+  }, [scenario.chapter]);
   useEffect(() => { game.current?.events.emit("echo-state"); }, [state, scenario, reducedMotion]);
   const statusText = state.status === "won" ? "真实目标已验收" : state.status === "running" ? "回声正在行动" : "回声等待你的下一步指令";
   const visibleChange = sceneArt(scenario) === "ferry" && state.world.boatAt === "far" ? "，渡船已到达远岸" : sceneArt(scenario) === "warehouse" && state.world.gate === true ? "，仓库门已经开启" : "";

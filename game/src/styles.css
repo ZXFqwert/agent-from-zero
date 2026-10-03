@@ -2133,3 +2133,20 @@ summary {
   .mission-rules { margin:6px 0 12px; }
 }
 @media (max-width:360px) { .target-grid { gap:6px; } .target-card { padding:10px; } }
+
+/* Tool protocols remain readable and tappable on a 320px phone. */
+.protocol-form,.receipt-desk,.protocol-presets {margin:20px 0;padding:16px;border:1px solid var(--line);border-radius:16px;background:#102c32aa;display:grid;gap:12px;}
+.parameter-fields {display:grid;gap:12px;}
+.protocol-form label,.receipt-desk label,.parameter-fields label {display:grid;gap:7px;font-size:13px;}
+.parameter-fields small,.protocol-form small {display:block;color:var(--muted);font-size:11px;line-height:1.6;}
+.parameter-fields select,.protocol-form input,.receipt-desk select {width:100%;min-width:0;min-height:44px;padding:10px;background:#0b2027;color:#e8e6d7;border:1px solid var(--line);border-radius:8px;font:inherit;}
+.protocol-form code,.receipt-card code,.event-protocol {overflow-wrap:anywhere;white-space:pre-wrap;font-size:11px;color:var(--gold);}
+.receipt-desk p {font-size:12px;color:var(--muted);line-height:1.7;}
+.receipt-cards {display:grid;gap:10px;}
+.receipt-card {text-align:left;display:grid;gap:8px;padding:14px;background:#d9c69812;border:1px solid var(--line);border-radius:10px;color:#e8e6d7;min-height:64px;}
+.receipt-card.selected {border-color:var(--gold);background:#e4c78320;}
+.receipt-card strong {font-size:12px;line-height:1.7;font-weight:500;}
+.receipt-card small {color:var(--muted);font-size:11px;}
+.protocol-presets details {padding:10px 0;border-bottom:1px solid var(--line);}
+.protocol-presets summary {font-size:13px;cursor:pointer;padding:6px 0 12px;}
+.protocol-presets .switch-row {padding:10px 0;}
