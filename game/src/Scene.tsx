@@ -46,12 +46,13 @@ export default function Scene({ state, scenario, reducedMotion }: {
           ["forge", "forge-background"], ["clerk", "paper-clerk"],
           ["clock", "clock-background"], ["warden", "endless-warden"],
           ["court", "court-background"], ["regent", "counterfeit-regent"],
+          ["council", "council-background"], ["speaker", "mirror-speaker"],
           ["bridge", "bridge-background"], ["chorus", "chorus-bridgewright"],
           ["mideng", "mideng-companion"], ["zhenzhou", "zhenzhou-companion"],
           ["archive", "archive-background"], ["keeper", "palimpsest-keeper"],
           ["corridor", "corridor-background"], ["archivist", "many-faced-archivist"],
         ]) {
-          const allowed=({1:['harbor','warehouse','warehouse-open','tide','ferry','ferry-far','ferry-far-empty','ferry-loaded','phantom'],2:['forge','clerk'],3:['clock','warden'],4:['corridor','archivist'],5:['archive','keeper'],6:['court','regent'],7:['bridge','chorus','mideng','zhenzhou']} as Record<number,string[]>)[latest.current.scenario.chapter]??[];
+          const allowed=({1:['harbor','warehouse','warehouse-open','tide','ferry','ferry-far','ferry-far-empty','ferry-loaded','phantom'],2:['forge','clerk'],3:['clock','warden'],4:['corridor','archivist'],5:['archive','keeper'],6:['court','regent'],7:['bridge','chorus','mideng','zhenzhou'],8:['council','speaker']} as Record<number,string[]>)[latest.current.scenario.chapter]??[];
           if(key!=='echo'&&!allowed.includes(key))continue;
           this.load.image(key, `${import.meta.env.BASE_URL}art/${file}.webp`);
         }
@@ -61,7 +62,7 @@ export default function Scene({ state, scenario, reducedMotion }: {
         this.background = this.add.image(0, 0, sceneTexture(latest.current.scenario,latest.current.state)).setOrigin(0.5, 0);
         this.oldBackground = this.add.image(0, 0, sceneTexture(latest.current.scenario,latest.current.state)).setOrigin(0.5, 0).setAlpha(0);
         this.glow = this.add.graphics();
-        this.phantom = this.add.image(0, 0, latest.current.scenario.chapter===7?"chorus":latest.current.scenario.chapter===6?"regent":latest.current.scenario.chapter===5?"keeper":latest.current.scenario.chapter===4?"archivist":latest.current.scenario.chapter===3?"warden":latest.current.scenario.chapter===2?"clerk":"phantom");
+        this.phantom = this.add.image(0, 0, latest.current.scenario.chapter===8?"speaker":latest.current.scenario.chapter===7?"chorus":latest.current.scenario.chapter===6?"regent":latest.current.scenario.chapter===5?"keeper":latest.current.scenario.chapter===4?"archivist":latest.current.scenario.chapter===3?"warden":latest.current.scenario.chapter===2?"clerk":"phantom");
         this.echo = this.add.image(0, 0, "echo").setOrigin(0.5, 1);
         if(latest.current.scenario.chapter===7){this.mideng=this.add.image(0,0,'mideng').setOrigin(0.5,1);this.zhenzhou=this.add.image(0,0,'zhenzhou').setOrigin(0.5,1);}
         if (!latest.current.reducedMotion) {
@@ -106,9 +107,15 @@ export default function Scene({ state, scenario, reducedMotion }: {
         this.echo.setPosition(w * (art==='bridge'?0.2:boss || art === "ferry" ? 0.23 : 0.28), h * (art==='bridge'?0.64:0.8)).setDisplaySize(w * (art==='bridge'?0.24:0.28), w * (art==='bridge'?0.27:0.315));
         this.mideng?.setPosition(w*0.49,h*0.64).setDisplaySize(w*0.2,w*0.2);
         this.zhenzhou?.setPosition(w*0.78,h*0.64).setDisplaySize(w*0.2,w*0.2);
-        this.phantom.setVisible(boss && s.status !== "won").setPosition(w * 0.65, h * ((art === "archive"||art === "court"||art==='bridge')?0.47:0.39)).setDisplaySize(w * (art === "clock"?0.5:art === "forge"?0.43:0.53), w * ((art === "corridor"||art === "archive"||art === "court"||art==='bridge')?0.8:art === "clock"?0.557:art === "forge"?0.645:0.555));
+        this.phantom.setVisible(boss && s.status !== "won").setPosition(w * 0.65, h * ((art === "archive"||art === "court"||art==='bridge'||art==='council')?0.47:0.39)).setDisplaySize(w * (art === "clock"?0.5:art === "forge"?0.43:0.53), w * ((art === "corridor"||art === "archive"||art === "court"||art==='bridge'||art==='council')?0.8:art === "clock"?0.557:art === "forge"?0.645:0.555));
         this.phantom.setAlpha(Math.max(0.35, 1 - s.verifiedGoals.length * 0.28));
         this.glow.clear();
+        if(art==='council'){
+          const run=s.evaluation?.runs.filter(r=>r.status==='completed').at(-1);
+          for(const [i,check]of (run?.checks??[]).entries())this.ring(px(0.35+i*0.1),h*0.27,check.status==='pass'?0x95d7c3:check.status==='fail'?0xdfa080:0x9a91b9,9);
+          if(s.evaluation?.certificate)this.ring(px(0.52),h*0.46,0xe5be75,19);
+          if(q.goals.every(g=>s.world[g.fact]===g.equals))this.aura(px(0.5),h*0.43,0x95d7c3,1.2);
+        }
         if(art==='bridge'){
           const artifact=s.team?.artifacts[0];
           if(artifact){
@@ -221,6 +228,7 @@ export default function Scene({ state, scenario, reducedMotion }: {
         }
         if (newEvents.length && !reduce) {
           const won = newEvents.some((event) => event.type === "victory");
+          if(newEvents.some(event=>event.type==='evaluation-result'||event.type==='evaluation-observation'))this.pulse(px(0.5),h*0.35,0xaaa1d1,18);
           const changedWorld = newEvents.some((event) => event.type === "world-change");
           const falseReport = newEvents.some((event) => event.type === "untrusted-message");
           if (won) this.cameras.main.flash(550, 255, 231, 165);

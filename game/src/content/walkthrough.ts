@@ -1,4 +1,6 @@
 import type { GameAction, GameState, ToolCall, TeamBlueprint } from '../engine';
+import type { EvaluationAction } from '../engine/evaluation-contract';
+type WithoutId<T> = T extends {id:string} ? Omit<T,'id'> : never;
 export interface AuthoredTaskRef {jobId:string; occurrence?:number;}
 type TeamStep = (
   | {type:'team';operation:'configure';actorId:string;blueprint:TeamBlueprint}
@@ -21,9 +23,14 @@ export type AuthoredStep =
   | {type:'security';operation:'approve'}
   | {type:'security';operation:'realm';realm:'live'|'sandbox'}
   | TeamStep
+  | (WithoutId<EvaluationAction> & {expectRejected?:boolean})
   | {type:'step'};
 /** Resolve only recorded material and known branches; never synthesize facts or completions. */
 export function resolveAuthoredStep(state:GameState,step:AuthoredStep,id:string):GameAction{
+  if(step.type==='evaluation'){
+    const {expectRejected: _assertion,...request}=step;
+    return {...request,id};
+  }
   if(step.type==='team'){
     const task=(ref:AuthoredTaskRef)=>{const match=state.team?.tasks.filter(t=>t.jobId===ref.jobId)[(ref.occurrence??1)-1];if(!match)throw new Error('路径引用尚未派出的协作任务');return match;};
     const original=(observationId:string)=>{const match=[...(state.context?.records??[])].reverse().find(r=>r.observationId===observationId&&!r.teamOrigin);if(!match)throw new Error('路径引用尚未读取的协作输入');return match;};

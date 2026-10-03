@@ -1,9 +1,10 @@
+import {chapterEightMainOrder as chapterEightMain,chapterEightPrerequisites,chapterEightScenarios} from './chapterEight';
 import { chapterSevenMainOrder as chapterSevenMain, chapterSevenPrerequisites, chapterSevenScenarios } from './chapterSeven';
 import { chapterSixMain, chapterSixPrerequisites, chapterSixScenarios } from './chapterSix';
 import { chapterFiveMain, chapterFivePrerequisites, chapterFiveScenarios } from './chapterFive';
 import { chapterFourMain, chapterFourPrerequisites, chapterFourScenarios } from './chapterFour';
 /** Unlocks are a graph: side quests never gate the main journey. Legacy wins remain valid. */
-export const journeyOrder = ['harbor-light', 'warehouse-gate', 'tide-ledger', 'last-ferry', 'hollow-regent', 'after-tide', 'etched-door', 'cooling-furnace', 'paired-valves', 'missing-crate', 'doubled-clerk', 'courier-lock', 'brass-order', 'cooling-pulse', 'one-crystal-left', 'broken-escapement', 'endless-warden', 'rescue-rope', ...chapterFourMain, ...chapterFiveMain,...chapterSixMain,...chapterSevenMain,...chapterSevenScenarios.slice(6).map(s=>s.id),...chapterSixScenarios.slice(6).map(s=>s.id),...chapterFiveScenarios.slice(6).map(s=>s.id), ...chapterFourScenarios.slice(6).map(s=>s.id), 'fog-bell', 'medicine-detour', 'backyard-address', 'reusable-scale', 'quiet-hours', 'lantern-shift'];
+export const journeyOrder = ['harbor-light', 'warehouse-gate', 'tide-ledger', 'last-ferry', 'hollow-regent', 'after-tide', 'etched-door', 'cooling-furnace', 'paired-valves', 'missing-crate', 'doubled-clerk', 'courier-lock', 'brass-order', 'cooling-pulse', 'one-crystal-left', 'broken-escapement', 'endless-warden', 'rescue-rope', ...chapterFourMain, ...chapterFiveMain,...chapterSixMain,...chapterSevenMain,...chapterEightMain,...chapterEightScenarios.slice(6).map(s=>s.id),...chapterSevenScenarios.slice(6).map(s=>s.id),...chapterSixScenarios.slice(6).map(s=>s.id),...chapterFiveScenarios.slice(6).map(s=>s.id), ...chapterFourScenarios.slice(6).map(s=>s.id), 'fog-bell', 'medicine-detour', 'backyard-address', 'reusable-scale', 'quiet-hours', 'lantern-shift'];
 export const prerequisites: Record<string, string[]> = {
   'harbor-light': [], 'warehouse-gate': ['harbor-light'],
   'hollow-regent': ['warehouse-gate'], // Preserve access granted by the original adventure.
@@ -13,7 +14,7 @@ export const prerequisites: Record<string, string[]> = {
   'missing-crate': ['paired-valves'], 'doubled-clerk': ['missing-crate'], 'courier-lock': ['doubled-clerk'],
   'backyard-address': ['paired-valves'], 'reusable-scale': ['paired-valves'],
   'brass-order':['courier-lock'],'cooling-pulse':['brass-order'],'one-crystal-left':['cooling-pulse'],'broken-escapement':['one-crystal-left'],'endless-warden':['broken-escapement'],'rescue-rope':['endless-warden'],'quiet-hours':['one-crystal-left'],'lantern-shift':['one-crystal-left'],
-  ...chapterFourPrerequisites,...chapterFivePrerequisites,...chapterSixPrerequisites,...chapterSevenPrerequisites,
+  ...chapterFourPrerequisites,...chapterFivePrerequisites,...chapterSixPrerequisites,...chapterSevenPrerequisites,...chapterEightPrerequisites,
   'fog-bell': ['tide-ledger'], 'medicine-detour': ['tide-ledger'],
 };
 export const chapterOneMain = ['harbor-light', 'warehouse-gate', 'tide-ledger', 'last-ferry', 'hollow-regent', 'after-tide'];
@@ -22,9 +23,9 @@ export function isUnlocked(id: string, completed: readonly string[]): boolean {
 }
 export const chapterTwoMain = ['etched-door', 'cooling-furnace', 'paired-valves', 'missing-crate', 'doubled-clerk', 'courier-lock'];
 export const chapterThreeMain=['brass-order','cooling-pulse','one-crystal-left','broken-escapement','endless-warden','rescue-rope'];
-export const mainScenarioIds = [...chapterOneMain, ...chapterTwoMain, ...chapterThreeMain,...chapterFourMain,...chapterFiveMain,...chapterSixMain,...chapterSevenMain];
+export const mainScenarioIds = [...chapterOneMain, ...chapterTwoMain, ...chapterThreeMain,...chapterFourMain,...chapterFiveMain,...chapterSixMain,...chapterSevenMain,...chapterEightMain];
 export function chapterComplete(completed: readonly string[], chapter = 1): boolean {
-  const main=[chapterOneMain,chapterTwoMain,chapterThreeMain,chapterFourMain,chapterFiveMain,chapterSixMain,chapterSevenMain][chapter-1]??[];
+  const main=[chapterOneMain,chapterTwoMain,chapterThreeMain,chapterFourMain,chapterFiveMain,chapterSixMain,chapterSevenMain,chapterEightMain][chapter-1]??[];
   return main.length>0&&main.every(id=>completed.includes(id));
 }
 export function nextMission(current: string, completed: readonly string[], available: readonly string[]): string | undefined {

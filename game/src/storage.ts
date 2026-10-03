@@ -14,7 +14,7 @@ export interface PlayerSave extends SaveEnvelope {
   completedGames: Record<string, GameState>;
   checkpoints: Array<{ scenarioId: string; state: GameState; actions: GameAction[] }>;
 }
-export const CONTENT_VERSION = 'season-0.8.0';
+export const CONTENT_VERSION = 'season-0.9.0';
 export const MAX_SAVE_BYTES = 8_000_000;
 export const emptySave = (): PlayerSave => ({saveVersion:1,kernelVersion:1,contentVersion:CONTENT_VERSION,savedAt:new Date().toISOString(),currentScenarioId:scenarios[0].id,games:{},completedScenarioIds:[],evidence:[],checkpoints:[],playerVersion:1,started:false,choices:{},actions:{},notes:'',sound:false,completedGames:{}});
 
@@ -73,11 +73,11 @@ export function validateSave(input:unknown):PlayerSave {
   try { size = new TextEncoder().encode(JSON.stringify(input)).byteLength; } catch { throw new Error('存档包含无法读取的循环引用。'); }
   if(size > MAX_SAVE_BYTES) throw new Error('存档不能超过 8 MB。');
   const save=structuredClone(input) as unknown as PlayerSave;
-  const legacy = ['harbor-0.1.0','harbor-0.2.0','season-0.3.0','season-0.4.0','season-0.5.0','season-0.6.0','season-0.7.0'].includes(save.contentVersion);
+  const legacy = ['harbor-0.1.0','harbor-0.2.0','season-0.3.0','season-0.4.0','season-0.5.0','season-0.6.0','season-0.7.0','season-0.8.0'].includes(save.contentVersion);
   if(save.saveVersion!==1||save.kernelVersion!==1||save.playerVersion!==1||(!legacy&&save.contentVersion!==CONTENT_VERSION)) throw new Error('存档版本不兼容。请保留原文件，在对应版本中打开。');
   // Migration changes the content envelope only. Legacy action logs still replay in the frozen v1 kernel.
   if(legacy) {
-    const oldIds=save.contentVersion === 'harbor-0.1.0' ? ['harbor-light','warehouse-gate','hollow-regent'] : scenarios.filter(scenario=>scenario.chapter<=(save.contentVersion==='season-0.7.0'?6:save.contentVersion==='season-0.6.0'?5:save.contentVersion==='season-0.5.0'?4:save.contentVersion==='season-0.4.0'?3:save.contentVersion==='season-0.3.0'?2:1)).map(scenario=>scenario.id);
+    const oldIds=save.contentVersion === 'harbor-0.1.0' ? ['harbor-light','warehouse-gate','hollow-regent'] : scenarios.filter(scenario=>scenario.chapter<=(save.contentVersion==='season-0.8.0'?7:save.contentVersion==='season-0.7.0'?6:save.contentVersion==='season-0.6.0'?5:save.contentVersion==='season-0.5.0'?4:save.contentVersion==='season-0.4.0'?3:save.contentVersion==='season-0.3.0'?2:1)).map(scenario=>scenario.id);
     if(!oldIds.includes(save.currentScenarioId)||!record(save.games)||!record(save.completedGames)||!Array.isArray(save.completedScenarioIds)||save.completedScenarioIds.some(id=>!oldIds.includes(id))||Object.keys(save.games).some(id=>!oldIds.includes(id))) throw new Error('旧存档包含未知关卡，迁移已停止。');
     if(!record(save.actions)||!record(save.choices)||!Array.isArray(save.checkpoints)||!Array.isArray(save.evidence)||Object.keys(save.completedGames).some(id=>!oldIds.includes(id))||Object.keys(save.actions).some(id=>!oldIds.includes(id))||Object.keys(save.choices).some(id=>!oldIds.includes(id))||save.checkpoints.some(checkpoint=>!oldIds.includes(checkpoint?.scenarioId))||save.evidence.some(evidence=>!oldIds.includes(evidence?.scenarioId)))throw new Error('旧存档包含当时不存在的内容，迁移已停止。');
     save.contentVersion=CONTENT_VERSION;
@@ -130,7 +130,7 @@ function validateTrace(scenario:ScenarioDefinition,state:GameState,input:unknown
   for(const action of input as GameAction[]) {
     if(!action||typeof action!=='object'||Array.isArray(action)) throw new Error('行动记录包含无效请求。');
     const commonKeys=['id','type'];
-    const permittedKeys=action.type==='team'?[...commonKeys,'operation','actorId','blueprint','jobId','inputRecordIds','boardRefs','afterTaskIds','taskId','resultId','slotId','recordId','expectedRevision','fieldKeys','proposalId']:action.type==='security'?[...commonKeys,'operation','principalId','recordId','call','realm']:action.type==='memory'?[...commonKeys,'operation','key','recordId']:action.type==='session'?[...commonKeys,'operation','branchId','label']:action.type==='skill'?[...commonKeys,'operation','skillId']:action.type==='context'?[...commonKeys,'operation','recordId','summaryId']:action.type==='configure'?[...commonKeys,'blueprint']:action.type==='tool'?[...commonKeys,'call']:action.type==='reset'?[...commonKeys,'preserveBlueprint']:action.type==='dispatch'||action.type==='resume'?[...commonKeys,'mode']:action.type==='step'?[...commonKeys,'source']:action.type==='receive'?[...commonKeys,'callId','receiptId']:commonKeys;
+    const permittedKeys=action.type==='evaluation'?[...commonKeys,'operation','candidateId','criterionIds','aggregation','caseId','caseIds']:action.type==='team'?[...commonKeys,'operation','actorId','blueprint','jobId','inputRecordIds','boardRefs','afterTaskIds','taskId','resultId','slotId','recordId','expectedRevision','fieldKeys','proposalId']:action.type==='security'?[...commonKeys,'operation','principalId','recordId','call','realm']:action.type==='memory'?[...commonKeys,'operation','key','recordId']:action.type==='session'?[...commonKeys,'operation','branchId','label']:action.type==='skill'?[...commonKeys,'operation','skillId']:action.type==='context'?[...commonKeys,'operation','recordId','summaryId']:action.type==='configure'?[...commonKeys,'blueprint']:action.type==='tool'?[...commonKeys,'call']:action.type==='reset'?[...commonKeys,'preserveBlueprint']:action.type==='dispatch'||action.type==='resume'?[...commonKeys,'mode']:action.type==='step'?[...commonKeys,'source']:action.type==='receive'?[...commonKeys,'callId','receiptId']:commonKeys;
     if(Object.keys(action).some(key=>!permittedKeys.includes(key))||(action.type==='reset'&&action.preserveBlueprint!==undefined&&typeof action.preserveBlueprint!=='boolean')) throw new Error('行动记录包含无效参数。');
     const next=reduceGame(scenario,replay,action);
     if(next===replay) throw new Error('行动记录包含被拒绝或重复的操作。');
@@ -156,6 +156,19 @@ function hasEverUsedHint(save:PlayerSave,id:string):boolean {
   return Boolean(save.games[id]?.hintUsed||save.completedGames[id]?.hintUsed||save.checkpoints.some(checkpoint=>checkpoint.scenarioId===id&&checkpoint.state.hintUsed));
 }
 
+/** Exposure is conservative learning context, never a certificate or completion proof. */
+function rememberSeenCases(input:PlayerSave,scenario:ScenarioDefinition,state:GameState,actions:GameAction[]):GameState {
+  if(scenario.engineVersion!==9||!state.evaluation||state.status==='won')return state;
+  const prior=[input.games[scenario.id],input.completedGames[scenario.id],...input.checkpoints.filter(c=>c.scenarioId===scenario.id).map(c=>c.state)];
+  const caseIds=[...new Set(prior.flatMap(game=>game?.evaluation?.seenCaseIds??[]))].sort();
+  const active=state.evaluation.runs.find(run=>run.id===state.evaluation!.activeRunId);
+  if(!caseIds.some(id=>!state.evaluation!.seenCaseIds.includes(id)||active?.caseId===id&&active.firstSeen))return state;
+  const action:GameAction={id:nextHelperId(state,'remember-exposure'),type:'evaluation',operation:'mark-seen',caseIds};
+  const next=reduceGame(scenario,state,action);
+  if(next!==state)actions.push(action);
+  return next;
+}
+
 /** Reset a current attempt atomically while retaining historical wins and their evidence. */
 export function resetCurrentScenario(input:PlayerSave):PlayerSave {
   const save=structuredClone(input);
@@ -168,6 +181,7 @@ export function resetCurrentScenario(input:PlayerSave):PlayerSave {
     const hint:GameAction={id:nextHelperId(state,'remember-hint'),type:'hint'};
     state=reduceGame(scenario,state,hint);actions.push(hint);
   }
+  state=rememberSeenCases(input,scenario,state,actions);
   save.games[scenario.id]=state;save.actions[scenario.id]=actions;
   return save;
 }
@@ -183,6 +197,7 @@ export function restoreCheckpoint(input:PlayerSave,index:number):PlayerSave {
     const hint:GameAction={id:nextHelperId(state,'remember-hint'),type:'hint'};
     state=reduceGame(scenario,state,hint);actions.push(hint);
   }
+  state=rememberSeenCases(input,scenario,state,actions);
   if(state.status==='running') {
     const pause:GameAction={id:nextHelperId(state,'restore-pause'),type:'pause'};
     state=reduceGame(scenario,state,pause);actions.push(pause);

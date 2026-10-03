@@ -31,6 +31,11 @@ export default function Journal({
     [actions, cursor, scenario, state.seed],
   );
   const types: Record<string, string> = {
+    "evaluation-change":"试验契约",
+    "evaluation-request":"试验请求",
+    "evaluation-observation":"试验量测",
+    "evaluation-result":"试验回执",
+    "evaluation-verified":"试验检查",
     "team-change":"协作交接",
     "security-change":"信任与门令",
     "memory-change":"持久档案",
@@ -170,6 +175,7 @@ export default function Journal({
                 context: replay.observed,
                 events: replay.events.slice(-8),
                 ...(replay.team ? {team:replay.team} : {}),
+                ...(replay.evaluation ? {evaluation:replay.evaluation} : {}),
               },
               null,
               2,
@@ -179,7 +185,7 @@ export default function Journal({
       ) : (
         <ol className="event-list">
           {replay.events
-            .filter((e) => layer === "system" || e.type !== "request")
+            .filter((e) => layer === "system" || !["request","evaluation-request"].includes(e.type))
             .map((e) => (
               <li key={e.id} className={`event-${e.type}`}>
                 <div className="event-mark">
@@ -195,6 +201,8 @@ export default function Journal({
                     {e.realm && <span>{e.realm === 'sandbox' ? '镜砂沙箱' : '城市现场'}</span>}
                     {e.actorId && <span>{scenario.team?.actors.find(actor=>actor.id===e.actorId)?.label??'回声'}</span>}
                     {e.taskId && <span>任务 {e.taskId.split(':').at(-1)}</span>}
+                    {e.evaluationCaseId && <span>试验：{scenario.evaluation?.cases.find(c=>c.id===e.evaluationCaseId)?.label??e.evaluationCaseId}</span>}
+                    {e.evaluationRunId && <span>试验世界 · {e.evaluationRunId.split(':').at(-1)}</span>}
                     {e.tool && <span>{e.tool}</span>}
                     {e.delivered === false && (
                       <span className="warning">未送入回声上下文</span>

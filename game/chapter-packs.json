@@ -76,6 +76,15 @@
         "mideng-companion",
         "zhenzhou-companion"
       ]
+    },
+    {
+      "number": 8,
+      "chapterId": "chapter-08",
+      "title": "镜面议会",
+      "art": [
+        "council-background",
+        "mirror-speaker"
+      ]
     }
   ]
 }

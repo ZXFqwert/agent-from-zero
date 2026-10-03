@@ -1,3 +1,4 @@
+import {chapterEightWalkthroughs} from '../src/content/chapterEight';
 import { chapterSevenWalkthroughs } from '../src/content/chapterSeven';
 import { chapterSixWalkthroughs } from '../src/content/chapterSix';
 import { chapterFiveWalkthroughs } from '../src/content/chapterFive';
@@ -21,7 +22,7 @@ import type { GameAction, GameState, ScenarioDefinition } from '../src/engine';
 export const contentBundle = {
   scenarios, prerequisites, journeyOrder, mainScenarioIds,
   stories, uiStories, npcs: chapterOneNpcs,
-  profiles, walkthroughs: [...chapterOneWalkthroughs,...chapterTwoWalkthroughs,...chapterThreeWalkthroughs,...chapterFourWalkthroughs,...chapterFiveWalkthroughs,...chapterSixWalkthroughs,...chapterSevenWalkthroughs],
+  profiles, walkthroughs: [...chapterOneWalkthroughs,...chapterTwoWalkthroughs,...chapterThreeWalkthroughs,...chapterFourWalkthroughs,...chapterFiveWalkthroughs,...chapterSixWalkthroughs,...chapterSevenWalkthroughs,...chapterEightWalkthroughs],
 };
 export type ContentBundle = typeof contentBundle;
 export interface ContentReport { errors: string[]; counts: { scenarios: number; stories: number; profiles: number; paths: number; art: number }; }
@@ -104,13 +105,13 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
 
   for (const scenario of bundle.scenarios) {
     const path = `scenario/${scenario?.id}`, before = report.errors.length;
-    if (!keys(scenario, path, ['id', 'version', 'engineVersion', 'title', 'subtitle', 'brief', 'npc', 'location', 'art', 'chapter', 'kind', 'initialWorld', 'observations', 'operations', 'goals', 'concepts', 'limits', 'hooks', 'transferRequirement','contextCapacity','memory','security','team'], ['id', 'title', 'subtitle', 'brief', 'npc', 'location', 'chapter', 'kind', 'initialWorld', 'observations', 'operations', 'goals', 'concepts'])) continue;
+    if (!keys(scenario, path, ['id', 'version', 'engineVersion', 'title', 'subtitle', 'brief', 'npc', 'location', 'art', 'chapter', 'kind', 'initialWorld', 'observations', 'operations', 'goals', 'concepts', 'limits', 'hooks', 'transferRequirement','contextCapacity','memory','security','team','evaluation'], ['id', 'title', 'subtitle', 'brief', 'npc', 'location', 'chapter', 'kind', 'initialWorld', 'observations', 'operations', 'goals', 'concepts'])) continue;
     for (const key of ['title', 'subtitle', 'brief', 'npc']) text(scenario[key as keyof ScenarioDefinition], `${path}.${key}`);
     integer(scenario.chapter, `${path}.chapter`, 8); if (scenario.version !== undefined) integer(scenario.version, `${path}.version`, 10000);
-    check([undefined, 1, 2, 3, 4, 5, 6, 7, 8].includes(scenario.engineVersion), path, '未知内核版本');
+    check([undefined, 1, 2, 3, 4, 5, 6, 7, 8, 9].includes(scenario.engineVersion), path, '未知内核版本');
     check(['lighthouse', 'warehouse', 'boss'].includes(scenario.location), path, '未知 location');
     check(['guided', 'transfer', 'boss'].includes(scenario.kind), path, '未知 kind');
-    if (scenario.art !== undefined) check(['harbor', 'warehouse', 'tide', 'ferry', 'forge', 'clock', 'corridor', 'archive', 'court','bridge'].includes(scenario.art), path, '未知 art');
+    if (scenario.art !== undefined) check(['harbor', 'warehouse', 'tide', 'ferry', 'forge', 'clock', 'corridor', 'archive', 'court','bridge','council'].includes(scenario.art), path, '未知 art');
     factMap(scenario.initialWorld, `${path}.initialWorld`, undefined, 1);
     strings(scenario.concepts, `${path}.concepts`, 1);
     if (!list(scenario.observations, `${path}.observations`) || !list(scenario.operations, `${path}.operations`, 1) || !list(scenario.goals, `${path}.goals`, 1) || !record(scenario.initialWorld)) continue;
@@ -130,6 +131,25 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
         check((scenario.engineVersion??1)>=5,at,'资料卷轴需内核 5');integer(observation.document.units,at,16);text(observation.document.source,at);
         if(observation.document.summaries!==undefined&&list(observation.document.summaries,at,1))for(const summary of observation.document.summaries)if(keys(summary,at,['id','label','units','retain'],['id','label','units','retain'])){validId(summary.id,at);text(summary.label,at);integer(summary.units,at,16);if(strings(summary.retain,at,1))for(const f of summary.retain)check(observation.facts.includes(f),at,'摘要不能创造原件之外的事实');}
       }
+    }
+    if(scenario.evaluation!==undefined&&keys(scenario.evaluation,path,['candidateFact','candidates','cases','metrics','criteria','gate'],['candidateFact','candidates','cases','metrics','criteria','gate'])){
+      check(scenario.engineVersion===9,path,'评价合同需内核9');const e=scenario.evaluation;
+      validId(e.candidateFact,path);check(own(scenario.initialWorld,e.candidateFact),path,'未知候选设计字段');
+      for(const name of ['candidates','cases','metrics','criteria'] as const)if(list(e[name],path,1))uniqueIds(e[name],path);
+      if(Array.isArray(e.candidates))for(const c of e.candidates)if(keys(c,path,['id','label','description','steps','tools','permissions'],['id','label','description','steps','tools','permissions'])){
+        text(c.label,path);text(c.description,path);strings(c.tools,path,1);strings(c.permissions,path,1);
+        if(list(c.steps,path,1))for(const step of c.steps)if(keys(step,path,['call','whenKnown'],['call'])){
+          if(keys(step.call,path,step.call?.tool==='observe'?['tool','observationId']:step.call?.tool==='operate'?['tool','operationId']:['tool','fact'],['tool'])){
+            check(['observe','operate','verify'].includes(step.call.tool),path,'未知候选法器');
+            for(const key of ['observationId','operationId','fact'])if(step.call[key]!==undefined)validId(step.call[key],path);
+          }
+          if(step.whenKnown!==undefined)factMap(step.whenKnown,path,scenario.initialWorld,1);
+        }
+      }
+      if(Array.isArray(e.cases))for(const c of e.cases)if(keys(c,path,['id','label','description','initialOverrides','category'],['id','label','description','initialOverrides','category'])){text(c.label,path);text(c.description,path);check(['normal','boundary','exception','holdout'].includes(c.category),path,'未知案例范围');factMap(c.initialOverrides,path,scenario.initialWorld);}
+      if(Array.isArray(e.metrics))for(const m of e.metrics)if(keys(m,path,['id','label','observationId','fact'],['id','label','observationId','fact'])){text(m.label,path);validId(m.observationId,path);validId(m.fact,path);}
+      if(Array.isArray(e.criteria))for(const c of e.criteria)if(keys(c,path,['id','label','metricId','equals','atLeast','atMost'],['id','label','metricId'])){text(c.label,path);validId(c.metricId,path);if(c.equals!==undefined)check(['boolean','string','number'].includes(typeof c.equals)&& (typeof c.equals!=='number'||Number.isFinite(c.equals)),path,'验收值须有限事实值');for(const key of ['atLeast','atMost'])if(c[key]!==undefined)check(typeof c[key]==='number'&&Number.isFinite(c[key]),path,'数值验收边界须有限数字');}
+      if(keys(e.gate,path,['caseIds','criterionIds','requireAll'],['caseIds','criterionIds'])){strings(e.gate.caseIds,path,1);strings(e.gate.criterionIds,path,1);if(e.gate.requireAll!==undefined)check(typeof e.gate.requireAll==='boolean',path,'requireAll须布尔值');}
     }
     if(scenario.memory!==undefined&&keys(scenario.memory,path,['slots','initial','skills','initialSkills'],['slots','initial','skills'])){
       check((scenario.engineVersion??1)>=6,path,'记忆与会话只由内核 6 执行');
@@ -165,7 +185,7 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
     }
     for (const operation of scenario.operations) {
       const at = `${path}.operation/${operation?.id}`;
-      if (!keys(operation, at, ['id', 'target', 'label', 'requires', 'effects', 'successText', 'failureText', 'cost', 'failureCost', 'protocol', 'failureKind', 'retryWindow','contextRequires','contextMatches','memoryRequires','sessionRequires','skillRequires','security','collaboration'], ['id', 'target', 'label', 'effects', 'successText', 'failureText'])) continue;
+      if (!keys(operation, at, ['id', 'target', 'label', 'requires', 'effects', 'successText', 'failureText', 'cost', 'failureCost', 'protocol', 'failureKind', 'retryWindow','contextRequires','contextMatches','memoryRequires','sessionRequires','skillRequires','security','collaboration','evaluationRequires'], ['id', 'target', 'label', 'effects', 'successText', 'failureText'])) continue;
       validId(operation.target, `${at}.target`);
       for (const key of ['label', 'successText', 'failureText'] as const) text(operation[key], `${at}.${key}`);
       factMap(operation.effects, `${at}.effects`, scenario.initialWorld, operation.protocol ? 0 : 1);
@@ -199,6 +219,7 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
       if(operation.sessionRequires!==undefined){check((scenario.engineVersion??1)>=6,at,'会话前置需内核 6');keys(operation.sessionRequires,at,['fresh','restored','forks','activeId','activeKind']);}
       if(operation.skillRequires!==undefined){check((scenario.engineVersion??1)>=6,at,'技能前置需内核 6');keys(operation.skillRequires,at,['skillId','afterOperationId'],['skillId']);}
       if(operation.security!==undefined&&keys(operation.security,at,['principalIds','approval','liveOnly','trustedInputs','sandboxRequires'])){check((scenario.engineVersion??1)>=7,at,'执行边界需内核 7');for(const key of ['principalIds','trustedInputs','sandboxRequires'] as const)if(operation.security[key]!==undefined)strings(operation.security[key],at,1);for(const key of ['approval','liveOnly'] as const)if(operation.security[key]!==undefined)check(typeof operation.security[key]==='boolean',at,'边界开关须布尔值');}
+      if(operation.evaluationRequires!==undefined){check(scenario.engineVersion===9,at,'评价交付门槛需内核9');check(typeof operation.evaluationRequires==='boolean',at,'评价交付门槛须布尔值');}
       if(operation.collaboration!==undefined&&keys(operation.collaboration,at,['draftArtifactId','actorIds'])){check(scenario.engineVersion===8,at,'协作岗位需内核 8');if(operation.collaboration.draftArtifactId!==undefined)validId(operation.collaboration.draftArtifactId,at);if(operation.collaboration.actorIds!==undefined)strings(operation.collaboration.actorIds,at,1);}
       for (const key of ['cost', 'failureCost'] as const) if (operation[key] !== undefined) integer(operation[key], `${at}.${key}`);
     }
@@ -234,7 +255,7 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
         }
       }
     }
-    if (scenario.transferRequirement !== undefined && keys(scenario.transferRequirement, `${path}.transferRequirement`, ['operationIds', 'reconfiguration', 'receiptCount','contextIds','summaryIds','memoryKeys','skillIds','freshSessions','security','team'])) {
+    if (scenario.transferRequirement !== undefined && keys(scenario.transferRequirement, `${path}.transferRequirement`, ['operationIds', 'reconfiguration', 'receiptCount','contextIds','summaryIds','memoryKeys','skillIds','freshSessions','security','team','evaluation'])) {
       check(scenario.kind === 'transfer', path, '只有迁移任务能声明迁移证据要求');
       if(scenario.transferRequirement.security!==undefined&&keys(scenario.transferRequirement.security,path,['authenticatedPrincipalIds','approvedOperationIds','sandboxOperationIds','dataOnly'])){check((scenario.engineVersion??1)>=7,path,'安全迁移需内核 7');for(const key of ['authenticatedPrincipalIds','approvedOperationIds','sandboxOperationIds'] as const)if(scenario.transferRequirement.security[key]!==undefined)strings(scenario.transferRequirement.security[key],path,1);if(scenario.transferRequirement.security.dataOnly!==undefined)check(typeof scenario.transferRequirement.security.dataOnly==='boolean',path,'dataOnly须布尔值');}
       if(scenario.transferRequirement.team!==undefined&&keys(scenario.transferRequirement.team,path,['actorIds','receivedJobs','dependency','mergedArtifactIds','observedSourceIds','echoVerified'])){
@@ -242,6 +263,7 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
         for(const name of ['actorIds','receivedJobs','mergedArtifactIds','observedSourceIds'] as const)if(requirement[name]!==undefined)strings(requirement[name],path,1);
         for(const name of ['dependency','echoVerified'] as const)if(requirement[name]!==undefined)check(typeof requirement[name]==='boolean',path,'协作证据开关须布尔值');
       }
+      if(scenario.transferRequirement.evaluation!==undefined&&keys(scenario.transferRequirement.evaluation,path,['caseIds','freshCaseIds','certified'])){check(scenario.engineVersion===9,path,'评价迁移需内核9');for(const key of ['caseIds','freshCaseIds'] as const)if(scenario.transferRequirement.evaluation[key]!==undefined)strings(scenario.transferRequirement.evaluation[key],path,1);if(scenario.transferRequirement.evaluation.certified!==undefined)check(typeof scenario.transferRequirement.evaluation.certified==='boolean',path,'certified须布尔值');}
       if (scenario.transferRequirement.operationIds !== undefined && strings(scenario.transferRequirement.operationIds, `${path}.transferRequirement.operationIds`, 1)) for (const id of scenario.transferRequirement.operationIds) check(scenario.operations.some(operation => operation?.id === id), path, `迁移证据引用未知操作 ${id}`);
       if (scenario.transferRequirement.receiptCount !== undefined) integer(scenario.transferRequirement.receiptCount, `${path}.transferRequirement.receiptCount`, 12);
       for(const key of ['contextIds','summaryIds','memoryKeys','skillIds'] as const)if(scenario.transferRequirement[key]!==undefined)strings(scenario.transferRequirement[key],path,1);
@@ -398,6 +420,17 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
             if(step.expectedRevision!==undefined)integer(step.expectedRevision,at,10000,0);
             if(step.boardRefs!==undefined&&list(step.boardRefs,at))for(const board of step.boardRefs)if(keys(board,at,['slotId','revision'],['slotId','revision'])){validId(board.slotId,at);integer(board.revision,at,10000,0);}
             if(step.blueprint!==undefined&&keys(step.blueprint,at,['tools','permissions','toolPermissions','budget'],['tools','permissions','budget'])){strings(step.blueprint.tools,at);strings(step.blueprint.permissions,at);integer(step.blueprint.budget,at);if(step.blueprint.toolPermissions!==undefined&&keys(step.blueprint.toolPermissions,at,['observe','operate','verify']))for(const values of Object.values(step.blueprint.toolPermissions))strings(values,at);}
+          }else if(step.type==='evaluation'){
+            check(scenario.engineVersion===9,at,'评价路径需内核9');
+            const opKeys:Record<string,string[]>={configure:['candidateId','criterionIds','aggregation'],seal:[],run:['caseId'],tick:[],cancel:[],certify:[],'mark-seen':['caseIds']};
+            check(Object.hasOwn(opKeys,step.operation),at,'未知评价路径动作');
+            if(!keys(step,at,['type','operation','expectRejected',...(opKeys[step.operation]??[])],['type','operation',...(opKeys[step.operation]??[])]))continue;
+            if(step.expectRejected!==undefined)check(typeof step.expectRejected==='boolean',at,'拒绝断言须布尔值');
+            if(step.candidateId!==undefined){validId(step.candidateId,at);check(scenario.evaluation?.candidates.some(c=>c.id===step.candidateId),at,'未知候选构筑');}
+            if(step.criterionIds!==undefined&&strings(step.criterionIds,at,1))for(const id of step.criterionIds)check(scenario.evaluation?.criteria.some(c=>c.id===id),at,'未知验收条件');
+            if(step.aggregation!==undefined)check(['all','any'].includes(step.aggregation),at,'未知聚合规则');
+            if(step.caseId!==undefined){validId(step.caseId,at);check(scenario.evaluation?.cases.some(c=>c.id===step.caseId),at,'未知案例');}
+            if(step.caseIds!==undefined&&strings(step.caseIds,at,1))for(const id of step.caseIds)check(scenario.evaluation?.cases.some(c=>c.id===id),at,'未知案例');
           }else{
             const allowed=step.type==='tool'?['type','call']:step.type==='context'?['type','observationId','operation','origin','summaryId']:step.type==='memory'?['type','operation','key','observationId']:step.type==='session'?['type','operation','branchIndex']:step.type==='skill'?['type','operation','skillId']:step.type==='security'?['type','operation','principalId','observationId','call','realm']:['type'];
             keys(step,at,allowed,['type']);check(['tool','context','memory','session','skill','security','step'].includes(step.type),at,'未知扩展路径动作');
@@ -425,7 +458,7 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
         const next = reduceGame(scenario, state, input);
         if(expectRejected){if(next!==state)throw new Error('应该无副作用拒绝的动作被接受');return;}
         if (next === state) throw new Error(`内核拒绝 ${JSON.stringify(data)}`);
-        cost += next.events.slice(state.events.length).filter(event => event.type === 'request').reduce((sum, event) => sum + (event.cost ?? 1), 0); state = next;
+        cost += next.events.slice(state.events.length).filter(event => (event.type === 'request'||event.type==='evaluation-request')).reduce((sum, event) => sum + (event.cost ?? 1), 0); state = next;
       };
       for (const stage of route.stages) {
         if (state.status === 'running') action({type: 'pause'});
@@ -434,7 +467,7 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
         for(const c of stage.contextChanges??[]){const card=[...(state.context?.records??[])].reverse().find(r=>r.observationId===c.observationId);if(!card)throw new Error('路径在读取之前装卷');action({type:'context',recordId:card.id,operation:c.operation,...(c.summaryId?{summaryId:c.summaryId}:{})} as GameAction);}
         for(const step of stage.steps??[]){
           if(step.type==='tool'||step.type==='step'||step.type==='skill'&&step.operation==='run'){if(state.status==='paused')action({type:'resume',mode:'manual'} as GameAction);else if(state.status!=='running')action({type:'dispatch',mode:'manual'} as GameAction);}
-          action(resolveAuthoredStep(state,step,`resolved-${state.processedActionIds.length}`),step.type==='team'&&step.expectRejected===true);
+          action(resolveAuthoredStep(state,step,`resolved-${state.processedActionIds.length}`),(step.type==='team'||step.type==='evaluation')&&step.expectRejected===true);
         }
         for (const call of stage.calls) action({type: 'tool', call} as GameAction);
         if(stage.collectReceipts) for(const receipt of state.protocol?.receipts.filter(receipt=>!receipt.collected) ?? []) action({type:'receive',callId:receipt.callId,receiptId:receipt.id} as GameAction);
@@ -475,7 +508,7 @@ function main(): void {
   const result = validateContent(input);
   if (result.errors.length) { process.stderr.write(`内容校验失败（${result.errors.length} 项）：\n${result.errors.map(error => `- ${error}`).join('\n')}\n`); process.exitCode = 1; return; }
   const {scenarios, stories, profiles, paths, art} = result.counts;
-  process.stdout.write(`内容校验通过：${scenarios} 个任务，${stories} 份剧情，${profiles} 份官方档案，${paths} 条参考/替代/恢复路线，${art} 项场景美术。\n范围：已制作的第一至七章；不代表完整第一季、真人学习效果或真机验收。官方链接仅校验来源归属与元数据，未重新联网核查正文。\n`);
+  process.stdout.write(`内容校验通过：${scenarios} 个任务，${stories} 份剧情，${profiles} 份官方档案，${paths} 条参考/替代/恢复路线，${art} 项场景美术。\n范围：已制作的第一至八章；不代表完整第一季、真人学习效果或真机验收。官方链接仅校验来源归属与元数据，未重新联网核查正文。\n`);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   try { main(); } catch (error) { process.stderr.write(`内容校验失败：${String(error)}\n`); process.exitCode = 1; }

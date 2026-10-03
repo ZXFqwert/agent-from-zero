@@ -3,6 +3,12 @@ import type { PlayerSave } from '../storage';
 import { uiStories } from '../content/stories';
 
 const landmarks = [
+  ['stamps-and-supplies','实物签收窗','印章以外，物资真正到了居民手中。'],
+  ['three-lamps-one-boundary','私门外的灯路','亮灯和保护私门分别有证据。'],
+  ['sunny-day-ledger','风雨账房','正常与故障案例接受同一版构筑检验。'],
+  ['unweighed-crate','称重货台','未知信息被补查，没有被算成零。'],
+  ['perfect-mirror-speaker','镜面议会','居民的实际处境接受独立检查。'],
+  ['glasshouse-audit','玻璃花房','根部供水经过实测，绿叶没有替代验收。'],
   ['three-hands','南岸接头','测绘与施工通过实际交接修复了接头。'],
   ['private-scrolls','私卷递送台','有限共享板把选定的尺寸交给了施工伙伴。'],
   ['wet-foundation','桥墩施工台','下游等待的是这项成功接回的实际基础任务。'],

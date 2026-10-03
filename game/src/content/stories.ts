@@ -1,3 +1,4 @@
+import {chapterEightStories,chapterEightStory} from './chapterEight';
 import { chapterSevenStories, chapterSevenStory } from './chapterSeven';
 import { chapterSixStories, chapterSixStory } from './chapterSix';
 import { chapterFiveStories, chapterFiveStory } from './chapterFive';
@@ -5,5 +6,5 @@ import { chapterOneStories, chapterOneStory } from './chapterOneStory';
 import { chapterTwoStories, chapterTwoStory } from './chapterTwo';
 import { chapterThreeStories, chapterThreeStory } from './chapterThree';
 import { chapterFourStories, chapterFourStory } from './chapterFour';
-export const stories = [...chapterOneStories, ...chapterTwoStories, ...chapterThreeStories, ...chapterFourStories,...chapterFiveStories,...chapterSixStories,...chapterSevenStories];
-export const uiStories = {...chapterOneStory, ...chapterTwoStory, ...chapterThreeStory,...chapterFourStory,...chapterFiveStory,...chapterSixStory,...chapterSevenStory};
+export const stories = [...chapterOneStories, ...chapterTwoStories, ...chapterThreeStories, ...chapterFourStories,...chapterFiveStories,...chapterSixStories,...chapterSevenStories,...chapterEightStories];
+export const uiStories = {...chapterOneStory, ...chapterTwoStory, ...chapterThreeStory,...chapterFourStory,...chapterFiveStory,...chapterSixStory,...chapterSevenStory,...chapterEightStory};

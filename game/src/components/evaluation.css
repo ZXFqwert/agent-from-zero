@@ -1,0 +1,51 @@
+/* v9 evaluation: a locked contract, isolated cases, and evidence before city delivery. */
+.evaluation-deck{margin-top:24px;padding-top:20px;border-top:1px solid var(--line);min-width:0;overflow-wrap:anywhere}
+.evaluation-deck .section-label{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.evaluation-deck p{font-size:13px;line-height:1.75;margin:10px 0}
+.evaluation-deck small{display:block;font-size:11px;line-height:1.7;color:var(--muted)}
+.evaluation-deck h4{font-size:14px;line-height:1.7;color:#e4d3b0;margin:0 0 12px}
+.evaluation-deck label{display:grid;gap:7px;font-size:13px;line-height:1.7;min-width:0;margin:12px 0}
+.evaluation-deck select{display:block;width:100%;max-width:100%;min-width:0;min-height:44px;padding:10px;background:#122b2c;color:#eee1c5;border:1px solid #6f654d;border-radius:9px;font:inherit}
+.evaluation-deck .button{min-height:44px;width:100%;max-width:100%;margin:12px 0 8px;white-space:normal;line-height:1.6;font-size:13px;overflow-wrap:anywhere}
+.evaluation-deck fieldset{min-width:0;margin:14px 0;padding:10px;border:1px solid #58635c;border-radius:9px}
+.evaluation-deck legend{padding:0 5px;color:#d2c29e;font-size:12px;line-height:1.8}
+.evaluation-deck details{margin:12px 0;min-width:0;font-size:13px;line-height:1.7}
+.evaluation-deck summary{min-height:44px;cursor:pointer;padding:10px 0;color:#d2c29e;line-height:1.8}
+.evaluation-deck-stage{margin:16px 0;padding:14px;border:1px solid #53645b;border-radius:12px;background:#162b2b;min-width:0}
+.evaluation-deck-stage>summary{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.evaluation-deck-stage>summary>span{min-width:0}
+.evaluation-deck-stage>summary>small{font-size:10px;text-align:right}
+.evaluation-deck-candidate{padding:11px;border-left:2px solid #a38559;background:#2c302480;margin:12px 0}
+.evaluation-deck-candidate p{font-size:12px}
+.evaluation-deck-steps{padding-left:22px;margin:10px 0}
+.evaluation-deck-steps>li{margin:9px 0;font-size:12px;line-height:1.7}
+.evaluation-deck label.evaluation-deck-check{display:flex;align-items:flex-start;gap:10px;min-height:44px;margin:4px 0;padding:9px 0;cursor:pointer}
+.evaluation-deck-check>input{appearance:auto;flex-shrink:0;width:19px;height:19px;min-width:19px;margin:2px 0 0;accent-color:#c6a168}
+.evaluation-deck-check>span{min-width:0;flex:1}
+.evaluation-deck-check small{margin-top:4px}
+.evaluation-deck-versions,.evaluation-deck-counts{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0}
+.evaluation-deck-versions>span,.evaluation-deck-counts>span{flex:1 1 90px;padding:8px;border:1px solid #4d5a50;border-radius:8px;font-size:11px;line-height:1.7;text-align:center;background:#1c302d}
+.evaluation-deck-counts strong{font-size:14px;color:#e4d1a7}
+.evaluation-deck-case-note,.evaluation-deck-note{padding:10px;border-left:2px solid #919ab2;background:#272b3b80;font-size:12px;line-height:1.8;color:#cbd0e2}
+.evaluation-deck-run{padding:12px;border:1px solid #6d705c;border-radius:10px;background:#202f2c;margin:12px 0;min-width:0}
+.evaluation-deck-run>summary{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.evaluation-deck-run>summary>span{min-width:0;flex:1}
+.evaluation-deck-run>summary>b{font-size:11px;font-weight:500;flex-shrink:0}
+.evaluation-deck-history-old{background:#222a2c;border-color:#4a5558;color:#a3adb0}
+.evaluation-deck-history-old>summary{color:#a3adb0}
+.evaluation-deck-status{display:inline-block;border:1px solid #8992a2;border-radius:6px;padding:3px 7px;font-size:11px;line-height:1.6;color:#c4cad9;background:#323845;white-space:normal}
+.evaluation-deck-status-pass{border-color:#7b9979;background:#2d4433;color:#c7dfbb}
+.evaluation-deck-status-fail{border-color:#ae8861;background:#463726;color:#e6ca9e}
+.evaluation-deck-check-results,.evaluation-deck-metrics{display:grid;gap:8px;list-style:none;margin:12px 0;padding:0}
+.evaluation-deck-check-results>li,.evaluation-deck-metrics>li{display:grid;gap:6px;padding:10px;border:1px solid #53615b;border-radius:8px;font-size:12px;line-height:1.8;min-width:0;background:#162627}
+.evaluation-deck-check-results>li>div{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.evaluation-deck-check-results>li strong{min-width:0;flex:1;color:#d9cfac}
+.evaluation-deck-events{padding-left:22px;margin:10px 0;font-size:12px;line-height:1.8}
+.evaluation-deck-events li{margin:10px 0}
+.evaluation-deck-events li>span{display:block}
+.evaluation-deck-certificate{padding:12px;border:1px solid #839477;border-radius:10px;background:#27392e;margin:14px 0}
+.evaluation-deck-gaps{padding-left:20px;font-size:12px;line-height:1.8;margin:12px 0}
+.evaluation-deck-gaps>li{margin:6px 0}
+.evaluation-deck-feedback,.evaluation-deck-error{padding:12px;margin:14px 0;border:1px solid #6b7a61;border-radius:10px;background:#25362c}
+.evaluation-deck-error{border-color:#a47e5b;background:#3b2d2280;color:#e0c9ad}
+@media(max-width:360px){.evaluation-deck-stage,.evaluation-deck-run{padding:10px}.evaluation-deck-stage>summary,.evaluation-deck-run>summary{align-items:flex-start;flex-direction:column;gap:4px}.evaluation-deck-stage>summary>small{text-align:left}.evaluation-deck-check-results>li>div{align-items:flex-start;flex-direction:column}.evaluation-deck .button{font-size:12px}.evaluation-deck-versions>span,.evaluation-deck-counts>span{flex-basis:70px}.evaluation-deck fieldset{padding:8px}}

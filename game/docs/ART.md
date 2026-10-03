@@ -334,3 +334,27 @@ PNG SHA-256：`9832e48a38acced4a7012f866d8f394fc48ac2480584d4ed1c150b693d36b97b`
 完整提示词：
 
 > One original friendly recruitable companion sprite for Echo Workshop mobile 2D hand painted fantasy game. Zhenzhou, a compact sturdy wooden and brass artisan golem, warm expressive amber eyes under a small practical ivory workshop cap, deep indigo work apron, brass jointed arms, a folding wooden ruler resting over shoulder and a short construction mallet in one hand. Patient capable builder, charming small broad body, clearly distinct from a slender surveying lantern golem. Full body with all tools and feet visible, clear silhouette readable at 90 pixels, three quarter front facing slightly left, generous transparent margins. Storybook gouache watercolor, fine ink edges, weathered brass wood and deep teal indigo with warm amber accents. Square composition. Truly transparent alpha background, no scenery, ground or external shadow, no text, letters, numbers, logos, UI, watermark or border. Not 3D, not pixel art.
+
+## 镜面议会 v0.9 · 第八章资源（制作中）
+
+使用会话内置图像生成工具独立生成两张原创素材；原图保留，发布用WebP只压缩格式，不编辑背景或透明边界。文字由界面绘制，不烘焙在图像。
+
+### council-background
+
+原图：`E:\CodexState\home\generated_images\01a09442-5f82-71c1-bdd3-70f8d293450b\exec-798d1ff9-498d-4e8b-997e-0a91eb80ada6.png`。项目原稿 `art-source/council-background.png`，发布图 `public/art/council-background.webp`。尺寸 1024×1536，RGB，alpha None。PNG 2996088字节 / SHA-256 `f6d7ff291a0176da5733c6d05ef32afb567adb856bd9c50ed1bf402ae1b02b6c`；WebP 356442字节 / SHA-256 `292fafaaa8e0ce2685603d4c0c8f6bc7e4d215e392768ba5cef86c30bd34acaf`，quality85/method6；alpha逐像素保留。
+
+最终提示词：
+
+```text
+Portrait mobile fantasy strategy adventure game background, 1024x1536 visual composition. A richly hand-painted 2D storybook scene for The Echo Workshop, consistent warm brass wood teal muted indigo parchment palette, soft atmospheric painterly textures, exquisite but readable silhouettes. The Mirror Council chamber in a magical industrial city: large ancient round mirror windows above a vaulted arch, small brass gauges with green glowing crystals arranged on a raised dais in upper half, below them two distinct side alcoves with unlit miniature neighborhoods visible through round portals. Warm golden late afternoon beams and cool violet reflected light. Middle center at y40-65 percent a large open circular marble evaluation table with subtle empty brass rings and crystal measuring devices, no text or numbers. Lower 28 percent wide open wood and stone foreground terrace for three small characters and HUD, no large objects blocking them. Strong depth, hand-drawn slight rough ink edges. No typography, no interface buttons, no letters, no logos, no modern screen or computer, no characters, no border. Designed game art, not a photograph, carefully staged mobile vertical scene with focal point at upper third.
+```
+
+### mirror-speaker
+
+原图：`E:\CodexState\home\generated_images\01a09442-5f82-71c1-bdd3-70f8d293450b\exec-723c5a8d-fa5d-4785-adfc-a85bc5cf8fa1.png`。项目原稿 `art-source/mirror-speaker.png`，发布图 `public/art/mirror-speaker.webp`。尺寸 1024×1536，RGBA，alpha (0, 254)。PNG 2610593字节 / SHA-256 `46e048b2a8c0af5bef9a8a476fac4b01025d74df900fca2f1c5b48b6506e6dfa`；WebP 326112字节 / SHA-256 `484603799ac8e1a40b2d9f146da8c981887c29fe171c700935268265dbf1f170`，quality85/method6；alpha逐像素保留。
+
+最终提示词：
+
+```text
+Transparent background, single full-body enemy boss character sprite for a portrait mobile hand-painted 2D fantasy strategy adventure game called The Echo Workshop. Mirror Speaker, an elegant and imposing magical brass automaton who chairs a city council: broad ornamental cloak of deep indigo and muted teal, a large oval antique mirror as its head with a calm abstract reflected golden face made of geometric light, ornate brass clockwork shoulders, two delicate mechanical hands one holding a small circular crystal gauge glowing green and one holding a fragmented mirror reflecting a dark small neighborhood. Intimidating dignified whimsical storybook villain, not horror. Gold filigree and hand-painted textured brushwork, soft warm highlights, slight ink outline, visually clear silhouette. Three-quarter pose facing left, full head, full cloak, both hands and both boots visible with spacious transparent margins, centered upright composition. Aspect ratio2:3, high quality game illustration. No scenery, no ground plane, no text, no letters or digits, no UI, no frame, no logos. True transparent alpha outside character and objects.
+```

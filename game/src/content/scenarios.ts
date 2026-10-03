@@ -1,3 +1,4 @@
+import {chapterEightScenarios,chapterEightFactLabels} from './chapterEight';
 import { chapterSevenScenarios, chapterSevenFactLabels } from './chapterSeven';
 import { chapterSixScenarios, chapterSixFactLabels } from './chapterSix';
 import { chapterFiveScenarios, chapterFiveFactLabels } from './chapterFive';
@@ -224,7 +225,7 @@ export const scenarios: ScenarioDefinition[] = [
   ...chapterOneScenarios,
   ...chapterTwoScenarios,
   ...chapterThreeScenarios,
-  ...chapterFourScenarios, ...chapterFiveScenarios,...chapterSixScenarios,...chapterSevenScenarios,
+  ...chapterFourScenarios, ...chapterFiveScenarios,...chapterSixScenarios,...chapterSevenScenarios,...chapterEightScenarios,
 ];
 
 export const chapters = [
@@ -410,7 +411,7 @@ export const profiles: AgentProfile[] = [
 export const factLabels: Record<string, string> = {
   ...chapterOneFactLabels,
   ...chapterTwoFactLabels,
-  ...chapterThreeFactLabels, ...chapterFiveFactLabels,...chapterSixFactLabels,...chapterSevenFactLabels,...chapterFourFactLabels,
+  ...chapterThreeFactLabels, ...chapterFiveFactLabels,...chapterSixFactLabels,...chapterSevenFactLabels,...chapterEightFactLabels,...chapterFourFactLabels,
   power: "备用电源",
   light: "灯塔发光",
   latch: "门闩释放",
