@@ -43,8 +43,9 @@ export default function Scene({ state, scenario, reducedMotion }: {
           ["echo", "echo-companion"], ["phantom", "hollow-herald"],
           ["forge", "forge-background"], ["clerk", "paper-clerk"],
           ["clock", "clock-background"], ["warden", "endless-warden"],
+          ["corridor", "corridor-background"], ["archivist", "many-faced-archivist"],
         ]) {
-          const allowed=latest.current.scenario.chapter===1?['harbor','warehouse','warehouse-open','tide','ferry','ferry-far','ferry-far-empty','ferry-loaded','phantom']:latest.current.scenario.chapter===2?['forge','clerk']:['clock','warden'];
+          const allowed=({1:['harbor','warehouse','warehouse-open','tide','ferry','ferry-far','ferry-far-empty','ferry-loaded','phantom'],2:['forge','clerk'],3:['clock','warden'],4:['corridor','archivist']} as Record<number,string[]>)[latest.current.scenario.chapter]??[];
           if(key!=='echo'&&!allowed.includes(key))continue;
           this.load.image(key, `${import.meta.env.BASE_URL}art/${file}.webp`);
         }
@@ -54,7 +55,7 @@ export default function Scene({ state, scenario, reducedMotion }: {
         this.background = this.add.image(0, 0, sceneTexture(latest.current.scenario,latest.current.state)).setOrigin(0.5, 0);
         this.oldBackground = this.add.image(0, 0, sceneTexture(latest.current.scenario,latest.current.state)).setOrigin(0.5, 0).setAlpha(0);
         this.glow = this.add.graphics();
-        this.phantom = this.add.image(0, 0, latest.current.scenario.chapter===3?"warden":latest.current.scenario.chapter===2?"clerk":"phantom");
+        this.phantom = this.add.image(0, 0, latest.current.scenario.chapter===4?"archivist":latest.current.scenario.chapter===3?"warden":latest.current.scenario.chapter===2?"clerk":"phantom");
         this.echo = this.add.image(0, 0, "echo").setOrigin(0.5, 1);
         if (!latest.current.reducedMotion) {
           this.tweens.add({ targets: this.echo, angle: { from: -1, to: 1 }, duration: 2400, yoyo: true, repeat: -1, ease: "Sine.inOut" });
@@ -95,9 +96,16 @@ export default function Scene({ state, scenario, reducedMotion }: {
         this.background.setPosition(w / 2, 0).setDisplaySize(w, backdropHeight).setTint(boss ? 0xadb6d5 : 0xffffff);
         this.oldBackground.setPosition(w / 2, 0).setDisplaySize(w, backdropHeight).setTint(boss ? 0xadb6d5 : 0xffffff);
         this.echo.setPosition(w * (boss || art === "ferry" ? 0.23 : 0.28), h * 0.8).setDisplaySize(w * 0.28, w * 0.315);
-        this.phantom.setVisible(boss && s.status !== "won").setPosition(w * 0.65, h * 0.39).setDisplaySize(w * (art === "clock"?0.5:art === "forge"?0.43:0.53), w * (art === "clock"?0.557:art === "forge"?0.645:0.555));
+        this.phantom.setVisible(boss && s.status !== "won").setPosition(w * 0.65, h * 0.39).setDisplaySize(w * (art === "clock"?0.5:art === "forge"?0.43:0.53), w * (art === "corridor"?0.75:art === "clock"?0.557:art === "forge"?0.645:0.555));
         this.phantom.setAlpha(Math.max(0.35, 1 - s.verifiedGoals.length * 0.28));
         this.glow.clear();
+        if(art==='corridor') {
+          const restored=q.goals.filter(g=>s.world[g.fact]===g.equals).length;
+          this.glow.lineStyle(2,restored?0x9cdcc7:0xb5a3df,0.6).strokeCircle(px(0.5),py(0.12),w*0.12);
+          for(let i=0;i<(s.context?.activeIds.length??0);i++){this.glow.fillStyle(0xdbc090,0.9).fillRoundedRect(px(0.14)+i*18,h*0.67,13,21,2);}
+          if(restored)this.aura(px(0.5),py(0.48),0x9cdcc7,1.4);
+          if(boss)for(let i=0;i<q.goals.length;i++)if(!s.verifiedGoals.includes(q.goals[i].fact))this.ring(px(0.6+i*0.07),h*0.29,0xb5a3df,9);
+        }
         if(art==='clock') {
           const cx=px(0.5),cy=py(0.135),angle=(s.runtime?.toolCalls??0)*0.42;
           const spinning=s.world.ritualActive!==false && s.world.turnstileStopped!==true;

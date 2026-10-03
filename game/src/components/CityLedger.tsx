@@ -13,13 +13,15 @@ const landmarks = [
   ['paired-valves','分流管道','两闸状态与各自回执已核对。'],
   ['missing-crate','公会货梯','一次业务与多次调用分开记账。'],
   ['doubled-clerk','交接柜台','箱数与签收真实吻合，纸盾已经消散。'],
+  ['folded-map','卷轴门廊','回声携带实际需要的资料。'],
+  ['many-faced-archivist','回廊档案桥','旧口令的面具落下，新实测恢复通道。'],
   ['brass-order','黄铜基座','校准不再被稍后的润滑冲掉。'],
   ['endless-warden','报时钟楼','续刻仪式已停止，居民通道恢复。'],
   ['rescue-rope','断桥救援台','孩子沿着有牢固锚点的绳子回来了。'],
 ];
 export default function CityLedger({save}:{save:PlayerSave}) {
   const choices=Object.entries(save.choices).map(([id,choice])=>({id,story:uiStories[id],choice})).filter(entry=>entry.story);
-  const relics=[['harbor-light','闭环印章','委托、行动与验收'],['tide-ledger','量潮卷轴','成本与现场证据'],['last-ferry','缆绳结','行动顺序'],['after-tide','回潮刻印','变化后的重新验收'],['etched-door','参数刻尺','结构与类型'],['paired-valves','风管回执','调用与结果配对'],['doubled-clerk','唯一订单印','重复请求与副作用'],['cooling-pulse','冷却晶石','有限重试'],['endless-warden','停刻保险盒','明确的停止条件']];
+  const relics=[['harbor-light','闭环印章','委托、行动与验收'],['tide-ledger','量潮卷轴','成本与现场证据'],['last-ferry','缆绳结','行动顺序'],['after-tide','回潮刻印','变化后的重新验收'],['etched-door','参数刻尺','结构与类型'],['paired-valves','风管回执','调用与结果配对'],['doubled-clerk','唯一订单印','重复请求与副作用'],['cooling-pulse','冷却晶石','有限重试'],['endless-warden','停刻保险盒','明确的停止条件'],['narrow-satchel','折卷扣','保留任务条件的压缩'],['many-faced-archivist','溯源镜','让旧快照重新接受检验']];
   return <section className="city-ledger">
     <div className="section-label"><Flame size={16}/>城区留下的变化</div>
     <div className="landmark-grid">{landmarks.map(([id,name,description])=><div className={save.completedScenarioIds.includes(id)?'restored':''} key={id}><CheckCircle2 size={16}/><strong>{name}</strong><small>{save.completedScenarioIds.includes(id)?description:'等待你的契约'}</small></div>)}</div>

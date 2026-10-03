@@ -10,6 +10,7 @@ export interface ObservationDefinition {
   facts: string[];
   text: string;
   cost?: number;
+  document?: { units: number; source: string; summaries?: Array<{id: string; label: string; units: number; retain: string[]}> };
 }
 
 export interface OperationDefinition {
@@ -27,6 +28,9 @@ export interface OperationDefinition {
   failureKind?: 'temporary' | 'permanent';
   /** Authored clock: after N rejected attempts the physical device becomes ready. */
   retryWindow?: { attempts: number; readyFact: string };
+  /** Inputs extracted from the active documents, distinct from physical prerequisites. */
+  contextRequires?: FactMap;
+  contextMatches?: string[];
 }
 
 export interface ParameterField {
@@ -81,7 +85,7 @@ export interface ScenarioDefinition {
   brief: string;
   npc: string;
   location: 'lighthouse' | 'warehouse' | 'boss';
-  art?: 'harbor' | 'warehouse' | 'tide' | 'ferry' | 'forge' | 'clock';
+  art?: 'harbor' | 'warehouse' | 'tide' | 'ferry' | 'forge' | 'clock' | 'corridor';
   chapter: number;
   kind: 'guided' | 'transfer' | 'boss';
   initialWorld: FactMap;
@@ -90,10 +94,11 @@ export interface ScenarioDefinition {
   goals: GoalDefinition[];
   concepts: string[];
   /** Existing v1 adventures retain their original reducer and replay format. */
-  engineVersion?: 1 | 2 | 3 | 4;
+  engineVersion?: 1 | 2 | 3 | 4 | 5;
+  contextCapacity?: number;
   limits?: ScenarioLimits;
   hooks?: WorldHook[];
-  transferRequirement?: { operationIds?: string[]; reconfiguration?: boolean; receiptCount?: number };
+  transferRequirement?: { operationIds?: string[]; reconfiguration?: boolean; receiptCount?: number; contextIds?: string[]; summaryIds?: string[] };
 }
 
 export interface AgentBlueprint {
@@ -122,7 +127,7 @@ export interface GameEvent {
   id: string;
   sequence: number;
   attempt: number;
-  type: 'configured' | 'dispatched' | 'request' | 'observation' | 'result' | 'claim' | 'verified' | 'victory' | 'paused' | 'resumed' | 'exhausted' | 'blocked' | 'reset' | 'world-change' | 'untrusted-message' | 'environment' | 'policy-stop';
+  type: 'configured' | 'dispatched' | 'request' | 'observation' | 'result' | 'claim' | 'verified' | 'victory' | 'paused' | 'resumed' | 'exhausted' | 'blocked' | 'reset' | 'world-change' | 'untrusted-message' | 'environment' | 'policy-stop' | 'context-change';
   text: string;
   tool?: ToolName;
   target?: string;
@@ -153,7 +158,7 @@ export interface LearningEvidence {
 export type GameStatus = 'ready' | 'running' | 'paused' | 'stalled' | 'exhausted' | 'won';
 
 export interface GameState {
-  kernelVersion: 1 | 2 | 3 | 4;
+  kernelVersion: 1 | 2 | 3 | 4 | 5;
   scenarioId: string;
   scenarioVersion: number;
   seed: number;
@@ -168,6 +173,7 @@ export interface GameState {
   processedActionIds: string[];
   learningEvidence: LearningEvidence[];
   hintUsed: boolean;
+  context?: { records: ContextRecord[]; activeIds: string[]; capacity: number; reply?: {facts: FactMap; source: ObservationRecord['source']; eventId: string} };
   protocol?: { receipts: ProtocolReceipt[]; ledger: ProtocolLedgerEntry[]; droppedOperations: string[] };
   control?: { dispatchCalls: number; failures: Record<string, number>; attempts: Record<string, number>;
     lastFailure?: { operationId: string; call: ToolCall; kind: 'temporary' | 'permanent'; eventId: string };
@@ -179,6 +185,11 @@ export interface GameState {
     executionMode: 'manual' | 'automatic';
     actionHistory: GameAction[];
   };
+}
+
+export interface ContextRecord {
+  id: string; observationId: string; label: string; source: string; text: string;
+  eventId: string; facts: FactMap; units: number; summaryId?: string;
 }
 
 export type ToolCall =
@@ -194,6 +205,7 @@ export type GameAction =
   | { id: string; type: 'resume'; mode?: 'manual' | 'automatic' }
   | { id: string; type: 'tool'; call: ToolCall }
   | { id: string; type: 'receive'; callId: string; receiptId: string }
+  | { id: string; type: 'context'; operation: 'include' | 'exclude' | 'summarize' | 'expand'; recordId: string; summaryId?: string }
   | { id: string; type: 'hint' }
   | { id: string; type: 'reset'; preserveBlueprint?: boolean };
 

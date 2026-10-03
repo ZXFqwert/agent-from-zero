@@ -214,3 +214,28 @@ PNG SHA-256：`9832e48a38acced4a7012f866d8f394fc48ac2480584d4ed1c150b693d36b97b`
 最终提示词：
 
 > Original hand-painted 2D fantasy mobile RPG boss sprite for Echo Workshop, full body isolated on transparent background. 'The Endless Warden': an ancient brass clockwork sentinel with a round blank clock-face chest and a glowing violet pendulum heart, asymmetrical armored shoulders built from worn bronze cogwheels, tiny teal glass eyes in a narrow knight visor, one hand clutching a coiled winding key and the other hand holding a long clock hand as a staff. Majestic stubborn mechanical guardian, melancholy and charming, not horror. Long dusty indigo fabric coat with brass rivets, bronze and muted amber glints, storybook gouache watercolor and fine ink edges, clear readable mobile silhouette. Three-quarter view facing slightly left toward player. Whole helmet, feet, staff included. No ground, backdrop, ground shadow, text, clock numbers, letters, logos, watermark, interface. Genuine alpha transparency around character and between limbs. Designed for a dark teal and amber clocktower background.
+
+
+## 第四章原创美术 · 2026-10-03
+
+内置 imagegen 生成并查看，原件保留。Pillow 仅做 WebP 格式转换（quality=85、method=6），没有做语义编辑或擦背景。最终合成在 390×844 浏览器截图查看；角色为静态精灵，动画、卷轴光标、封印光环和护盾由 Phaser 依据提交的状态绘制，不能决定模拟结果。
+
+### corridor-background
+
+原稿 `art-source/corridor-background.png`，发布 `public/art/corridor-background.webp`；1024×1536 RGB，透明背景 False，发布 299370 字节。
+
+默认原件 `E:/CodexState/home/generated_images/01a09442-5f82-71c1-bdd3-70f8d293450b/exec-a3308c47-96bf-45a5-ae1f-c8b752be7d55.png`。PNG SHA-256 `4126f1ef9fddf5f8835eb96339aadc6c9bb0e00fd345c1f6ff11c943d73db0d0`。
+
+最终提示词：
+
+> Create a premium hand-painted 2D fantasy mobile game environment, vertical 2:3 portrait, NO text, NO letters, NO UI, NO humans. A labyrinthine corridor in an ancient magical archive: deep teal stone arches, winding shelves of scrolls, floating parchment fragments and golden threads, a circular glass memory lens high in the center, a central closed ornate doorway in the far distance, violet fog flowing along the floor, warm amber lanterns, turquoise bioluminescent accents. Storybook gouache and watercolor texture, detailed silhouettes, soft painterly shading, theatrical fantasy adventure atmosphere, dark enough for bright gold UI overlay near top. Foreground bottom 25% is open stone floor so companion can be composited separately. Not photorealistic, no pixel art. Match a charming miniature stone golem adventure game palette with bronze gold, dark ink teal, aged parchment. Single complete scene full bleed.
+
+### many-faced-archivist
+
+原稿 `art-source/many-faced-archivist.png`，发布 `public/art/many-faced-archivist.webp`；1024×1536 RGBA，透明背景 True，实际 Alpha 0–254，发布 422166 字节；转换保留透明度。
+
+默认原件 `E:/CodexState/home/generated_images/01a09442-5f82-71c1-bdd3-70f8d293450b/exec-9671363b-117e-4be8-8c23-73d4373e6c43.png`。PNG SHA-256 `63a4f53d9d7a1813be0c036f80ad87c04773d4e8d6794ce423638c9f49457fdf`。
+
+最终提示词：
+
+> Single full-body character asset on transparent background, no text, no letters, no UI. 'The Many-Faced Archivist', a whimsical menacing 2D fantasy boss for a hand-painted mobile adventure. An animated tall stack of aged parchment scrolls and bronze archive rings, forming a floating magician silhouette with six overlapping ivory theatrical masks, each with different small glowing blue eyes. Main central mask looks thoughtfully sly, not horror. Coiled scroll ribbons create arms, holding a luminous turquoise crystal seal and a blank rolled scroll. Weathered dark teal fabric, bronze and amber details, violet magical wisps. Strong compact readable silhouette, hand-painted storybook gouache texture, soft dimensional illustration, charming mysterious personality. Full body centered, entire silhouette and all scroll ribbons fit with clear padding, facing slightly left, 2:3 character ratio. No floor, no environment, genuinely transparent cutout. Match warm parchment/dark teal stone fantasy archive scene.

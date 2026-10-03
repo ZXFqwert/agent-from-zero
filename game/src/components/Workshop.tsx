@@ -196,7 +196,7 @@ export default function Workshop({
           <Repeat2/><span><strong>重试保留同一业务凭证</strong><small>当前每种操作代表一笔业务。自动重试保留凭证；参数改变会触发冲突，需要你介入。</small></span><i className={build.stableRequestKeys?'switch on':'switch'}/>
         </button>
       </div>}
-      {scenario.engineVersion===4&&<div className="loop-controls">
+      {(scenario.engineVersion??1)>=4&&<div className="loop-controls">
         <div className="section-label">回路保险 · 决定什么时候停</div>
         <label>每次派遣最多调用 <strong>{build.loopPolicy?.maxCalls??8} 次</strong><input aria-label="调用次数上限" type="range" min="1" max="24" value={build.loopPolicy?.maxCalls??8} onChange={event=>setBuild({...build,loopPolicy:{maxCalls:Number(event.target.value),maxRetries:build.loopPolicy?.maxRetries??0,permanentFailure:build.loopPolicy?.permanentFailure??'stop'}})}/></label>
         <label>短暂故障的额外重试 <select aria-label="短暂故障重试上限" value={build.loopPolicy?.maxRetries??0} onChange={event=>setBuild({...build,loopPolicy:{maxCalls:build.loopPolicy?.maxCalls??8,maxRetries:Number(event.target.value),permanentFailure:build.loopPolicy?.permanentFailure??'stop'}})}>{[0,1,2,3,4].map(number=><option key={number} value={number}>{number} 次</option>)}</select></label>

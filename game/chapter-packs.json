@@ -38,6 +38,15 @@
         "clock-background",
         "endless-warden"
       ]
+    },
+    {
+      "number": 4,
+      "chapterId": "chapter-04",
+      "title": "遗忘回廊",
+      "art": [
+        "corridor-background",
+        "many-faced-archivist"
+      ]
     }
   ]
 }
