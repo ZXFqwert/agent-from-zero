@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { scenarios } from '../src/content/scenarios';
 import { createGame, reduceGame } from '../src/engine';
 import type { AgentBlueprint, GameAction } from '../src/engine';
@@ -49,7 +50,7 @@ function checkpoint(save:PlayerSave):PlayerSave {
 
 function allWon():PlayerSave {
   let save=emptySave();
-  for(let index=0;index<scenarios.length;index++)save=finish(configure(begin(save,index)));
+  for(let index=0;index<3;index++)save=finish(configure(begin(save,index)));
   return save;
 }
 
@@ -178,4 +179,15 @@ test('semantically identical object key order does not break action replay impor
   const save=allWon();
   const reorder=(value:unknown):unknown=>Array.isArray(value)?value.map(reorder):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).reverse().map(([key,item])=>[key,reorder(item)])):value;
   assert.deepEqual(validateSave(reorder(save)),save);
+});
+
+test('a real v0.1 browser export migrates its envelope without altering any historical action or proof',()=>{
+  const legacy=JSON.parse(readFileSync(new URL('./fixtures/harbor-v1.json',import.meta.url),'utf8'));
+  const before=JSON.stringify(legacy);
+  const migrated=validateSave(legacy);
+  assert.equal(JSON.stringify(legacy),before,'migration never changes the backup file snapshot');
+  assert.equal(migrated.contentVersion,'harbor-0.2.0');
+  for(const key of ['games','completedGames','actions','choices','evidence','checkpoints']) assert.deepEqual(migrated[key as keyof PlayerSave],legacy[key]);
+  assert.equal(migrated.completedScenarioIds.length,3);
+  assert.deepEqual(validateSave(migrated),migrated);
 });

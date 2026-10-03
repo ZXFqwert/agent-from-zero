@@ -1,4 +1,5 @@
 import { scenarios } from './content/scenarios';
+import { isUnlocked } from './content/progression';
 import { createGame, reduceGame, validateGameState } from './engine';
 import type { GameAction, GameState, SaveEnvelope, ScenarioDefinition } from './engine/types';
 
@@ -13,7 +14,7 @@ export interface PlayerSave extends SaveEnvelope {
   completedGames: Record<string, GameState>;
   checkpoints: Array<{ scenarioId: string; state: GameState; actions: GameAction[] }>;
 }
-export const CONTENT_VERSION = 'harbor-0.1.0';
+export const CONTENT_VERSION = 'harbor-0.2.0';
 export const MAX_SAVE_BYTES = 8_000_000;
 export const emptySave = (): PlayerSave => ({saveVersion:1,kernelVersion:1,contentVersion:CONTENT_VERSION,savedAt:new Date().toISOString(),currentScenarioId:scenarios[0].id,games:{},completedScenarioIds:[],evidence:[],checkpoints:[],playerVersion:1,started:false,choices:{},actions:{},notes:'',sound:false,completedGames:{}});
 
@@ -61,8 +62,15 @@ export function validateSave(input:unknown):PlayerSave {
   let size: number;
   try { size = new TextEncoder().encode(JSON.stringify(input)).byteLength; } catch { throw new Error('存档包含无法读取的循环引用。'); }
   if(size > MAX_SAVE_BYTES) throw new Error('存档不能超过 8 MB。');
-  const save=input as unknown as PlayerSave;
-  if(save.saveVersion!==1||save.kernelVersion!==1||save.playerVersion!==1||save.contentVersion!==CONTENT_VERSION) throw new Error('存档版本不兼容。请保留原文件，在对应版本中打开。');
+  const save=structuredClone(input) as unknown as PlayerSave;
+  const legacy = save.contentVersion === 'harbor-0.1.0';
+  if(save.saveVersion!==1||save.kernelVersion!==1||save.playerVersion!==1||(!legacy&&save.contentVersion!==CONTENT_VERSION)) throw new Error('存档版本不兼容。请保留原文件，在对应版本中打开。');
+  // Migration changes the content envelope only. Legacy action logs still replay in the frozen v1 kernel.
+  if(legacy) {
+    const oldIds=['harbor-light','warehouse-gate','hollow-regent'];
+    if(!oldIds.includes(save.currentScenarioId)||!record(save.games)||!record(save.completedGames)||!Array.isArray(save.completedScenarioIds)||save.completedScenarioIds.some(id=>!oldIds.includes(id))||Object.keys(save.games).some(id=>!oldIds.includes(id))) throw new Error('旧存档包含未知关卡，迁移已停止。');
+    save.contentVersion=CONTENT_VERSION;
+  }
   const ids=scenarios.map(s=>s.id);
   if(!ids.includes(save.currentScenarioId)||!record(save.games)||!record(save.completedGames)||!Array.isArray(save.completedScenarioIds)||!Array.isArray(save.evidence)||!Array.isArray(save.checkpoints)||save.checkpoints.length>3||typeof save.started!=='boolean'||typeof save.sound!=='boolean'||typeof save.notes!=='string'||save.notes.length>10000||!record(save.choices)||!record(save.actions)||typeof save.savedAt!=='string'||!Number.isFinite(Date.parse(save.savedAt))||new Date(save.savedAt).toISOString()!==save.savedAt) throw new Error('存档结构不完整，当前进度未被覆盖。');
   if(!save.started&&(Object.keys(save.games).length>0||save.completedScenarioIds.length>0)) throw new Error('旅途开始标记与关卡进度不一致。');
@@ -73,15 +81,14 @@ export function validateSave(input:unknown):PlayerSave {
   }
   for(const id of Object.keys(save.actions)) if(!ids.includes(id)||!save.games[id]) throw new Error('行动记录引用了不存在的关卡。');
   if(new Set(save.completedScenarioIds).size!==save.completedScenarioIds.length||save.completedScenarioIds.some(id=>!ids.includes(id))) throw new Error('完成记录包含重复或未知关卡。');
-  for(const id of save.completedScenarioIds) if(ids.slice(0,ids.indexOf(id)).some(previousId=>!save.completedScenarioIds.includes(previousId))) throw new Error('历史委托的解锁顺序不一致。');
+  for(const id of save.completedScenarioIds) if(!isUnlocked(id,save.completedScenarioIds)) throw new Error('历史委托的解锁顺序不一致。');
   if(Object.keys(save.completedGames).length!==save.completedScenarioIds.length) throw new Error('完成记录缺少对应的历史验收证据。');
   for(const [id,state] of Object.entries(save.completedGames)) {
     const scenario=scenarios.find(s=>s.id===id);
     if(!scenario||!save.completedScenarioIds.includes(id)||state?.status!=='won'||!validateGameState(scenario,state)) throw new Error('历史完成记录没有有效的验收证据。');
   }
-  const currentIndex=ids.indexOf(save.currentScenarioId);
-  if(currentIndex>0&&!save.completedScenarioIds.includes(ids[currentIndex-1])) throw new Error('当前委托尚未解锁。');
-  for(const id of Object.keys(save.games)) if(ids.indexOf(id)>0&&!save.completedScenarioIds.includes(ids[ids.indexOf(id)-1])) throw new Error('关卡记录引用了尚未解锁的委托。');
+  if(!isUnlocked(save.currentScenarioId,save.completedScenarioIds)) throw new Error('当前委托尚未解锁。');
+  for(const id of Object.keys(save.games)) if(!isUnlocked(id,save.completedScenarioIds)) throw new Error('关卡记录引用了尚未解锁的委托。');
   if(save.evidence.length>scenarios.reduce((total,scenario)=>total+scenario.concepts.length,0)) throw new Error('学习证据数量异常。');
   const expectedEvidence=save.completedScenarioIds.flatMap(id=>save.completedGames[id].learningEvidence);
   if(stableJSON([...save.evidence].sort(evidenceOrder))!==stableJSON([...expectedEvidence].sort(evidenceOrder))) throw new Error('学习证据与历史验收记录不一致。');
@@ -90,7 +97,7 @@ export function validateSave(input:unknown):PlayerSave {
     if(!record(checkpoint)) throw new Error('恢复检查点结构不正确。');
     const scenario=scenarios.find(item=>item.id===checkpoint.scenarioId);
     if(!scenario||!validateGameState(scenario,checkpoint.state)) throw new Error('恢复检查点缺少有效行动证据。');
-    if(ids.indexOf(scenario.id)>0&&!save.completedScenarioIds.includes(ids[ids.indexOf(scenario.id)-1])) throw new Error('恢复检查点引用了尚未解锁的委托。');
+    if(!isUnlocked(scenario.id,save.completedScenarioIds)) throw new Error('恢复检查点引用了尚未解锁的委托。');
     validateTrace(scenario,checkpoint.state,checkpoint.actions);
   }
   return structuredClone(save);
@@ -112,7 +119,7 @@ function validateTrace(scenario:ScenarioDefinition,state:GameState,input:unknown
   for(const action of input as GameAction[]) {
     if(!action||typeof action!=='object'||Array.isArray(action)) throw new Error('行动记录包含无效请求。');
     const commonKeys=['id','type'];
-    const permittedKeys=action.type==='configure'?[...commonKeys,'blueprint']:action.type==='tool'?[...commonKeys,'call']:action.type==='reset'?[...commonKeys,'preserveBlueprint']:commonKeys;
+    const permittedKeys=action.type==='configure'?[...commonKeys,'blueprint']:action.type==='tool'?[...commonKeys,'call']:action.type==='reset'?[...commonKeys,'preserveBlueprint']:action.type==='dispatch'||action.type==='resume'?[...commonKeys,'mode']:action.type==='step'?[...commonKeys,'source']:commonKeys;
     if(Object.keys(action).some(key=>!permittedKeys.includes(key))||(action.type==='reset'&&action.preserveBlueprint!==undefined&&typeof action.preserveBlueprint!=='boolean')) throw new Error('行动记录包含无效参数。');
     const next=reduceGame(scenario,replay,action);
     if(next===replay) throw new Error('行动记录包含被拒绝或重复的操作。');

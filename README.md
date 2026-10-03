@@ -12,7 +12,7 @@
 
 ## 当前状态
 
-网站正在按新方案重构为手机游戏 **《回声工坊：失序之城》**。第一阶段试玩为灯塔、仓库迁移与机制首领三场冒险，入口 [agent.li33.art/play/](https://agent.li33.art/play/)，源码与运行说明见 [game/README.md](game/README.md)。完整第一季尚在制作计划中；先根据本人的手机试玩验收核心玩法，具体接续见 [游戏路线](game/docs/ROADMAP.md)。
+网站正在按新方案重构为手机游戏 **《回声工坊：失序之城》**。第一章现有八场港口冒险，包括错误航道、空船返航、回潮后重新验收、有限法器换装与两种供药路线。入口 [agent.li33.art/play/](https://agent.li33.art/play/)，源码与运行说明见 [game/README.md](game/README.md)。用户已授权制作方试玩后继续，完整第一季仍在制作；软件/编辑验证与真人学习效果分别记录，具体接续见 [游戏路线](game/docs/ROADMAP.md)。
 
 独立网站 **[Agent 实验局](https://agent.li33.art/)** 已上线：八关课程、三个互动实验、七款 Agent 图鉴、社会映射与学习档案。网站源码和运行方式见 [website/README.md](website/README.md)。网站使用独立静态实现，不访问下面 Python 练习的模型配置。
 

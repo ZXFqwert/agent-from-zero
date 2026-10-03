@@ -99,6 +99,64 @@ SHA-256: `3737697e69661da6ad8bef86df04fa07fb486a9046f5a5115567aa3710b578e4`。
 
 SHA-256: `7c6cc28d75947c47b683f2c1c7cccd0a04263c448211787fb755f4dc6ca013a7`。
 
+
+## 正式第一章追加素材
+
+2026-10-02 追加潮汐泵房与渡船场景。全部使用内置 imagegen，透明参数均为 false，编辑输入与输出均以 view_image 检查。原件保存在 art-source/，发布图保存在 public/art/；均为 1024×1536 RGB。用工作区依赖包中的 Sharp 纯转码 WebP（quality 82，effort 6），不缩放、不裁切。每张均小于 550 KB。
+
+渡船额外制作装货、空船远岸、载货远岸三种状态，避免让“船到了”在画面上冒充“药箱已交付”。Scene 的持久状态只使用 state.world；untrusted-message 仅有紫色波纹，不能改变灯、桥或货物位置。currentSafeRoute 不被画成免费正确答案，航牌只显示玩家实际选择。
+
+### tide-background.png / .webp
+
+模式：新场景生成；harbor-background.png 只作画风参考。发布体积：322512 字节。
+
+> Use case: illustration-story. Create a NEW original environment plate for the next scene of the same 2D fantasy mobile adventure as the reference. Reference image is STYLE AND PALETTE ONLY, not a scene to preserve. Portrait 2:3. A harbor tidal measuring station and old pump house beside a small ancient stone bridge at blue hour. Strong readable arrangement: central low stone bridge spans a channel, two clearly distinct water passages splitting left and right behind it; right middle has a brass handwheel pump and intake pipe on a small stone pump-house facade; left middle has a tall tide gauge made of aged brass with evenly spaced plain ticks but NO numbers or letters, dipping into teal water. A small sheltered wooden lectern with open OLD BLANK parchment logbook is on lower-left quay. Foreground bottom quarter broad empty wet stone platform for a separate knee-high stone golem sprite. Warm amber lamp on bridge, ivy and worn sandstone, moody ink-blue sky, distant harbor village. Finely hand-painted storybook gouache, rich tactile realistic materials but illustrative silhouettes, matching reference teal shadows, warm ochre and antique brass. Keep crucial tide gauge, bridge, lectern and pump clustered in middle/upper two thirds so phone portrait cropping retains them. No characters, no writing, no UI, no labels, no watermark. Avoid turning the old logbook into magical floating text. No lighthouse dominating this composition.
+
+默认原件：`E:/CodexState/home/generated_images/01a0fcf6-b2bd-77c2-b703-1ec544c9f1c1/exec-eda473a7-0975-4998-b49e-f87c953d007e.png`。
+
+PNG SHA-256：`76a9bf3ff4496604ccd6bf8a08849352a48b65cfca93651e2cd241fdec8a1335`。
+
+### ferry-background.png / .webp
+
+模式：新场景生成；harbor-background.png 只作画风参考。发布体积：336450 字节。
+
+> Use case: illustration-story. Create a NEW original vertical 2:3 game environment for the same 2D fantasy mobile adventure, using the provided harbor reference only for painting style, material quality and teal / amber palette. Scene: the last ferry at a quiet fantasy harbor at twilight. A medium small beautiful wooden ferry is moored directly beside an old stone quay, occupying center-right of the middle third, angled into the distance but close enough to clearly see its deck; a rope and mooring post connect it to the near quay. A few wooden medicine crates with unmarked plain ivory cloth bindings wait visibly on the quay beside the boat at middle-left. A warm lantern hangs over the gangplank. Across the teal water a clearly visible distant landing with one warm amber beacon marks the ferry destination. Rich old-city stone architecture, distant moody skyline, blue hour sky with last amber sunset. The foreground bottom quarter is open stone quay with space for a separate knee-high stone golem companion sprite. Hand-painted storybook gouache, exquisite tactile wood/rope/stone, cinematic illustration, inviting wistful adventure, strong readable silhouettes at mobile scale. Composition places boat, crates, rope, gangplank in middle/upper two-thirds so portrait cropping retains all task landmarks. No characters, no letters, no numbers, no labels, no UI, no watermark. Medicine crates must be on near quay, boat empty of cargo initially. No cannon, no modern objects.
+
+默认原件：`E:/CodexState/home/generated_images/01a0fcf6-b2bd-77c2-b703-1ec544c9f1c1/exec-f5cdd8e5-b7aa-40ae-b6c6-15d7de3e511c.png`。
+
+PNG SHA-256：`11ed0f120cf988767997d11c4bd35244e050ee85dbad1a637c763c73549fddd5`。
+
+### ferry-far-background.png / .webp
+
+模式：编辑 ferry-background.png，船与货物抵达远岸。发布体积：311286 字节。
+
+> Precise environment state edit for a game. The provided image is the NEAR SHORE state. Create a FAR SHORE state of exactly the same scene. Move the same covered wooden ferry away from foreground quay to the small distant landing on the upper-right side of the harbor; it should be small from distance but still identifiable as the same boat. Foreground space previously occupied by the boat becomes calm teal harbor water. Pull the gangplank back onto the near quay and coil mooring ropes by the nearest post; remove the specific foreground medicine crates since their cargo has been shipped. Keep exact camera framing, resolution, buildings, sky, water lighting, foreground stone quay, left lantern post, all distant stone structures and overall painterly style. Nothing else changes. No characters, no new text, no UI, no watermark. This is a before/after game background, so exterior invariants must match closely.
+
+默认原件：`E:/CodexState/home/generated_images/01a0fcf6-b2bd-77c2-b703-1ec544c9f1c1/exec-83bb5ef7-2f70-495e-89d3-2b6bf00f118b.png`。
+
+PNG SHA-256：`15efcf23dbc6001b1c51036b339fb57fe97b8bc7e2d1531835a90f21419d58b2`。
+
+### ferry-far-empty-background.png / .webp
+
+模式：编辑 ferry-far-background.png，以 ferry-background.png 作货箱位置参考；空船已到远岸而货箱仍在本岸。发布体积：272710 字节。
+
+> Precise game state edit. Image 1 is the FAR SHORE ferry scene to edit. Image 2 is a supporting reference ONLY for the medicine crate cluster on the near quay. Produce the same FAR SHORE scene as image 1, but restore the original ivory-cloth-wrapped wooden medicine crates at lower-left quay exactly as seen in image 2. This is the game state where the ferry sailed EMPTY and the medicine cargo was accidentally left behind. Keep ferry SMALL at the distant right landing, foreground water empty of boat, and all buildings, sky, lighting, lantern post, wet stone quay, camera and image dimensions unchanged from image 1. Add only the near-shore crate cluster from image 2 at its original position. Do not bring the boat back. No characters, no text or UI. Preserve painterly style and every other detail.
+
+默认原件：`E:/CodexState/home/generated_images/01a0fcf6-b2bd-77c2-b703-1ec544c9f1c1/exec-223bd8a2-dfdd-4602-9e1e-fceeab778dde.png`。
+
+PNG SHA-256：`42064090a91b04bb2c8c658d61659de84300a30c81ce427a1d6d491058688440`。
+
+### ferry-loaded-background.png / .webp
+
+模式：编辑 ferry-background.png，货箱已装上仍在本岸的船。发布体积：299562 字节。
+
+> Precise environment state edit for a game. Use the supplied NEAR SHORE ferry environment unchanged except the medicine crates. Move the group of ivory-cloth-wrapped wooden medicine crates from the lower-left quay onto the deck of the moored wooden ferry at center, behind the small gangplank so they are clearly inside the boat. Remove those crates from the near quay, leaving the stone surface and ropes visible. The ferry remains at the near quay exactly in its existing position; no sailing, no change to background or camera. Preserve exact composition, dimensions, blue-hour lighting, buildings, water, lanterns, wood texture and painterly style. This is the LOADED NEAR SHORE state. No new text, no characters, no UI, no watermark.
+
+默认原件：`E:/CodexState/home/generated_images/01a0fcf6-b2bd-77c2-b703-1ec544c9f1c1/exec-599058ef-38f0-413a-b78e-1b50cded544c.png`。
+
+PNG SHA-256：`8f6d520e552a824ad8be9b9c902f0b7401f171a8dbbf3437291dde4e8a7ea048`。
+
+
 ## 验证界限
 
 已验证文件存在、尺寸、颜色模式、透明度与人工视觉内容。未在本任务内验证真实手机上的最终裁切、性能或动画，需由页面集成与真机体验进一步检查。首领与回声目前为静态透明精灵，位移、呼吸、光晕与攻击效果应由表现层制作；不能宣称已有逐帧动画。

@@ -14,6 +14,7 @@ import type {
   ScenarioDefinition,
   ToolName,
 } from "../engine/types";
+import { validateBlueprint } from "../engine";
 const tools = [
   {
     id: "observe" as ToolName,
@@ -41,14 +42,19 @@ export default function Workshop({
   state,
   scenario,
   onApply,
+  initialBuild,
 }: {
   state: GameState;
   scenario: ScenarioDefinition;
   onApply: (build: AgentBlueprint) => void;
+  initialBuild?: AgentBlueprint;
 }) {
   const [build, setBuild] = useState<AgentBlueprint>(
-    structuredClone(state.blueprint),
+    structuredClone(initialBuild ?? state.blueprint),
   );
+  const capacity = scenario.limits?.toolCapacity ?? 3;
+  const errors = validateBlueprint(scenario, build);
+  const order = build.goalOrder ?? scenario.goals.map(g => g.fact);
   const targets = [
     ...new Set(
       [...scenario.observations, ...scenario.operations].map((x) => x.target),
@@ -77,13 +83,14 @@ export default function Workshop({
       </div>
       <div className="section-label">
         <span>01 / 选择法器</span>
-        <span>{build.tools.length} / 3 已装备</span>
+        <span>{build.tools.length} / {capacity} 已装备</span>
       </div>
       <div className="tool-grid">
         {tools.map(({ id, name, label, Icon, text }) => (
           <button
             key={id}
             aria-pressed={build.tools.includes(id)}
+            disabled={!build.tools.includes(id) && build.tools.length >= capacity}
             className={`tool-card ${build.tools.includes(id) ? "equipped" : ""}`}
             onClick={() =>
               setBuild({
@@ -99,6 +106,7 @@ export default function Workshop({
             </span>
             <span className="tool-title">{name}</span>
             <small>{label}</small>
+            {scenario.engineVersion === 2 && <small className="tool-cost">通常消耗 {scenario.limits?.toolCosts?.[id] ?? 1} 能量</small>}
             <p>{text}</p>
             <span className="equip-state">
               {build.tools.includes(id) ? (
@@ -113,6 +121,7 @@ export default function Workshop({
           </button>
         ))}
       </div>
+      {capacity < 3 && <p className="notice">这次背包只有 {capacity} 个槽位。可以暂停换装，现场与卷轴会保留；换装不会补充任务能量。</p>}
       <div className="section-label">
         <span>02 / 接通行动回路</span>
       </div>
@@ -147,23 +156,34 @@ export default function Workshop({
       <div className="section-label">
         <span>03 / 行动契约</span>
         <span>
-          <Zap size={12} /> 每个工具请求消耗 1 点
+          <Zap size={12} /> {scenario.engineVersion === 2 ? `任务余量 ${state.runtime?.missionRemaining ?? scenario.limits?.missionBudget} 能量` : '每个工具请求消耗 1 点'}
         </span>
       </div>
       <label className="budget-control">
-        单次派遣预算 <strong>{build.budget} 步</strong>
+        单次派遣预算 <strong>{build.budget} 点</strong>
         <input
           aria-label="行动预算"
           type="range"
           min="2"
-          max="20"
+          max={scenario.limits?.maxBudget ?? 20}
           value={build.budget}
           onChange={(e) =>
             setBuild({ ...build, budget: Number(e.target.value) })
           }
         />
-        <small>用尽即停止。调低它，观察回声会在哪一步停下。</small>
+        <small>{scenario.engineVersion === 2 ? '单次预算只决定何时停下来。任务总能量用完后，须回到整个委托的起点重试。' : '用尽即停止。调低它，观察回声会在哪一步停下。'}</small>
       </label>
+      {scenario.goals.length > 1 && scenario.engineVersion === 2 && <div className="goal-order">
+        <div className="section-label">04 / 伙伴先处理哪个目标？</div>
+        {order.map((fact, index) => <div key={fact}>
+          <span>{index + 1}. {scenario.goals.find(g => g.fact === fact)?.label}</span>
+          <button className="text-button" disabled={index === 0} onClick={() => {
+            const next = [...order]; [next[index - 1], next[index]] = [next[index], next[index - 1]];
+            setBuild({...build, goalOrder: next});
+          }}>提前</button>
+        </div>)}
+        <small>顺序会改变资源消耗；完成条件仍须全部验收。</small>
+      </div>}
       <details className="permissions">
         <summary>
           访问范围 ·{" "}
@@ -206,7 +226,8 @@ export default function Workshop({
         <ArrowRight />
         <span className={build.verification ? "connected" : ""}>验收</span>
       </div>
-      <button className="button primary full" onClick={() => onApply(build)}>
+      {errors.length > 0 && <div className="notice" role="alert">{errors.join('；')}</div>}
+      <button className="button primary full" disabled={errors.length > 0} onClick={() => onApply(build)}>
         签订契约，返回冒险 <ArrowRight size={17} />
       </button>
       <p className="fine-print">

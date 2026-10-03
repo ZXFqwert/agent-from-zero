@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { CheckCircle2, Eye, FileText, Link2, ShieldCheck } from "lucide-react";
 import { createGame, reduceGame } from "../engine";
 import { factLabels } from "../content/scenarios";
+import { chapterOneStory } from "../content/chapterOneStory";
+import { displayFact } from "../content/presentation";
 import type {
   GameAction,
   GameState,
@@ -42,6 +44,9 @@ export default function Journal({
     exhausted: "停止",
     blocked: "拦截",
     reset: "重试",
+    "world-change": "现场变化",
+    "untrusted-message": "外部报告",
+    environment: "环境告知",
   };
   return (
     <div>
@@ -60,6 +65,7 @@ export default function Journal({
           </button>
         ))}
       </div>
+      <div className="callout recap-note"><p>{layer === 'story' ? chapterOneStory[scenario.id]?.recap.story : layer === 'system' ? chapterOneStory[scenario.id]?.recap.system : chapterOneStory[scenario.id]?.recap.technical}</p></div>
       <div className="replay-control">
         <label>
           回放行动{" "}
@@ -180,7 +186,7 @@ export default function Journal({
                   </div>
                   <p>{e.text}</p>
                   {layer === "system" && e.facts && (
-                    <code>{JSON.stringify(e.facts)}</code>
+                    <div className="live-facts">{Object.entries(e.facts).map(([fact, value]) => <span key={fact}>{factLabels[fact] ?? fact}：{displayFact(fact, value)}</span>)}</div>
                   )}
                 </div>
               </li>

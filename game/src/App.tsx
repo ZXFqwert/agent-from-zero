@@ -39,9 +39,15 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { createGame, reduceGame } from "./engine";
-import type { AgentBlueprint, GameAction, GameState, ToolCall } from "./engine";
+import { createGame, reduceGame, validateBlueprint } from "./engine";
+import type { AgentBlueprint, GameAction, GameState } from "./engine";
 import { chapters, factLabels, profiles, scenarios } from "./content/scenarios";
+import { chapterOneStory,chapterOneNpcs } from "./content/chapterOneStory";
+import { getOpeningLines } from "./content/narrative";
+import { budgetExplanation, displayFact } from "./content/presentation";
+import { chapterComplete, isUnlocked, journeyOrder, nextMission } from "./content/progression";
+import CommandDeck from "./components/CommandDeck";
+import CityLedger from "./components/CityLedger";
 import {
   downloadSave,
   emptySave,
@@ -88,17 +94,20 @@ export default function App() {
     [busy, setBusy] = useState(false),
     [auto, setAuto] = useState(false),
     [profile, setProfile] = useState<string | null>(null),
-    [manual, setManual] = useState<ToolCall | null>(null),
     [online, setOnline] = useState(navigator.onLine),
     [offline, setOffline] = useState(""),
     [downloading, setDownloading] = useState(false),
     [offlineReady, setOfflineReady] = useState(false),
     [updateReady, setUpdateReady] = useState(false),
     [readOnly, setReadOnly] = useState(false);
+  const [suggestedBuild,setSuggestedBuild] = useState<AgentBlueprint | undefined>();
+  const [dialogueIndex,setDialogueIndex] = useState(0);
   const saveRef = useRef<PlayerSave | null>(null),
     busyRef = useRef(false),
     inputFile = useRef<HTMLInputElement>(null),
-    ownsLock = useRef(!navigator.locks);
+    ownsLock = useRef(!navigator.locks),
+    lockOwner = useRef<symbol | undefined>(undefined),
+    storageBlocked = useRef(false);
   const reducedMotion = useRef(
     matchMedia("(prefers-reduced-motion: reduce)").matches,
   ).current;
@@ -131,6 +140,7 @@ export default function App() {
           setError(
             `无法读取存档：${e.message}。原始数据库已保留，请先导入有效备份，或检查浏览器存储设置。`,
           );
+          storageBlocked.current = true;
           setReadOnly(true);
           saveRef.current = emptySave();
           setSave(saveRef.current);
@@ -152,27 +162,22 @@ export default function App() {
   useEffect(() => {
     let release: () => void = () => {};
     let ended = false;
-    if (navigator.locks)
-      void navigator.locks.request(
-        "echo-workshop-writer",
-        { ifAvailable: true },
-        async (lock) => {
-          if (!lock) {
-            if (!ended) setReadOnly(true);
-            return;
-          }
-          ownsLock.current = true;
-          await new Promise<void>((resolve) => {
-            release = resolve;
-            if (ended) resolve();
-          });
-          ownsLock.current = false;
-        },
-      );
-    return () => {
-      ended = true;
-      release();
-    };
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    const owner=Symbol('writer');
+    const acquire=(retry=true)=>navigator.locks.request('echo-workshop-writer',{ifAvailable:true},async lock=>{
+      if(ended)return;
+      if(!lock){
+        // Fast Refresh may remount before the prior lock-release microtask completes.
+        if(retry)retryTimer=setTimeout(()=>void acquire(false),75);
+        else setReadOnly(true);
+        return;
+      }
+      lockOwner.current=owner;ownsLock.current=true;setReadOnly(storageBlocked.current);
+      await new Promise<void>(resolve=>{release=resolve;if(ended)resolve();});
+      if(lockOwner.current===owner){ownsLock.current=false;lockOwner.current=undefined;}
+    });
+    if(navigator.locks)void acquire();
+    return()=>{ended=true;if(retryTimer)clearTimeout(retryTimer);release();};
   }, []);
   useEffect(() => {
     if (!toast) return;
@@ -195,6 +200,7 @@ export default function App() {
       if (
         busyRef.current ||
         !saveRef.current ||
+        !ownsLock.current ||
         (readOnly && !(recovery && ownsLock.current))
       )
         return false;
@@ -207,6 +213,7 @@ export default function App() {
         saveRef.current = next;
         setSave(next);
         if (recovery) {
+          storageBlocked.current=false;
           setReadOnly(false);
           setError("");
         }
@@ -281,11 +288,19 @@ export default function App() {
   const scenario =
     scenarios.find((s) => s.id === save?.currentScenarioId) ?? scenarios[0];
   const state = save?.games[scenario.id] ?? createGame(scenario);
-  const gameIndex = scenarios.indexOf(scenario);
+  const gameIndex = journeyOrder.indexOf(scenario.id);
+  const story = chapterOneStory[scenario.id];
+  const orderedScenarios = [...scenarios].sort((a,b)=>journeyOrder.indexOf(a.id)-journeyOrder.indexOf(b.id));
+  const nextId = nextMission(scenario.id, save?.completedScenarioIds ?? [], scenarios.map(q=>q.id));
+  const nextIndex = scenarios.findIndex(q=>q.id === nextId);
+  const mainComplete = chapterComplete(save?.completedScenarioIds ?? []);
+  const openingLines=getOpeningLines(scenario.id,save?.choices ?? {});
+  const openingLine=openingLines[Math.min(dialogueIndex,openingLines.length-1)];
+  useEffect(()=>setDialogueIndex(0),[scenario.id]);
   useEffect(() => {
     if (!auto || panel || busy || state.status !== "running" || document.hidden)
       return;
-    const timeout = setTimeout(() => void act({ type: "step" }), 1350);
+    const timeout = setTimeout(() => void act({ type: "step", source: "scheduler" }), 1350);
     return () => clearTimeout(timeout);
   }, [auto, panel, busy, state, act]);
   useEffect(() => {
@@ -308,28 +323,45 @@ export default function App() {
     setPanel(next);
   }
   async function launch(automatic = true) {
-    if (state.status === "won") return;
+    if (state.status === "won") return false;
     const okay = await act({
       type: state.status === "paused" ? "resume" : "dispatch",
+      mode: automatic ? "automatic" : "manual",
     });
     if (okay) setAuto(automatic);
+    return okay;
   }
   async function selectScenario(index: number) {
     const target = scenarios[index];
     if (
       !target ||
-      (index > 0 &&
-        !save?.completedScenarioIds.includes(scenarios[index - 1].id))
+      !isUnlocked(target.id, save?.completedScenarioIds ?? [])
     )
       return;
+    let draft: AgentBlueprint | undefined;
     const changed = await commit((previous) => {
+      const prior=previous.games[previous.currentScenarioId]?.blueprint;
+      if(!previous.games[target.id]) {
+        previous.games[target.id]=createGame(target);
+        if(prior) {
+          const inherited={...structuredClone(prior),budget:Math.min(prior.budget,target.limits?.maxBudget ?? 20)};
+          delete inherited.goalOrder;
+          if(validateBlueprint(target,inherited).length === 0) {
+            const action:GameAction={id:crypto.randomUUID(),type:'configure',blueprint:inherited};
+            previous.games[target.id]=reduceGame(target,previous.games[target.id],action);
+            previous.actions[target.id]=[action];
+          } else draft=inherited;
+        }
+      }
       previous.currentScenarioId = target.id;
       previous.games[target.id] ??= createGame(target);
       previous.started = true;
       return previous;
     });
     if (!changed) return;
-    setPanel(null);
+    setSuggestedBuild(draft);
+    setPanel(draft ? 'workshop' : null);
+    if(draft) setToast('上份契约已经带来。新的现场约束需要你调整装配。');
     setAuto(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -340,17 +372,12 @@ export default function App() {
       return;
     }
     if (await act({ type: "configure", blueprint: build })) {
+      setSuggestedBuild(undefined);
       setPanel(null);
       setToast("契约已签订。派遣回声，观察这次会发生什么。");
     }
   }
   async function retry() {
-    if (
-      !confirm(
-        "回到这次委托的起点？本关当前世界与记录将重置，已看过提示的记录和历史完成记录会保留。",
-      )
-    )
-      return;
     if (!(await commit(resetCurrentScenario))) return;
     setAuto(false);
     setPanel(null);
@@ -358,12 +385,13 @@ export default function App() {
   async function hint() {
     await act({ type: "hint" });
     setToast(
-      scenario.kind === "guided"
+      story?.hint ?? (scenario.kind === "guided"
         ? guidance()
-        : "检查工具是否齐全、回执是否进入上下文、结束前是否验收，以及预算是否足够。",
+        : "检查工具是否齐全、回执是否进入上下文、结束前是否验收，以及预算是否足够。"),
     );
   }
   function guidance() {
+    if (scenario.engineVersion === 2) return story?.hint ?? "看卷轴中已有的证据，再决定下一步。";
     if (!state.blueprint.tools.includes("operate"))
       return "一句“完成了”不会让灯塔亮。去工坊装备观测之镜和塑形之手，再派遣回声。";
     if (!state.blueprint.feedback)
@@ -438,7 +466,7 @@ export default function App() {
         </div>
         <div className="aside-bottom">
           <span>单人剧情 × 伙伴构筑 × Agent 学习</span>
-          <span>首段可玩冒险 · v0.1</span>
+          <span>熄火之港 · v0.2</span>
           <a href="/archive/v1/" target="_blank" rel="noreferrer">
             旧学习档案 ↗
           </a>
@@ -565,11 +593,11 @@ export default function App() {
                 onClick={() => void open("map")}
               >
                 <span>{String(gameIndex + 1).padStart(2, "0")}</span>
-                <small>/ 03</small>
+                <small>/ {String(scenarios.length).padStart(2,"0")}</small>
               </button>
             </section>
             <section
-              className={`scene-wrap ${scenario.location === "boss" ? "boss-scene" : ""}`}
+              className={`scene-wrap ${scenario.kind === "boss" ? "boss-scene" : ""}`}
             >
               <Suspense
                 fallback={
@@ -589,16 +617,16 @@ export default function App() {
               <div className="scene-topline">
                 <span className="location-pill">
                   <Compass size={13} />
-                  {scenario.location === "warehouse"
+                  {story?.location ?? (scenario.location === "warehouse"
                     ? "旧港仓库"
                     : scenario.location === "boss"
                       ? "迷雾引航台"
-                      : "雾湾 · 西岸"}
+                      : "雾湾 · 西岸")}
                 </span>
                 <span className="budget-pill">
                   <Zap size={13} />
-                  {state.budgetRemaining}
-                  <small> / {state.blueprint.budget}</small>
+                  {state.runtime?.missionRemaining ?? state.budgetRemaining}
+                  <small> / {scenario.limits?.missionBudget ?? state.blueprint.budget}</small>
                 </span>
               </div>
               {scenario.kind === "boss" && (
@@ -629,7 +657,7 @@ export default function App() {
               )}
               <div className="companion-tag">
                 <span>✦ 回声</span>
-                <small>{statusNames[state.status]}</small>
+                <small>{state.status === 'exhausted' && state.runtime ? state.runtime.missionRemaining === 0 ? '委托能量用完' : '派遣已停止' : statusNames[state.status]}</small>
               </div>
               <div className="dialogue-box" aria-live="polite">
                 <span className="speaker">
@@ -639,25 +667,22 @@ export default function App() {
                       : last.type === "victory"
                         ? "契约的回响"
                         : "行动卷轴"
-                    : scenario.npc}
+                    : openingLine ? chapterOneNpcs.find(npc=>npc.id===openingLine.speaker)?.name ?? (openingLine.speaker==='echo'?'回声':'旅途卷轴') : scenario.npc}
                 </span>
                 <p>
                   {last?.text ??
                     (gameIndex === 1 &&
                     save.choices["harbor-light"] === "people"
                       ? "莫拉说你先顾着归船。现在，请帮我把门后的药送出去。"
-                      : scenario.brief)}
+                      : openingLine?.text ?? story?.opening ?? scenario.brief)}
                 </p>
+                {!last&&dialogueIndex<openingLines.length-1&&<button className="dialogue-next" aria-label="下一句对话" onClick={()=>setDialogueIndex(i=>i+1)}>继续 {dialogueIndex+1}/{openingLines.length}<ChevronRight size={13}/></button>}
                 {last?.facts && (
                   <div className="live-facts">
                     {Object.entries(last.facts).map(([k, v]) => (
                       <span key={k}>
                         {factLabels[k] ?? k}：
-                        {v === true
-                          ? "已实现"
-                          : v === false
-                            ? "未实现"
-                            : String(v)}
+                        {displayFact(k, v)}
                       </span>
                     ))}
                   </div>
@@ -698,6 +723,7 @@ export default function App() {
                   </span>
                 ))}
               </div>
+              {story?.rules.length > 0 && <details className="mission-rules"><summary>现场规则{scenario.hooks?.length ? ' · 行动会改变局势' : ''} <ChevronRight size={12}/></summary>{story.rules.map(rule=><p key={rule}>{rule}</p>)}</details>}
               {state.status === "won" ? (
                 <button
                   className="button primary full"
@@ -715,7 +741,7 @@ export default function App() {
                     <Wrench size={18} />
                     <span>
                       装配伙伴
-                      <small>{state.blueprint.tools.length}/3 法器</small>
+                      <small>{state.blueprint.tools.length}/{scenario.limits?.toolCapacity ?? 3} 法器</small>
                     </span>
                   </button>
                   {state.status === "running" ? (
@@ -766,6 +792,7 @@ export default function App() {
                   灵感
                 </button>
               </div>
+              {state.status === 'exhausted' && <div className="retry-callout"><p>{budgetExplanation(state)}</p><button className="button" disabled={busy} onClick={()=>void retry()}><RotateCcw size={16}/>从委托起点重试</button></div>}
               {scenario.kind === "guided" &&
                 ["stalled", "exhausted"].includes(state.status) && (
                   <div className="guide-note">
@@ -804,14 +831,14 @@ export default function App() {
       <aside className="desktop-journal">
         <span className="eyebrow">你的契约旅程</span>
         <h3>微光，从这里开始。</h3>
-        {scenarios.map((q, i) => (
+        {orderedScenarios.map((q, i) => (
           <button
             className={`journey-item ${q.id === scenario.id ? "current" : ""}`}
             key={q.id}
             disabled={
-              i > 0 && !save.completedScenarioIds.includes(scenarios[i - 1].id)
+              !isUnlocked(q.id,save.completedScenarioIds)
             }
-            onClick={() => void selectScenario(i)}
+            onClick={() => void selectScenario(scenarios.indexOf(q))}
           >
             <span>
               {save.completedScenarioIds.includes(q.id) ? (
@@ -823,11 +850,7 @@ export default function App() {
             <div>
               <strong>{q.title}</strong>
               <small>
-                {q.kind === "guided"
-                  ? "引导冒险"
-                  : q.kind === "transfer"
-                    ? "独立迁移"
-                    : "机制首领"}
+                {chapterOneStory[q.id]?.role === 'side' ? '港口支线' : q.kind === 'boss' ? '机制首领' : q.kind === 'transfer' ? '陌生委托' : '主线冒险'}
               </small>
             </div>
           </button>
@@ -862,6 +885,7 @@ export default function App() {
             state={state}
             scenario={scenario}
             onApply={(build) => void configure(build)}
+            initialBuild={suggestedBuild}
           />
         </Dialog>
       )}
@@ -886,8 +910,9 @@ export default function App() {
           onClose={() => setPanel(null)}
         >
           <p className="muted">
-            当前是核心玩法试玩：熄火之港的三场冒险。其余章节会在玩法验收后制作，不以锁图冒充已完成内容。
+            港口的六场主线与两条支线。支线可以晚些回来；已经修好的设施与旅途记录会保留。
           </p>
+          <details className="city-fold"><summary>港口变化与旅途收藏</summary><CityLedger save={save}/></details>
           <div className="chapter-map">
             {chapters.map(([name, description, tag], i) => (
               <div
@@ -903,29 +928,10 @@ export default function App() {
                   <p>{description}</p>
                   {i === 0 ? (
                     <div className="map-missions">
-                      {scenarios.map((q, j) => (
-                        <button
-                          key={q.id}
-                          disabled={
-                            j > 0 &&
-                            !save.completedScenarioIds.includes(
-                              scenarios[j - 1].id,
-                            )
-                          }
-                          onClick={() => void selectScenario(j)}
-                        >
-                          {save.completedScenarioIds.includes(q.id) ? (
-                            <CheckCircle2 size={15} />
-                          ) : j > 0 &&
-                            !save.completedScenarioIds.includes(
-                              scenarios[j - 1].id,
-                            ) ? (
-                            <Lock size={14} />
-                          ) : (
-                            <Play size={14} />
-                          )}
-                          <span>{q.title}</span>
-                          <ChevronRight size={14} />
+                      {orderedScenarios.map((q) => (
+                        <button key={q.id} disabled={!isUnlocked(q.id,save.completedScenarioIds)} onClick={() => void selectScenario(scenarios.indexOf(q))}>
+                          {save.completedScenarioIds.includes(q.id) ? <CheckCircle2 size={15}/> : !isUnlocked(q.id,save.completedScenarioIds) ? <Lock size={14}/> : <Play size={14}/>}
+                          <span>{q.title}<small>{chapterOneStory[q.id]?.role === 'side' ? '支线' : ''}</small></span><ChevronRight size={14}/>
                         </button>
                       ))}
                     </div>
@@ -1010,233 +1016,23 @@ export default function App() {
         </Dialog>
       )}
       {panel === "victory" && (
-        <Dialog
-          title={gameIndex === 2 ? "港口重新有了光" : "一份契约，真正履行"}
-          kicker={
-            gameIndex === 2 ? "首领击破 · 熄火之港试玩完成" : "新的回响已收录"
-          }
-          onClose={() => setPanel(null)}
-        >
-          <div className="victory-seal">
-            <Sparkles size={42} />
-            <span>{gameIndex === 2 ? "真实胜过宣称" : "世界因行动而改变"}</span>
-          </div>
-          <p>
-            {gameIndex === 0
-              ? "归船沿着灯光靠岸。莫拉将一枚旧契约印章放在你的掌心：“现在，它不只是会回答了。”"
-              : gameIndex === 1
-                ? "仓库门升起，缇娅抱起了药箱。你没有照着灯塔的按钮操作，却在另一个地方接通了相同的闭环。"
-                : "完美的报告化作空白纸片。回声第一次安静下来：“原来，不是我说完成了，就算完成了。”"}
-          </p>
-          <div className="reward-row">
-            <span>
-              <Wrench size={19} />
-              {gameIndex === 0
-                ? "解锁独立委托"
-                : gameIndex === 1
-                  ? "解锁首领契约"
-                  : "完成三场试玩"}
-            </span>
-            <span>
-              <BookOpen size={19} />
-              {state.learningEvidence.some(
-                (e) => e.level === "independent-transfer",
-              )
-                ? "记录：独立迁移"
-                : "记录：引导使用"}
-            </span>
-          </div>
-          <div className="callout">
-            <h4>这次改变了什么？</h4>
-            <p>
-              委托 → 观察信息 → 提出工具请求 → 执行 → 回传结果 → 继续或停止 →
-              检查完成条件。这些环节共同组成 Agent 的行动闭环。
-            </p>
-            <small>
-              通关记录不等于已经掌握全部 Agent
-              知识；后续还需要陌生任务与延迟重遇。
-            </small>
-          </div>
-          {!save.choices[scenario.id] && (
-            <div className="story-choice">
-              <h4>
-                {gameIndex === 0
-                  ? "莫拉问：灯亮后的第一件事，你会做什么？"
-                  : gameIndex === 1
-                    ? "缇娅问：这次经验该怎么留下？"
-                    : "回声问：离开港口之前，你想留下什么？"}
-              </h4>
-              <button
-                onClick={() =>
-                  void commit((p) => ({
-                    ...p,
-                    choices: { ...p.choices, [scenario.id]: "people" },
-                  }))
-                }
-              >
-                {gameIndex === 0
-                  ? "先把归船上的人接回家。"
-                  : gameIndex === 1
-                    ? "记下条件与证据，供下次核对。"
-                    : "把修复记录交给居民。"}
-                <ArrowRight size={16} />
-              </button>
-              <button
-                onClick={() =>
-                  void commit((p) => ({
-                    ...p,
-                    choices: { ...p.choices, [scenario.id]: "workshop" },
-                  }))
-                }
-              >
-                {gameIndex === 0
-                  ? "把灯塔的行动回路画下来。"
-                  : gameIndex === 1
-                    ? "给未来的自己留一份故障便笺。"
-                    : "给回声整理一份旅途手册。"}
-                <ArrowRight size={16} />
-              </button>
-              <small>
-                这是故事选择，不计技术对错。选择会保留在你的旅途记录中。
-              </small>
-            </div>
-          )}
-          {save.choices[scenario.id] && (
-            <p className="choice-response">
-              {save.choices[scenario.id] === "people"
-                ? "你把这段经历留给了需要它的人。"
-                : "你把这段经历收进了工坊的卷轴。"}
-            </p>
-          )}
-          <div className="button-row">
-            <button className="button" onClick={() => setPanel("journal")}>
-              <ScrollText size={16} />
-              三层复盘
-            </button>
-            {gameIndex < 2 ? (
-              <button
-                className="button primary"
-                disabled={!save.choices[scenario.id] || busy}
-                onClick={() => void selectScenario(gameIndex + 1)}
-              >
-                下一封委托 <ArrowRight size={17} />
-              </button>
-            ) : (
-              <button
-                className="button primary"
-                onClick={() => setPanel("settings")}
-              >
-                保存这段旅程 <Download size={16} />
-              </button>
-            )}
-          </div>
-          {gameIndex === 2 && (
-            <div className="callout">
-              <h4>试玩到这里，请把感觉告诉我。</h4>
-              <p>
-                你是否愿意主动重试？现在能否解释“回声说成功，世界却没变”的原因？这决定下一阶段的玩法是否值得扩展。
-              </p>
-            </div>
-          )}
+        <Dialog title={mainComplete ? "熄火之港，重新有了光" : "一份契约，真正履行"} kicker={scenario.kind==='boss'?'首领击破 · 真实胜过宣称':'新的回响已收录'} onClose={()=>setPanel(null)}>
+          <div className="victory-seal"><Sparkles size={42}/><span>{mainComplete?'新的旅程从港口开始':'世界回应了你的行动'}</span></div>
+          <p>{story?.success ?? '回声收起法器，等待你的下一封委托。'}</p>
+          {story?.outcomes?.filter(outcome=>state.world[outcome.fact]===outcome.equals).map(outcome=><p className="choice-response" key={outcome.fact}>{outcome.text}</p>)}
+          <div className="reward-row"><span><Wrench size={19}/>{nextId ? '新的委托已开放' : '港口契约已收录'}</span><span><BookOpen size={19}/>{state.kernelVersion===2&&state.learningEvidence.some(e=>e.level==='independent-transfer')?'记录：独立解决':'记录：情境完成'}</span></div>
+          <div className="callout"><h4>把魔法翻译成系统</h4><p>{story?.recap.system ?? '目标、信息、行动、回执与验收共同组成了这段行动闭环。'}</p><small>记录保存的是操作证据。理解还要在后续陌生委托中检验。</small></div>
+          {!save.choices[scenario.id]&&<div className="story-choice"><h4>这段回响，留给谁？</h4>{story?.choices.map(choice=><button key={choice.id} onClick={()=>void commit(p=>({...p,choices:{...p.choices,[scenario.id]:choice.id}}))}>{choice.text}<ArrowRight size={16}/></button>)}<small>这决定港口的人如何记住你，不计技术对错。</small></div>}
+          {save.choices[scenario.id]&&<p className="choice-response">{story?.choices.find(c=>c.id===save.choices[scenario.id])?.consequence}</p>}
+          <div className="button-row"><button className="button" onClick={()=>setPanel('journal')}><ScrollText size={16}/>三层复盘</button>{nextIndex>=0?<button className="button primary" disabled={!save.choices[scenario.id]||busy} onClick={()=>void selectScenario(nextIndex)}>下一封委托<ArrowRight size={17}/></button>:<button className="button primary" onClick={()=>setPanel('map')}>回到城市地图<Map size={16}/></button>}</div>
+          {mainComplete&&<div className="callout"><h4>工坊里多了一张远行地图。</h4><p>港口的主线已完成。你还可以完成支线、试用另一条修复路线，或回放失败时回声收到的消息。</p></div>}
         </Dialog>
       )}
-      {panel === "manual" && (
-        <Dialog
-          title="逐步指挥"
-          kicker="点选法器 → 选择目标 → 执行"
-          onClose={() => {
-            setPanel(null);
-            setManual(null);
-          }}
-        >
-          <p className="muted">
-            每次工具请求消耗 1
-            点预算。你可以手动观察、操作和验收，也可以只看伙伴自己选择的下一步。
-          </p>
-          <div className="manual-tools">
-            {scenario.observations.map((o) => (
-              <button
-                className={
-                  manual?.tool === "observe" && manual.observationId === o.id
-                    ? "selected"
-                    : ""
-                }
-                disabled={!state.blueprint.tools.includes("observe")}
-                key={o.id}
-                onClick={() =>
-                  setManual({ tool: "observe", observationId: o.id })
-                }
-              >
-                <Eye size={17} />
-                {o.label}
-              </button>
-            ))}
-            {scenario.operations.map((o) => (
-              <button
-                className={
-                  manual?.tool === "operate" && manual.operationId === o.id
-                    ? "selected"
-                    : ""
-                }
-                disabled={!state.blueprint.tools.includes("operate")}
-                key={o.id}
-                onClick={() =>
-                  setManual({ tool: "operate", operationId: o.id })
-                }
-              >
-                <Wrench size={17} />
-                {o.label}
-              </button>
-            ))}
-            {scenario.goals.map((g) => (
-              <button
-                key={g.fact}
-                disabled={!state.blueprint.tools.includes("verify")}
-                className={
-                  manual?.tool === "verify" && manual.fact === g.fact
-                    ? "selected"
-                    : ""
-                }
-                onClick={() => setManual({ tool: "verify", fact: g.fact })}
-              >
-                <ShieldCheck size={17} />
-                验收：{g.label}
-              </button>
-            ))}
-          </div>
-          {!state.blueprint.tools.length && (
-            <div className="notice">还没有装备法器。请先在工坊装配伙伴。</div>
-          )}
-          <div className="button-row">
-            <button
-              className="button"
-              disabled={busy}
-              onClick={async () => {
-                if (state.status !== "running") await launch(false);
-                await act({ type: "step" });
-              }}
-            >
-              伙伴自行决定一步
-            </button>
-            <button
-              className="button primary"
-              disabled={!manual || busy}
-              onClick={async () => {
-                if (state.status !== "running") await launch(false);
-                if (manual) await act({ type: "tool", call: manual });
-              }}
-            >
-              执行选中法器 · 1 点
-            </button>
-          </div>
-          {last && (
-            <div className="callout" aria-live="polite">
-              <h4>最近回执</h4>
-              <p>{last.text}</p>
-            </div>
-          )}
-        </Dialog>
-      )}
+      {panel === "manual" && <Dialog title="探索与指挥" kicker="能力 → 目标 → 成本 → 执行" onClose={()=>setPanel(null)}>
+        <CommandDeck state={state} scenario={scenario} busy={busy} onWorkshop={()=>void open('workshop')}
+          onStep={async()=>{if(state.status!=='running'&&!(await launch(false)))return;await act({type:'step',source:'player'});}}
+          onCall={async(call)=>{if(state.status!=='running'&&!(await launch(false)))return;await act({type:'tool',call});}}/>
+      </Dialog>}
       {panel === "settings" && (
         <Dialog
           title="旅途行囊"
@@ -1246,7 +1042,7 @@ export default function App() {
           <div className="save-summary">
             <span className="brand-rune">✧</span>
             <div>
-              <h3>{earned} / 3 份契约已履行</h3>
+              <h3>{earned} / {scenarios.length} 份契约已履行</h3>
               <p>上次刻写：{new Date(save.savedAt).toLocaleString("zh-CN")}</p>
             </div>
           </div>
@@ -1363,7 +1159,7 @@ export default function App() {
                   </span>
                   <b>
                     {e.level === "independent-transfer"
-                      ? "独立迁移"
+                      ? save.completedGames[e.scenarioId]?.kernelVersion === 2 ? "独立决策" : "情境完成"
                       : e.level === "guided"
                         ? "引导使用"
                         : "已见过"}
@@ -1422,8 +1218,7 @@ export default function App() {
             打开旧学习档案 ↗
           </a>
           <p className="fine-print">
-            旧站笔记不兑换新游戏技能。当前为核心玩法验证版本，并非 84
-            个任务的完整第一季。
+            旧站笔记保留在档案中。本章为八场港口冒险，后续章节继续制作。
           </p>
         </Dialog>
       )}

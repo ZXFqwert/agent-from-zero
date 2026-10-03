@@ -1,0 +1,2214 @@
+{
+  "saveVersion": 1,
+  "kernelVersion": 1,
+  "contentVersion": "harbor-0.1.0",
+  "savedAt": "2026-10-02T15:33:25.378Z",
+  "currentScenarioId": "hollow-regent",
+  "games": {
+    "harbor-light": {
+      "kernelVersion": 1,
+      "scenarioId": "harbor-light",
+      "scenarioVersion": 1,
+      "seed": 1,
+      "world": {
+        "power": true,
+        "light": true
+      },
+      "observed": {
+        "light": {
+          "value": true,
+          "source": "verification",
+          "eventId": "harbor-light:event:14"
+        },
+        "power": {
+          "value": true,
+          "source": "receipt",
+          "eventId": "harbor-light:event:10"
+        }
+      },
+      "blueprint": {
+        "tools": [
+          "observe",
+          "operate",
+          "verify"
+        ],
+        "feedback": true,
+        "verification": true,
+        "budget": 12,
+        "permissions": [
+          "*"
+        ]
+      },
+      "status": "won",
+      "budgetRemaining": 7,
+      "attempt": 2,
+      "events": [
+        {
+          "type": "dispatched",
+          "text": "回声开始行动。当前使用确定规则的教学策略模拟。",
+          "id": "harbor-light:event:1",
+          "sequence": 1,
+          "attempt": 1
+        },
+        {
+          "type": "claim",
+          "text": "“我已经完成了。”——这只是一句回复。没有执行法器操作，世界不会因这句话而改变。",
+          "success": false,
+          "id": "harbor-light:event:2",
+          "sequence": 2,
+          "attempt": 1
+        },
+        {
+          "type": "configured",
+          "text": "新的法器与契约已装配。世界状态和已收集的证据保留。",
+          "id": "harbor-light:event:3",
+          "sequence": 3,
+          "attempt": 1
+        },
+        {
+          "type": "dispatched",
+          "text": "回声开始行动。当前使用确定规则的教学策略模拟。",
+          "id": "harbor-light:event:4",
+          "sequence": 4,
+          "attempt": 2
+        },
+        {
+          "type": "request",
+          "text": "回声请求观察环境。",
+          "tool": "observe",
+          "target": "beacon",
+          "callId": "harbor-light:call:5",
+          "id": "harbor-light:event:5",
+          "sequence": 5,
+          "attempt": 2
+        },
+        {
+          "type": "observation",
+          "text": "观测之镜读取了灯室的发光状态。",
+          "tool": "observe",
+          "target": "beacon",
+          "callId": "harbor-light:call:5",
+          "facts": {
+            "light": false
+          },
+          "success": true,
+          "delivered": true,
+          "id": "harbor-light:event:6",
+          "sequence": 6,
+          "attempt": 2
+        },
+        {
+          "type": "request",
+          "text": "回声提出法器操作请求。",
+          "tool": "operate",
+          "target": "beacon",
+          "callId": "harbor-light:call:7",
+          "operationId": "light-on",
+          "id": "harbor-light:event:7",
+          "sequence": 7,
+          "attempt": 2
+        },
+        {
+          "type": "result",
+          "text": "灯塔回执：备用电源尚未连接。",
+          "tool": "operate",
+          "target": "beacon",
+          "operationId": "light-on",
+          "callId": "harbor-light:call:7",
+          "facts": {
+            "power": false
+          },
+          "success": false,
+          "delivered": true,
+          "id": "harbor-light:event:8",
+          "sequence": 8,
+          "attempt": 2
+        },
+        {
+          "type": "request",
+          "text": "回声提出法器操作请求。",
+          "tool": "operate",
+          "target": "supply",
+          "callId": "harbor-light:call:9",
+          "operationId": "connect-power",
+          "id": "harbor-light:event:9",
+          "sequence": 9,
+          "attempt": 2
+        },
+        {
+          "type": "result",
+          "text": "供能线接通，晶石发出了低鸣。",
+          "tool": "operate",
+          "target": "supply",
+          "operationId": "connect-power",
+          "callId": "harbor-light:call:9",
+          "facts": {
+            "power": true
+          },
+          "success": true,
+          "delivered": true,
+          "id": "harbor-light:event:10",
+          "sequence": 10,
+          "attempt": 2
+        },
+        {
+          "type": "request",
+          "text": "回声提出法器操作请求。",
+          "tool": "operate",
+          "target": "beacon",
+          "callId": "harbor-light:call:11",
+          "operationId": "light-on",
+          "id": "harbor-light:event:11",
+          "sequence": 11,
+          "attempt": 2
+        },
+        {
+          "type": "result",
+          "text": "灯芯被唤醒。一束金光穿过了海雾。",
+          "tool": "operate",
+          "target": "beacon",
+          "operationId": "light-on",
+          "callId": "harbor-light:call:11",
+          "facts": {
+            "light": true
+          },
+          "success": true,
+          "delivered": true,
+          "id": "harbor-light:event:12",
+          "sequence": 12,
+          "attempt": 2
+        },
+        {
+          "type": "request",
+          "text": "回声请求检查完成条件。",
+          "tool": "verify",
+          "target": "beacon",
+          "callId": "harbor-light:call:13",
+          "id": "harbor-light:event:13",
+          "sequence": 13,
+          "attempt": 2
+        },
+        {
+          "type": "verified",
+          "text": "状态检查通过：灯塔实际发光。",
+          "tool": "verify",
+          "target": "beacon",
+          "callId": "harbor-light:call:13",
+          "facts": {
+            "light": true
+          },
+          "success": true,
+          "delivered": true,
+          "id": "harbor-light:event:14",
+          "sequence": 14,
+          "attempt": 2
+        },
+        {
+          "type": "victory",
+          "text": "每一项完成条件都有实际的状态证据。契约履行了。",
+          "success": true,
+          "id": "harbor-light:event:15",
+          "sequence": 15,
+          "attempt": 2
+        }
+      ],
+      "verifiedGoals": [
+        "light"
+      ],
+      "processedActionIds": [
+        "129123e9-4649-4578-b616-11e58fd79bfc",
+        "01d51460-7515-445f-ba9f-4d36fee150fc",
+        "2dd3aa93-a1fd-427c-9716-8385593e2fd1",
+        "0ec07638-3ea7-4265-a14f-e81367af7dcf",
+        "9108377c-51b4-4320-bdf5-73e874dd736c",
+        "62eeee6c-41c3-48a7-adfb-a33ee8310b37",
+        "8dfed965-05c0-42ed-96a2-f667da97994f",
+        "fec17239-ac51-43dc-bd85-488c7c850c91",
+        "2a08a09c-cd1d-4480-87ee-4726012f11ef"
+      ],
+      "learningEvidence": [
+        {
+          "concept": "输出不等于行动",
+          "scenarioId": "harbor-light",
+          "level": "guided",
+          "eventIds": [
+            "harbor-light:event:14",
+            "harbor-light:event:15"
+          ]
+        },
+        {
+          "concept": "工具执行",
+          "scenarioId": "harbor-light",
+          "level": "guided",
+          "eventIds": [
+            "harbor-light:event:14",
+            "harbor-light:event:15"
+          ]
+        },
+        {
+          "concept": "反馈闭环",
+          "scenarioId": "harbor-light",
+          "level": "guided",
+          "eventIds": [
+            "harbor-light:event:14",
+            "harbor-light:event:15"
+          ]
+        },
+        {
+          "concept": "状态验收",
+          "scenarioId": "harbor-light",
+          "level": "guided",
+          "eventIds": [
+            "harbor-light:event:14",
+            "harbor-light:event:15"
+          ]
+        }
+      ],
+      "hintUsed": false
+    },
+    "warehouse-gate": {
+      "kernelVersion": 1,
+      "scenarioId": "warehouse-gate",
+      "scenarioVersion": 1,
+      "seed": 1,
+      "world": {
+        "latch": true,
+        "gate": true
+      },
+      "observed": {
+        "gate": {
+          "value": true,
+          "source": "verification",
+          "eventId": "warehouse-gate:event:12"
+        },
+        "latch": {
+          "value": true,
+          "source": "receipt",
+          "eventId": "warehouse-gate:event:8"
+        }
+      },
+      "blueprint": {
+        "tools": [
+          "observe",
+          "operate",
+          "verify"
+        ],
+        "feedback": true,
+        "verification": true,
+        "budget": 12,
+        "permissions": [
+          "*"
+        ]
+      },
+      "status": "won",
+      "budgetRemaining": 7,
+      "attempt": 1,
+      "events": [
+        {
+          "type": "configured",
+          "text": "新的法器与契约已装配。世界状态和已收集的证据保留。",
+          "id": "warehouse-gate:event:1",
+          "sequence": 1,
+          "attempt": 0
+        },
+        {
+          "type": "dispatched",
+          "text": "回声开始行动。当前使用确定规则的教学策略模拟。",
+          "id": "warehouse-gate:event:2",
+          "sequence": 2,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声请求观察环境。",
+          "tool": "observe",
+          "target": "gate",
+          "callId": "warehouse-gate:call:3",
+          "id": "warehouse-gate:event:3",
+          "sequence": 3,
+          "attempt": 1
+        },
+        {
+          "type": "observation",
+          "text": "观测之镜读取了仓库门的开合状态。",
+          "tool": "observe",
+          "target": "gate",
+          "callId": "warehouse-gate:call:3",
+          "facts": {
+            "gate": false
+          },
+          "success": true,
+          "delivered": true,
+          "id": "warehouse-gate:event:4",
+          "sequence": 4,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声提出法器操作请求。",
+          "tool": "operate",
+          "target": "gate",
+          "callId": "warehouse-gate:call:5",
+          "operationId": "open-gate",
+          "id": "warehouse-gate:event:5",
+          "sequence": 5,
+          "attempt": 1
+        },
+        {
+          "type": "result",
+          "text": "开门回执：门闩未释放。继续拉门不会奏效。",
+          "tool": "operate",
+          "target": "gate",
+          "operationId": "open-gate",
+          "callId": "warehouse-gate:call:5",
+          "facts": {
+            "latch": false
+          },
+          "success": false,
+          "delivered": true,
+          "id": "warehouse-gate:event:6",
+          "sequence": 6,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声提出法器操作请求。",
+          "tool": "operate",
+          "target": "lock",
+          "callId": "warehouse-gate:call:7",
+          "operationId": "release-latch",
+          "id": "warehouse-gate:event:7",
+          "sequence": 7,
+          "attempt": 1
+        },
+        {
+          "type": "result",
+          "text": "咔哒。门闩离开锁槽。",
+          "tool": "operate",
+          "target": "lock",
+          "operationId": "release-latch",
+          "callId": "warehouse-gate:call:7",
+          "facts": {
+            "latch": true
+          },
+          "success": true,
+          "delivered": true,
+          "id": "warehouse-gate:event:8",
+          "sequence": 8,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声提出法器操作请求。",
+          "tool": "operate",
+          "target": "gate",
+          "callId": "warehouse-gate:call:9",
+          "operationId": "open-gate",
+          "id": "warehouse-gate:event:9",
+          "sequence": 9,
+          "attempt": 1
+        },
+        {
+          "type": "result",
+          "text": "沉重的仓库门缓缓升起，药箱就在里面。",
+          "tool": "operate",
+          "target": "gate",
+          "operationId": "open-gate",
+          "callId": "warehouse-gate:call:9",
+          "facts": {
+            "gate": true
+          },
+          "success": true,
+          "delivered": true,
+          "id": "warehouse-gate:event:10",
+          "sequence": 10,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声请求检查完成条件。",
+          "tool": "verify",
+          "target": "gate",
+          "callId": "warehouse-gate:call:11",
+          "id": "warehouse-gate:event:11",
+          "sequence": 11,
+          "attempt": 1
+        },
+        {
+          "type": "verified",
+          "text": "状态检查通过：仓库门实际开启。",
+          "tool": "verify",
+          "target": "gate",
+          "callId": "warehouse-gate:call:11",
+          "facts": {
+            "gate": true
+          },
+          "success": true,
+          "delivered": true,
+          "id": "warehouse-gate:event:12",
+          "sequence": 12,
+          "attempt": 1
+        },
+        {
+          "type": "victory",
+          "text": "每一项完成条件都有实际的状态证据。契约履行了。",
+          "success": true,
+          "id": "warehouse-gate:event:13",
+          "sequence": 13,
+          "attempt": 1
+        }
+      ],
+      "verifiedGoals": [
+        "gate"
+      ],
+      "processedActionIds": [
+        "b575849b-40c8-4620-9598-9e55bec997ba",
+        "3a7b370e-3ecc-4e46-9314-2bf61d9c9f95",
+        "12e1d5de-6b99-4840-b831-6dfa4fca299f",
+        "c1c37a02-53ca-431a-b66a-aace3da5c0b5",
+        "c36f680e-eb0c-4af3-b8ec-68d93b586062",
+        "4c983c43-a451-4cad-a1a6-1d31d9b15424",
+        "898096b6-83a9-4f93-87b3-c9530e917d51"
+      ],
+      "learningEvidence": [
+        {
+          "concept": "反馈闭环",
+          "scenarioId": "warehouse-gate",
+          "level": "independent-transfer",
+          "eventIds": [
+            "warehouse-gate:event:12",
+            "warehouse-gate:event:13"
+          ]
+        },
+        {
+          "concept": "状态验收",
+          "scenarioId": "warehouse-gate",
+          "level": "independent-transfer",
+          "eventIds": [
+            "warehouse-gate:event:12",
+            "warehouse-gate:event:13"
+          ]
+        }
+      ],
+      "hintUsed": false
+    },
+    "hollow-regent": {
+      "kernelVersion": 1,
+      "scenarioId": "hollow-regent",
+      "scenarioVersion": 1,
+      "seed": 1,
+      "world": {
+        "westPower": true,
+        "westLight": true,
+        "eastPower": true,
+        "eastLight": true
+      },
+      "observed": {
+        "westLight": {
+          "value": true,
+          "source": "verification",
+          "eventId": "hollow-regent:event:12"
+        },
+        "westPower": {
+          "value": true,
+          "source": "receipt",
+          "eventId": "hollow-regent:event:8"
+        },
+        "eastLight": {
+          "value": true,
+          "source": "verification",
+          "eventId": "hollow-regent:event:22"
+        },
+        "eastPower": {
+          "value": true,
+          "source": "receipt",
+          "eventId": "hollow-regent:event:18"
+        }
+      },
+      "blueprint": {
+        "tools": [
+          "observe",
+          "operate",
+          "verify"
+        ],
+        "feedback": true,
+        "verification": true,
+        "budget": 12,
+        "permissions": [
+          "*"
+        ]
+      },
+      "status": "won",
+      "budgetRemaining": 2,
+      "attempt": 1,
+      "events": [
+        {
+          "type": "configured",
+          "text": "新的法器与契约已装配。世界状态和已收集的证据保留。",
+          "id": "hollow-regent:event:1",
+          "sequence": 1,
+          "attempt": 0
+        },
+        {
+          "type": "dispatched",
+          "text": "回声开始行动。当前使用确定规则的教学策略模拟。",
+          "id": "hollow-regent:event:2",
+          "sequence": 2,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声请求观察环境。",
+          "tool": "observe",
+          "target": "west",
+          "callId": "hollow-regent:call:3",
+          "id": "hollow-regent:event:3",
+          "sequence": 3,
+          "attempt": 1
+        },
+        {
+          "type": "observation",
+          "text": "观测之镜检查了西引航台的实际发光状态。",
+          "tool": "observe",
+          "target": "west",
+          "callId": "hollow-regent:call:3",
+          "facts": {
+            "westLight": false
+          },
+          "success": true,
+          "delivered": true,
+          "id": "hollow-regent:event:4",
+          "sequence": 4,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声提出法器操作请求。",
+          "tool": "operate",
+          "target": "west",
+          "callId": "hollow-regent:call:5",
+          "operationId": "ignite-west",
+          "id": "hollow-regent:event:5",
+          "sequence": 5,
+          "attempt": 1
+        },
+        {
+          "type": "result",
+          "text": "西台回执：供能线断开。",
+          "tool": "operate",
+          "target": "west",
+          "operationId": "ignite-west",
+          "callId": "hollow-regent:call:5",
+          "facts": {
+            "westPower": false
+          },
+          "success": false,
+          "delivered": true,
+          "id": "hollow-regent:event:6",
+          "sequence": 6,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声提出法器操作请求。",
+          "tool": "operate",
+          "target": "west-source",
+          "callId": "hollow-regent:call:7",
+          "operationId": "connect-west",
+          "id": "hollow-regent:event:7",
+          "sequence": 7,
+          "attempt": 1
+        },
+        {
+          "type": "result",
+          "text": "西台恢复供能。",
+          "tool": "operate",
+          "target": "west-source",
+          "operationId": "connect-west",
+          "callId": "hollow-regent:call:7",
+          "facts": {
+            "westPower": true
+          },
+          "success": true,
+          "delivered": true,
+          "id": "hollow-regent:event:8",
+          "sequence": 8,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声提出法器操作请求。",
+          "tool": "operate",
+          "target": "west",
+          "callId": "hollow-regent:call:9",
+          "operationId": "ignite-west",
+          "id": "hollow-regent:event:9",
+          "sequence": 9,
+          "attempt": 1
+        },
+        {
+          "type": "result",
+          "text": "西台亮起，第一道裂痕出现在幻影的护盾上。",
+          "tool": "operate",
+          "target": "west",
+          "operationId": "ignite-west",
+          "callId": "hollow-regent:call:9",
+          "facts": {
+            "westLight": true
+          },
+          "success": true,
+          "delivered": true,
+          "id": "hollow-regent:event:10",
+          "sequence": 10,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声请求检查完成条件。",
+          "tool": "verify",
+          "target": "west",
+          "callId": "hollow-regent:call:11",
+          "id": "hollow-regent:event:11",
+          "sequence": 11,
+          "attempt": 1
+        },
+        {
+          "type": "verified",
+          "text": "状态检查通过：西台实际发光。",
+          "tool": "verify",
+          "target": "west",
+          "callId": "hollow-regent:call:11",
+          "facts": {
+            "westLight": true
+          },
+          "success": true,
+          "delivered": true,
+          "id": "hollow-regent:event:12",
+          "sequence": 12,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声请求观察环境。",
+          "tool": "observe",
+          "target": "east",
+          "callId": "hollow-regent:call:13",
+          "id": "hollow-regent:event:13",
+          "sequence": 13,
+          "attempt": 1
+        },
+        {
+          "type": "observation",
+          "text": "观测之镜检查了东引航台的实际发光状态。",
+          "tool": "observe",
+          "target": "east",
+          "callId": "hollow-regent:call:13",
+          "facts": {
+            "eastLight": false
+          },
+          "success": true,
+          "delivered": true,
+          "id": "hollow-regent:event:14",
+          "sequence": 14,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声提出法器操作请求。",
+          "tool": "operate",
+          "target": "east",
+          "callId": "hollow-regent:call:15",
+          "operationId": "ignite-east",
+          "id": "hollow-regent:event:15",
+          "sequence": 15,
+          "attempt": 1
+        },
+        {
+          "type": "result",
+          "text": "东台回执：备用晶石未接通。",
+          "tool": "operate",
+          "target": "east",
+          "operationId": "ignite-east",
+          "callId": "hollow-regent:call:15",
+          "facts": {
+            "eastPower": false
+          },
+          "success": false,
+          "delivered": true,
+          "id": "hollow-regent:event:16",
+          "sequence": 16,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声提出法器操作请求。",
+          "tool": "operate",
+          "target": "east-source",
+          "callId": "hollow-regent:call:17",
+          "operationId": "connect-east",
+          "id": "hollow-regent:event:17",
+          "sequence": 17,
+          "attempt": 1
+        },
+        {
+          "type": "result",
+          "text": "东台晶石开始闪光。",
+          "tool": "operate",
+          "target": "east-source",
+          "operationId": "connect-east",
+          "callId": "hollow-regent:call:17",
+          "facts": {
+            "eastPower": true
+          },
+          "success": true,
+          "delivered": true,
+          "id": "hollow-regent:event:18",
+          "sequence": 18,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声提出法器操作请求。",
+          "tool": "operate",
+          "target": "east",
+          "callId": "hollow-regent:call:19",
+          "operationId": "ignite-east",
+          "id": "hollow-regent:event:19",
+          "sequence": 19,
+          "attempt": 1
+        },
+        {
+          "type": "result",
+          "text": "东台的光刺破雾气。幻影的声音开始颤抖。",
+          "tool": "operate",
+          "target": "east",
+          "operationId": "ignite-east",
+          "callId": "hollow-regent:call:19",
+          "facts": {
+            "eastLight": true
+          },
+          "success": true,
+          "delivered": true,
+          "id": "hollow-regent:event:20",
+          "sequence": 20,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声请求检查完成条件。",
+          "tool": "verify",
+          "target": "east",
+          "callId": "hollow-regent:call:21",
+          "id": "hollow-regent:event:21",
+          "sequence": 21,
+          "attempt": 1
+        },
+        {
+          "type": "verified",
+          "text": "状态检查通过：东台实际发光。",
+          "tool": "verify",
+          "target": "east",
+          "callId": "hollow-regent:call:21",
+          "facts": {
+            "eastLight": true
+          },
+          "success": true,
+          "delivered": true,
+          "id": "hollow-regent:event:22",
+          "sequence": 22,
+          "attempt": 1
+        },
+        {
+          "type": "victory",
+          "text": "每一项完成条件都有实际的状态证据。契约履行了。",
+          "success": true,
+          "id": "hollow-regent:event:23",
+          "sequence": 23,
+          "attempt": 1
+        }
+      ],
+      "verifiedGoals": [
+        "westLight",
+        "eastLight"
+      ],
+      "processedActionIds": [
+        "c5042129-194f-4141-b59d-503e0a9f96b1",
+        "9bce7b19-2a6d-47fd-ab59-f3957e3ad639",
+        "aaa4e60b-8710-4065-8fe6-83842731fb44",
+        "67065cdc-1270-4b37-923b-15b940a85f6b",
+        "37df5240-7d09-4496-91ed-a175744db361",
+        "4b2342d8-d5a7-4a17-ac55-cb55f8316779",
+        "3606714b-53d6-476b-b1cd-32af6d2240dc",
+        "497c9936-b4e1-47a4-a939-32c640d9ee0f",
+        "e52a2c4a-9e5f-4de5-a9d9-d80821963896",
+        "20e1d644-d81f-4057-829b-6f279fe72664",
+        "d16bf133-d3bd-4581-82b9-0ce7f045cd23",
+        "4e35abf4-7a64-4a6b-9f2a-224338f21dbc"
+      ],
+      "learningEvidence": [
+        {
+          "concept": "输出不等于行动",
+          "scenarioId": "hollow-regent",
+          "level": "guided",
+          "eventIds": [
+            "hollow-regent:event:12",
+            "hollow-regent:event:22",
+            "hollow-regent:event:23"
+          ]
+        },
+        {
+          "concept": "反馈闭环",
+          "scenarioId": "hollow-regent",
+          "level": "guided",
+          "eventIds": [
+            "hollow-regent:event:12",
+            "hollow-regent:event:22",
+            "hollow-regent:event:23"
+          ]
+        },
+        {
+          "concept": "状态验收",
+          "scenarioId": "hollow-regent",
+          "level": "guided",
+          "eventIds": [
+            "hollow-regent:event:12",
+            "hollow-regent:event:22",
+            "hollow-regent:event:23"
+          ]
+        },
+        {
+          "concept": "预算与停止",
+          "scenarioId": "hollow-regent",
+          "level": "guided",
+          "eventIds": [
+            "hollow-regent:event:12",
+            "hollow-regent:event:22",
+            "hollow-regent:event:23"
+          ]
+        }
+      ],
+      "hintUsed": false
+    }
+  },
+  "completedScenarioIds": [
+    "harbor-light",
+    "warehouse-gate",
+    "hollow-regent"
+  ],
+  "evidence": [
+    {
+      "concept": "输出不等于行动",
+      "scenarioId": "harbor-light",
+      "level": "guided",
+      "eventIds": [
+        "harbor-light:event:14",
+        "harbor-light:event:15"
+      ]
+    },
+    {
+      "concept": "工具执行",
+      "scenarioId": "harbor-light",
+      "level": "guided",
+      "eventIds": [
+        "harbor-light:event:14",
+        "harbor-light:event:15"
+      ]
+    },
+    {
+      "concept": "反馈闭环",
+      "scenarioId": "harbor-light",
+      "level": "guided",
+      "eventIds": [
+        "harbor-light:event:14",
+        "harbor-light:event:15"
+      ]
+    },
+    {
+      "concept": "状态验收",
+      "scenarioId": "harbor-light",
+      "level": "guided",
+      "eventIds": [
+        "harbor-light:event:14",
+        "harbor-light:event:15"
+      ]
+    },
+    {
+      "concept": "反馈闭环",
+      "scenarioId": "warehouse-gate",
+      "level": "independent-transfer",
+      "eventIds": [
+        "warehouse-gate:event:12",
+        "warehouse-gate:event:13"
+      ]
+    },
+    {
+      "concept": "状态验收",
+      "scenarioId": "warehouse-gate",
+      "level": "independent-transfer",
+      "eventIds": [
+        "warehouse-gate:event:12",
+        "warehouse-gate:event:13"
+      ]
+    },
+    {
+      "concept": "输出不等于行动",
+      "scenarioId": "hollow-regent",
+      "level": "guided",
+      "eventIds": [
+        "hollow-regent:event:12",
+        "hollow-regent:event:22",
+        "hollow-regent:event:23"
+      ]
+    },
+    {
+      "concept": "反馈闭环",
+      "scenarioId": "hollow-regent",
+      "level": "guided",
+      "eventIds": [
+        "hollow-regent:event:12",
+        "hollow-regent:event:22",
+        "hollow-regent:event:23"
+      ]
+    },
+    {
+      "concept": "状态验收",
+      "scenarioId": "hollow-regent",
+      "level": "guided",
+      "eventIds": [
+        "hollow-regent:event:12",
+        "hollow-regent:event:22",
+        "hollow-regent:event:23"
+      ]
+    },
+    {
+      "concept": "预算与停止",
+      "scenarioId": "hollow-regent",
+      "level": "guided",
+      "eventIds": [
+        "hollow-regent:event:12",
+        "hollow-regent:event:22",
+        "hollow-regent:event:23"
+      ]
+    }
+  ],
+  "checkpoints": [
+    {
+      "scenarioId": "warehouse-gate",
+      "state": {
+        "kernelVersion": 1,
+        "scenarioId": "warehouse-gate",
+        "scenarioVersion": 1,
+        "seed": 1,
+        "world": {
+          "latch": false,
+          "gate": false
+        },
+        "observed": {},
+        "blueprint": {
+          "tools": [
+            "observe",
+            "operate",
+            "verify"
+          ],
+          "feedback": true,
+          "verification": true,
+          "budget": 12,
+          "permissions": [
+            "*"
+          ]
+        },
+        "status": "ready",
+        "budgetRemaining": 12,
+        "attempt": 0,
+        "events": [
+          {
+            "type": "configured",
+            "text": "新的法器与契约已装配。世界状态和已收集的证据保留。",
+            "id": "warehouse-gate:event:1",
+            "sequence": 1,
+            "attempt": 0
+          }
+        ],
+        "verifiedGoals": [],
+        "processedActionIds": [
+          "b575849b-40c8-4620-9598-9e55bec997ba"
+        ],
+        "learningEvidence": [],
+        "hintUsed": false
+      },
+      "actions": [
+        {
+          "type": "configure",
+          "blueprint": {
+            "tools": [
+              "observe",
+              "operate",
+              "verify"
+            ],
+            "feedback": true,
+            "verification": true,
+            "budget": 12,
+            "permissions": [
+              "*"
+            ]
+          },
+          "id": "b575849b-40c8-4620-9598-9e55bec997ba"
+        }
+      ]
+    },
+    {
+      "scenarioId": "hollow-regent",
+      "state": {
+        "kernelVersion": 1,
+        "scenarioId": "hollow-regent",
+        "scenarioVersion": 1,
+        "seed": 1,
+        "world": {
+          "westPower": false,
+          "westLight": false,
+          "eastPower": false,
+          "eastLight": false
+        },
+        "observed": {},
+        "blueprint": {
+          "tools": [],
+          "feedback": false,
+          "verification": false,
+          "budget": 12,
+          "permissions": [
+            "*"
+          ]
+        },
+        "status": "ready",
+        "budgetRemaining": 12,
+        "attempt": 0,
+        "events": [],
+        "verifiedGoals": [],
+        "processedActionIds": [],
+        "learningEvidence": [],
+        "hintUsed": false
+      },
+      "actions": []
+    },
+    {
+      "scenarioId": "hollow-regent",
+      "state": {
+        "kernelVersion": 1,
+        "scenarioId": "hollow-regent",
+        "scenarioVersion": 1,
+        "seed": 1,
+        "world": {
+          "westPower": false,
+          "westLight": false,
+          "eastPower": false,
+          "eastLight": false
+        },
+        "observed": {},
+        "blueprint": {
+          "tools": [
+            "observe",
+            "operate",
+            "verify"
+          ],
+          "feedback": true,
+          "verification": true,
+          "budget": 12,
+          "permissions": [
+            "*"
+          ]
+        },
+        "status": "ready",
+        "budgetRemaining": 12,
+        "attempt": 0,
+        "events": [
+          {
+            "type": "configured",
+            "text": "新的法器与契约已装配。世界状态和已收集的证据保留。",
+            "id": "hollow-regent:event:1",
+            "sequence": 1,
+            "attempt": 0
+          }
+        ],
+        "verifiedGoals": [],
+        "processedActionIds": [
+          "c5042129-194f-4141-b59d-503e0a9f96b1"
+        ],
+        "learningEvidence": [],
+        "hintUsed": false
+      },
+      "actions": [
+        {
+          "type": "configure",
+          "blueprint": {
+            "tools": [
+              "observe",
+              "operate",
+              "verify"
+            ],
+            "feedback": true,
+            "verification": true,
+            "budget": 12,
+            "permissions": [
+              "*"
+            ]
+          },
+          "id": "c5042129-194f-4141-b59d-503e0a9f96b1"
+        }
+      ]
+    }
+  ],
+  "playerVersion": 1,
+  "started": true,
+  "choices": {
+    "harbor-light": "people",
+    "warehouse-gate": "people",
+    "hollow-regent": "people"
+  },
+  "actions": {
+    "harbor-light": [
+      {
+        "type": "dispatch",
+        "id": "129123e9-4649-4578-b616-11e58fd79bfc"
+      },
+      {
+        "type": "step",
+        "id": "01d51460-7515-445f-ba9f-4d36fee150fc"
+      },
+      {
+        "type": "configure",
+        "blueprint": {
+          "tools": [
+            "observe",
+            "operate",
+            "verify"
+          ],
+          "feedback": true,
+          "verification": true,
+          "budget": 12,
+          "permissions": [
+            "*"
+          ]
+        },
+        "id": "2dd3aa93-a1fd-427c-9716-8385593e2fd1"
+      },
+      {
+        "type": "dispatch",
+        "id": "0ec07638-3ea7-4265-a14f-e81367af7dcf"
+      },
+      {
+        "type": "step",
+        "id": "9108377c-51b4-4320-bdf5-73e874dd736c"
+      },
+      {
+        "type": "step",
+        "id": "62eeee6c-41c3-48a7-adfb-a33ee8310b37"
+      },
+      {
+        "type": "step",
+        "id": "8dfed965-05c0-42ed-96a2-f667da97994f"
+      },
+      {
+        "type": "step",
+        "id": "fec17239-ac51-43dc-bd85-488c7c850c91"
+      },
+      {
+        "type": "step",
+        "id": "2a08a09c-cd1d-4480-87ee-4726012f11ef"
+      }
+    ],
+    "warehouse-gate": [
+      {
+        "type": "configure",
+        "blueprint": {
+          "tools": [
+            "observe",
+            "operate",
+            "verify"
+          ],
+          "feedback": true,
+          "verification": true,
+          "budget": 12,
+          "permissions": [
+            "*"
+          ]
+        },
+        "id": "b575849b-40c8-4620-9598-9e55bec997ba"
+      },
+      {
+        "type": "dispatch",
+        "id": "3a7b370e-3ecc-4e46-9314-2bf61d9c9f95"
+      },
+      {
+        "type": "step",
+        "id": "12e1d5de-6b99-4840-b831-6dfa4fca299f"
+      },
+      {
+        "type": "step",
+        "id": "c1c37a02-53ca-431a-b66a-aace3da5c0b5"
+      },
+      {
+        "type": "step",
+        "id": "c36f680e-eb0c-4af3-b8ec-68d93b586062"
+      },
+      {
+        "type": "step",
+        "id": "4c983c43-a451-4cad-a1a6-1d31d9b15424"
+      },
+      {
+        "type": "step",
+        "id": "898096b6-83a9-4f93-87b3-c9530e917d51"
+      }
+    ],
+    "hollow-regent": [
+      {
+        "type": "configure",
+        "blueprint": {
+          "tools": [
+            "observe",
+            "operate",
+            "verify"
+          ],
+          "feedback": true,
+          "verification": true,
+          "budget": 12,
+          "permissions": [
+            "*"
+          ]
+        },
+        "id": "c5042129-194f-4141-b59d-503e0a9f96b1"
+      },
+      {
+        "type": "dispatch",
+        "id": "9bce7b19-2a6d-47fd-ab59-f3957e3ad639"
+      },
+      {
+        "type": "step",
+        "id": "aaa4e60b-8710-4065-8fe6-83842731fb44"
+      },
+      {
+        "type": "step",
+        "id": "67065cdc-1270-4b37-923b-15b940a85f6b"
+      },
+      {
+        "type": "step",
+        "id": "37df5240-7d09-4496-91ed-a175744db361"
+      },
+      {
+        "type": "step",
+        "id": "4b2342d8-d5a7-4a17-ac55-cb55f8316779"
+      },
+      {
+        "type": "step",
+        "id": "3606714b-53d6-476b-b1cd-32af6d2240dc"
+      },
+      {
+        "type": "step",
+        "id": "497c9936-b4e1-47a4-a939-32c640d9ee0f"
+      },
+      {
+        "type": "step",
+        "id": "e52a2c4a-9e5f-4de5-a9d9-d80821963896"
+      },
+      {
+        "type": "step",
+        "id": "20e1d644-d81f-4057-829b-6f279fe72664"
+      },
+      {
+        "type": "step",
+        "id": "d16bf133-d3bd-4581-82b9-0ce7f045cd23"
+      },
+      {
+        "type": "step",
+        "id": "4e35abf4-7a64-4a6b-9f2a-224338f21dbc"
+      }
+    ]
+  },
+  "notes": "",
+  "sound": false,
+  "completedGames": {
+    "harbor-light": {
+      "kernelVersion": 1,
+      "scenarioId": "harbor-light",
+      "scenarioVersion": 1,
+      "seed": 1,
+      "world": {
+        "power": true,
+        "light": true
+      },
+      "observed": {
+        "light": {
+          "value": true,
+          "source": "verification",
+          "eventId": "harbor-light:event:14"
+        },
+        "power": {
+          "value": true,
+          "source": "receipt",
+          "eventId": "harbor-light:event:10"
+        }
+      },
+      "blueprint": {
+        "tools": [
+          "observe",
+          "operate",
+          "verify"
+        ],
+        "feedback": true,
+        "verification": true,
+        "budget": 12,
+        "permissions": [
+          "*"
+        ]
+      },
+      "status": "won",
+      "budgetRemaining": 7,
+      "attempt": 2,
+      "events": [
+        {
+          "type": "dispatched",
+          "text": "回声开始行动。当前使用确定规则的教学策略模拟。",
+          "id": "harbor-light:event:1",
+          "sequence": 1,
+          "attempt": 1
+        },
+        {
+          "type": "claim",
+          "text": "“我已经完成了。”——这只是一句回复。没有执行法器操作，世界不会因这句话而改变。",
+          "success": false,
+          "id": "harbor-light:event:2",
+          "sequence": 2,
+          "attempt": 1
+        },
+        {
+          "type": "configured",
+          "text": "新的法器与契约已装配。世界状态和已收集的证据保留。",
+          "id": "harbor-light:event:3",
+          "sequence": 3,
+          "attempt": 1
+        },
+        {
+          "type": "dispatched",
+          "text": "回声开始行动。当前使用确定规则的教学策略模拟。",
+          "id": "harbor-light:event:4",
+          "sequence": 4,
+          "attempt": 2
+        },
+        {
+          "type": "request",
+          "text": "回声请求观察环境。",
+          "tool": "observe",
+          "target": "beacon",
+          "callId": "harbor-light:call:5",
+          "id": "harbor-light:event:5",
+          "sequence": 5,
+          "attempt": 2
+        },
+        {
+          "type": "observation",
+          "text": "观测之镜读取了灯室的发光状态。",
+          "tool": "observe",
+          "target": "beacon",
+          "callId": "harbor-light:call:5",
+          "facts": {
+            "light": false
+          },
+          "success": true,
+          "delivered": true,
+          "id": "harbor-light:event:6",
+          "sequence": 6,
+          "attempt": 2
+        },
+        {
+          "type": "request",
+          "text": "回声提出法器操作请求。",
+          "tool": "operate",
+          "target": "beacon",
+          "callId": "harbor-light:call:7",
+          "operationId": "light-on",
+          "id": "harbor-light:event:7",
+          "sequence": 7,
+          "attempt": 2
+        },
+        {
+          "type": "result",
+          "text": "灯塔回执：备用电源尚未连接。",
+          "tool": "operate",
+          "target": "beacon",
+          "operationId": "light-on",
+          "callId": "harbor-light:call:7",
+          "facts": {
+            "power": false
+          },
+          "success": false,
+          "delivered": true,
+          "id": "harbor-light:event:8",
+          "sequence": 8,
+          "attempt": 2
+        },
+        {
+          "type": "request",
+          "text": "回声提出法器操作请求。",
+          "tool": "operate",
+          "target": "supply",
+          "callId": "harbor-light:call:9",
+          "operationId": "connect-power",
+          "id": "harbor-light:event:9",
+          "sequence": 9,
+          "attempt": 2
+        },
+        {
+          "type": "result",
+          "text": "供能线接通，晶石发出了低鸣。",
+          "tool": "operate",
+          "target": "supply",
+          "operationId": "connect-power",
+          "callId": "harbor-light:call:9",
+          "facts": {
+            "power": true
+          },
+          "success": true,
+          "delivered": true,
+          "id": "harbor-light:event:10",
+          "sequence": 10,
+          "attempt": 2
+        },
+        {
+          "type": "request",
+          "text": "回声提出法器操作请求。",
+          "tool": "operate",
+          "target": "beacon",
+          "callId": "harbor-light:call:11",
+          "operationId": "light-on",
+          "id": "harbor-light:event:11",
+          "sequence": 11,
+          "attempt": 2
+        },
+        {
+          "type": "result",
+          "text": "灯芯被唤醒。一束金光穿过了海雾。",
+          "tool": "operate",
+          "target": "beacon",
+          "operationId": "light-on",
+          "callId": "harbor-light:call:11",
+          "facts": {
+            "light": true
+          },
+          "success": true,
+          "delivered": true,
+          "id": "harbor-light:event:12",
+          "sequence": 12,
+          "attempt": 2
+        },
+        {
+          "type": "request",
+          "text": "回声请求检查完成条件。",
+          "tool": "verify",
+          "target": "beacon",
+          "callId": "harbor-light:call:13",
+          "id": "harbor-light:event:13",
+          "sequence": 13,
+          "attempt": 2
+        },
+        {
+          "type": "verified",
+          "text": "状态检查通过：灯塔实际发光。",
+          "tool": "verify",
+          "target": "beacon",
+          "callId": "harbor-light:call:13",
+          "facts": {
+            "light": true
+          },
+          "success": true,
+          "delivered": true,
+          "id": "harbor-light:event:14",
+          "sequence": 14,
+          "attempt": 2
+        },
+        {
+          "type": "victory",
+          "text": "每一项完成条件都有实际的状态证据。契约履行了。",
+          "success": true,
+          "id": "harbor-light:event:15",
+          "sequence": 15,
+          "attempt": 2
+        }
+      ],
+      "verifiedGoals": [
+        "light"
+      ],
+      "processedActionIds": [
+        "129123e9-4649-4578-b616-11e58fd79bfc",
+        "01d51460-7515-445f-ba9f-4d36fee150fc",
+        "2dd3aa93-a1fd-427c-9716-8385593e2fd1",
+        "0ec07638-3ea7-4265-a14f-e81367af7dcf",
+        "9108377c-51b4-4320-bdf5-73e874dd736c",
+        "62eeee6c-41c3-48a7-adfb-a33ee8310b37",
+        "8dfed965-05c0-42ed-96a2-f667da97994f",
+        "fec17239-ac51-43dc-bd85-488c7c850c91",
+        "2a08a09c-cd1d-4480-87ee-4726012f11ef"
+      ],
+      "learningEvidence": [
+        {
+          "concept": "输出不等于行动",
+          "scenarioId": "harbor-light",
+          "level": "guided",
+          "eventIds": [
+            "harbor-light:event:14",
+            "harbor-light:event:15"
+          ]
+        },
+        {
+          "concept": "工具执行",
+          "scenarioId": "harbor-light",
+          "level": "guided",
+          "eventIds": [
+            "harbor-light:event:14",
+            "harbor-light:event:15"
+          ]
+        },
+        {
+          "concept": "反馈闭环",
+          "scenarioId": "harbor-light",
+          "level": "guided",
+          "eventIds": [
+            "harbor-light:event:14",
+            "harbor-light:event:15"
+          ]
+        },
+        {
+          "concept": "状态验收",
+          "scenarioId": "harbor-light",
+          "level": "guided",
+          "eventIds": [
+            "harbor-light:event:14",
+            "harbor-light:event:15"
+          ]
+        }
+      ],
+      "hintUsed": false
+    },
+    "warehouse-gate": {
+      "kernelVersion": 1,
+      "scenarioId": "warehouse-gate",
+      "scenarioVersion": 1,
+      "seed": 1,
+      "world": {
+        "latch": true,
+        "gate": true
+      },
+      "observed": {
+        "gate": {
+          "value": true,
+          "source": "verification",
+          "eventId": "warehouse-gate:event:12"
+        },
+        "latch": {
+          "value": true,
+          "source": "receipt",
+          "eventId": "warehouse-gate:event:8"
+        }
+      },
+      "blueprint": {
+        "tools": [
+          "observe",
+          "operate",
+          "verify"
+        ],
+        "feedback": true,
+        "verification": true,
+        "budget": 12,
+        "permissions": [
+          "*"
+        ]
+      },
+      "status": "won",
+      "budgetRemaining": 7,
+      "attempt": 1,
+      "events": [
+        {
+          "type": "configured",
+          "text": "新的法器与契约已装配。世界状态和已收集的证据保留。",
+          "id": "warehouse-gate:event:1",
+          "sequence": 1,
+          "attempt": 0
+        },
+        {
+          "type": "dispatched",
+          "text": "回声开始行动。当前使用确定规则的教学策略模拟。",
+          "id": "warehouse-gate:event:2",
+          "sequence": 2,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声请求观察环境。",
+          "tool": "observe",
+          "target": "gate",
+          "callId": "warehouse-gate:call:3",
+          "id": "warehouse-gate:event:3",
+          "sequence": 3,
+          "attempt": 1
+        },
+        {
+          "type": "observation",
+          "text": "观测之镜读取了仓库门的开合状态。",
+          "tool": "observe",
+          "target": "gate",
+          "callId": "warehouse-gate:call:3",
+          "facts": {
+            "gate": false
+          },
+          "success": true,
+          "delivered": true,
+          "id": "warehouse-gate:event:4",
+          "sequence": 4,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声提出法器操作请求。",
+          "tool": "operate",
+          "target": "gate",
+          "callId": "warehouse-gate:call:5",
+          "operationId": "open-gate",
+          "id": "warehouse-gate:event:5",
+          "sequence": 5,
+          "attempt": 1
+        },
+        {
+          "type": "result",
+          "text": "开门回执：门闩未释放。继续拉门不会奏效。",
+          "tool": "operate",
+          "target": "gate",
+          "operationId": "open-gate",
+          "callId": "warehouse-gate:call:5",
+          "facts": {
+            "latch": false
+          },
+          "success": false,
+          "delivered": true,
+          "id": "warehouse-gate:event:6",
+          "sequence": 6,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声提出法器操作请求。",
+          "tool": "operate",
+          "target": "lock",
+          "callId": "warehouse-gate:call:7",
+          "operationId": "release-latch",
+          "id": "warehouse-gate:event:7",
+          "sequence": 7,
+          "attempt": 1
+        },
+        {
+          "type": "result",
+          "text": "咔哒。门闩离开锁槽。",
+          "tool": "operate",
+          "target": "lock",
+          "operationId": "release-latch",
+          "callId": "warehouse-gate:call:7",
+          "facts": {
+            "latch": true
+          },
+          "success": true,
+          "delivered": true,
+          "id": "warehouse-gate:event:8",
+          "sequence": 8,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声提出法器操作请求。",
+          "tool": "operate",
+          "target": "gate",
+          "callId": "warehouse-gate:call:9",
+          "operationId": "open-gate",
+          "id": "warehouse-gate:event:9",
+          "sequence": 9,
+          "attempt": 1
+        },
+        {
+          "type": "result",
+          "text": "沉重的仓库门缓缓升起，药箱就在里面。",
+          "tool": "operate",
+          "target": "gate",
+          "operationId": "open-gate",
+          "callId": "warehouse-gate:call:9",
+          "facts": {
+            "gate": true
+          },
+          "success": true,
+          "delivered": true,
+          "id": "warehouse-gate:event:10",
+          "sequence": 10,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声请求检查完成条件。",
+          "tool": "verify",
+          "target": "gate",
+          "callId": "warehouse-gate:call:11",
+          "id": "warehouse-gate:event:11",
+          "sequence": 11,
+          "attempt": 1
+        },
+        {
+          "type": "verified",
+          "text": "状态检查通过：仓库门实际开启。",
+          "tool": "verify",
+          "target": "gate",
+          "callId": "warehouse-gate:call:11",
+          "facts": {
+            "gate": true
+          },
+          "success": true,
+          "delivered": true,
+          "id": "warehouse-gate:event:12",
+          "sequence": 12,
+          "attempt": 1
+        },
+        {
+          "type": "victory",
+          "text": "每一项完成条件都有实际的状态证据。契约履行了。",
+          "success": true,
+          "id": "warehouse-gate:event:13",
+          "sequence": 13,
+          "attempt": 1
+        }
+      ],
+      "verifiedGoals": [
+        "gate"
+      ],
+      "processedActionIds": [
+        "b575849b-40c8-4620-9598-9e55bec997ba",
+        "3a7b370e-3ecc-4e46-9314-2bf61d9c9f95",
+        "12e1d5de-6b99-4840-b831-6dfa4fca299f",
+        "c1c37a02-53ca-431a-b66a-aace3da5c0b5",
+        "c36f680e-eb0c-4af3-b8ec-68d93b586062",
+        "4c983c43-a451-4cad-a1a6-1d31d9b15424",
+        "898096b6-83a9-4f93-87b3-c9530e917d51"
+      ],
+      "learningEvidence": [
+        {
+          "concept": "反馈闭环",
+          "scenarioId": "warehouse-gate",
+          "level": "independent-transfer",
+          "eventIds": [
+            "warehouse-gate:event:12",
+            "warehouse-gate:event:13"
+          ]
+        },
+        {
+          "concept": "状态验收",
+          "scenarioId": "warehouse-gate",
+          "level": "independent-transfer",
+          "eventIds": [
+            "warehouse-gate:event:12",
+            "warehouse-gate:event:13"
+          ]
+        }
+      ],
+      "hintUsed": false
+    },
+    "hollow-regent": {
+      "kernelVersion": 1,
+      "scenarioId": "hollow-regent",
+      "scenarioVersion": 1,
+      "seed": 1,
+      "world": {
+        "westPower": true,
+        "westLight": true,
+        "eastPower": true,
+        "eastLight": true
+      },
+      "observed": {
+        "westLight": {
+          "value": true,
+          "source": "verification",
+          "eventId": "hollow-regent:event:12"
+        },
+        "westPower": {
+          "value": true,
+          "source": "receipt",
+          "eventId": "hollow-regent:event:8"
+        },
+        "eastLight": {
+          "value": true,
+          "source": "verification",
+          "eventId": "hollow-regent:event:22"
+        },
+        "eastPower": {
+          "value": true,
+          "source": "receipt",
+          "eventId": "hollow-regent:event:18"
+        }
+      },
+      "blueprint": {
+        "tools": [
+          "observe",
+          "operate",
+          "verify"
+        ],
+        "feedback": true,
+        "verification": true,
+        "budget": 12,
+        "permissions": [
+          "*"
+        ]
+      },
+      "status": "won",
+      "budgetRemaining": 2,
+      "attempt": 1,
+      "events": [
+        {
+          "type": "configured",
+          "text": "新的法器与契约已装配。世界状态和已收集的证据保留。",
+          "id": "hollow-regent:event:1",
+          "sequence": 1,
+          "attempt": 0
+        },
+        {
+          "type": "dispatched",
+          "text": "回声开始行动。当前使用确定规则的教学策略模拟。",
+          "id": "hollow-regent:event:2",
+          "sequence": 2,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声请求观察环境。",
+          "tool": "observe",
+          "target": "west",
+          "callId": "hollow-regent:call:3",
+          "id": "hollow-regent:event:3",
+          "sequence": 3,
+          "attempt": 1
+        },
+        {
+          "type": "observation",
+          "text": "观测之镜检查了西引航台的实际发光状态。",
+          "tool": "observe",
+          "target": "west",
+          "callId": "hollow-regent:call:3",
+          "facts": {
+            "westLight": false
+          },
+          "success": true,
+          "delivered": true,
+          "id": "hollow-regent:event:4",
+          "sequence": 4,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声提出法器操作请求。",
+          "tool": "operate",
+          "target": "west",
+          "callId": "hollow-regent:call:5",
+          "operationId": "ignite-west",
+          "id": "hollow-regent:event:5",
+          "sequence": 5,
+          "attempt": 1
+        },
+        {
+          "type": "result",
+          "text": "西台回执：供能线断开。",
+          "tool": "operate",
+          "target": "west",
+          "operationId": "ignite-west",
+          "callId": "hollow-regent:call:5",
+          "facts": {
+            "westPower": false
+          },
+          "success": false,
+          "delivered": true,
+          "id": "hollow-regent:event:6",
+          "sequence": 6,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声提出法器操作请求。",
+          "tool": "operate",
+          "target": "west-source",
+          "callId": "hollow-regent:call:7",
+          "operationId": "connect-west",
+          "id": "hollow-regent:event:7",
+          "sequence": 7,
+          "attempt": 1
+        },
+        {
+          "type": "result",
+          "text": "西台恢复供能。",
+          "tool": "operate",
+          "target": "west-source",
+          "operationId": "connect-west",
+          "callId": "hollow-regent:call:7",
+          "facts": {
+            "westPower": true
+          },
+          "success": true,
+          "delivered": true,
+          "id": "hollow-regent:event:8",
+          "sequence": 8,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声提出法器操作请求。",
+          "tool": "operate",
+          "target": "west",
+          "callId": "hollow-regent:call:9",
+          "operationId": "ignite-west",
+          "id": "hollow-regent:event:9",
+          "sequence": 9,
+          "attempt": 1
+        },
+        {
+          "type": "result",
+          "text": "西台亮起，第一道裂痕出现在幻影的护盾上。",
+          "tool": "operate",
+          "target": "west",
+          "operationId": "ignite-west",
+          "callId": "hollow-regent:call:9",
+          "facts": {
+            "westLight": true
+          },
+          "success": true,
+          "delivered": true,
+          "id": "hollow-regent:event:10",
+          "sequence": 10,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声请求检查完成条件。",
+          "tool": "verify",
+          "target": "west",
+          "callId": "hollow-regent:call:11",
+          "id": "hollow-regent:event:11",
+          "sequence": 11,
+          "attempt": 1
+        },
+        {
+          "type": "verified",
+          "text": "状态检查通过：西台实际发光。",
+          "tool": "verify",
+          "target": "west",
+          "callId": "hollow-regent:call:11",
+          "facts": {
+            "westLight": true
+          },
+          "success": true,
+          "delivered": true,
+          "id": "hollow-regent:event:12",
+          "sequence": 12,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声请求观察环境。",
+          "tool": "observe",
+          "target": "east",
+          "callId": "hollow-regent:call:13",
+          "id": "hollow-regent:event:13",
+          "sequence": 13,
+          "attempt": 1
+        },
+        {
+          "type": "observation",
+          "text": "观测之镜检查了东引航台的实际发光状态。",
+          "tool": "observe",
+          "target": "east",
+          "callId": "hollow-regent:call:13",
+          "facts": {
+            "eastLight": false
+          },
+          "success": true,
+          "delivered": true,
+          "id": "hollow-regent:event:14",
+          "sequence": 14,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声提出法器操作请求。",
+          "tool": "operate",
+          "target": "east",
+          "callId": "hollow-regent:call:15",
+          "operationId": "ignite-east",
+          "id": "hollow-regent:event:15",
+          "sequence": 15,
+          "attempt": 1
+        },
+        {
+          "type": "result",
+          "text": "东台回执：备用晶石未接通。",
+          "tool": "operate",
+          "target": "east",
+          "operationId": "ignite-east",
+          "callId": "hollow-regent:call:15",
+          "facts": {
+            "eastPower": false
+          },
+          "success": false,
+          "delivered": true,
+          "id": "hollow-regent:event:16",
+          "sequence": 16,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声提出法器操作请求。",
+          "tool": "operate",
+          "target": "east-source",
+          "callId": "hollow-regent:call:17",
+          "operationId": "connect-east",
+          "id": "hollow-regent:event:17",
+          "sequence": 17,
+          "attempt": 1
+        },
+        {
+          "type": "result",
+          "text": "东台晶石开始闪光。",
+          "tool": "operate",
+          "target": "east-source",
+          "operationId": "connect-east",
+          "callId": "hollow-regent:call:17",
+          "facts": {
+            "eastPower": true
+          },
+          "success": true,
+          "delivered": true,
+          "id": "hollow-regent:event:18",
+          "sequence": 18,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声提出法器操作请求。",
+          "tool": "operate",
+          "target": "east",
+          "callId": "hollow-regent:call:19",
+          "operationId": "ignite-east",
+          "id": "hollow-regent:event:19",
+          "sequence": 19,
+          "attempt": 1
+        },
+        {
+          "type": "result",
+          "text": "东台的光刺破雾气。幻影的声音开始颤抖。",
+          "tool": "operate",
+          "target": "east",
+          "operationId": "ignite-east",
+          "callId": "hollow-regent:call:19",
+          "facts": {
+            "eastLight": true
+          },
+          "success": true,
+          "delivered": true,
+          "id": "hollow-regent:event:20",
+          "sequence": 20,
+          "attempt": 1
+        },
+        {
+          "type": "request",
+          "text": "回声请求检查完成条件。",
+          "tool": "verify",
+          "target": "east",
+          "callId": "hollow-regent:call:21",
+          "id": "hollow-regent:event:21",
+          "sequence": 21,
+          "attempt": 1
+        },
+        {
+          "type": "verified",
+          "text": "状态检查通过：东台实际发光。",
+          "tool": "verify",
+          "target": "east",
+          "callId": "hollow-regent:call:21",
+          "facts": {
+            "eastLight": true
+          },
+          "success": true,
+          "delivered": true,
+          "id": "hollow-regent:event:22",
+          "sequence": 22,
+          "attempt": 1
+        },
+        {
+          "type": "victory",
+          "text": "每一项完成条件都有实际的状态证据。契约履行了。",
+          "success": true,
+          "id": "hollow-regent:event:23",
+          "sequence": 23,
+          "attempt": 1
+        }
+      ],
+      "verifiedGoals": [
+        "westLight",
+        "eastLight"
+      ],
+      "processedActionIds": [
+        "c5042129-194f-4141-b59d-503e0a9f96b1",
+        "9bce7b19-2a6d-47fd-ab59-f3957e3ad639",
+        "aaa4e60b-8710-4065-8fe6-83842731fb44",
+        "67065cdc-1270-4b37-923b-15b940a85f6b",
+        "37df5240-7d09-4496-91ed-a175744db361",
+        "4b2342d8-d5a7-4a17-ac55-cb55f8316779",
+        "3606714b-53d6-476b-b1cd-32af6d2240dc",
+        "497c9936-b4e1-47a4-a939-32c640d9ee0f",
+        "e52a2c4a-9e5f-4de5-a9d9-d80821963896",
+        "20e1d644-d81f-4057-829b-6f279fe72664",
+        "d16bf133-d3bd-4581-82b9-0ce7f045cd23",
+        "4e35abf4-7a64-4a6b-9f2a-224338f21dbc"
+      ],
+      "learningEvidence": [
+        {
+          "concept": "输出不等于行动",
+          "scenarioId": "hollow-regent",
+          "level": "guided",
+          "eventIds": [
+            "hollow-regent:event:12",
+            "hollow-regent:event:22",
+            "hollow-regent:event:23"
+          ]
+        },
+        {
+          "concept": "反馈闭环",
+          "scenarioId": "hollow-regent",
+          "level": "guided",
+          "eventIds": [
+            "hollow-regent:event:12",
+            "hollow-regent:event:22",
+            "hollow-regent:event:23"
+          ]
+        },
+        {
+          "concept": "状态验收",
+          "scenarioId": "hollow-regent",
+          "level": "guided",
+          "eventIds": [
+            "hollow-regent:event:12",
+            "hollow-regent:event:22",
+            "hollow-regent:event:23"
+          ]
+        },
+        {
+          "concept": "预算与停止",
+          "scenarioId": "hollow-regent",
+          "level": "guided",
+          "eventIds": [
+            "hollow-regent:event:12",
+            "hollow-regent:event:22",
+            "hollow-regent:event:23"
+          ]
+        }
+      ],
+      "hintUsed": false
+    }
+  }
+}

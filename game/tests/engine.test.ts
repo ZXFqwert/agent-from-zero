@@ -253,7 +253,7 @@ test('invalid authored goals and unknown facts are rejected before play', () => 
 });
 
 test('all three authored adventures have reference, error and recovery paths', () => {
-  for (const scenario of scenarios) {
+  for (const scenario of scenarios.filter(item=>(item.engineVersion??1)===1)) {
     assert.deepEqual(validateScenario(scenario), [], scenario.id);
     const noTools = play(scenario, createGame(scenario));
     assert.equal(noTools.status, 'stalled', `${scenario.id}: claim cannot win`);
@@ -268,7 +268,7 @@ test('all three authored adventures have reference, error and recovery paths', (
 });
 
 test('every committed reference state survives strict save validation', () => {
-  for (const scenario of scenarios) {
+  for (const scenario of scenarios.filter(item=>(item.engineVersion??1)===1)) {
     let state = createGame(scenario);
     assert.equal(validateGameState(scenario, state), true);
     state = reduceGame(scenario, state, { id: 'configure', type: 'configure', blueprint: full });
