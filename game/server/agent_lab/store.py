@@ -8,6 +8,7 @@ import time
 import uuid
 
 from .config import Settings
+from . import experiments
 from .world import execute_tool, initial_messages, initial_world
 
 
@@ -55,6 +56,7 @@ class Store:
                     max_steps INTEGER NOT NULL, inflight INTEGER NOT NULL DEFAULT 0,
                     world TEXT NOT NULL, messages TEXT NOT NULL, events TEXT NOT NULL,
                     final_text TEXT NOT NULL DEFAULT '',
+                    experiment TEXT NOT NULL DEFAULT '',
                     UNIQUE(invite_id, create_key)
                 );
                 CREATE INDEX IF NOT EXISTS runs_quota ON runs(invite_id, day);
@@ -64,6 +66,12 @@ class Store:
                     PRIMARY KEY(run_id, request_key)
                 );
             """)
+            # Additive migration preserves old single-run history and idempotency.
+            columns = {row[1] for row in conn.execute("PRAGMA table_info(runs)")}
+            if "experiment" not in columns:
+                conn.execute("ALTER TABLE runs ADD COLUMN experiment TEXT NOT NULL DEFAULT ''")
+            conn.execute("PRAGMA user_version=2")
+            conn.commit()
 
     @contextmanager
     def transaction(self):
@@ -113,7 +121,10 @@ class Store:
             if row["status"] == "active":
                 events.append({"kind": "stop", "code": "run_timeout"})
             status = "timed_out" if row["status"] == "active" else row["status"]
-            conn.execute("UPDATE runs SET status=?,inflight=0,events=? WHERE id=?", (status, encode(events), row["id"]))
+            experiment = json.loads(row["experiment"]) if row["experiment"] else None
+            if experiment:
+                experiments.abort(experiment, status)
+            conn.execute("UPDATE runs SET status=?,inflight=0,events=?,experiment=? WHERE id=?", (status, encode(events), encode(experiment) if experiment else "", row["id"]))
             result = self.view(self._row(conn, row["id"], row["invite_id"]))
             conn.execute("UPDATE operations SET response=? WHERE run_id=? AND response IS NULL", (encode(result), row["id"]))
 
@@ -123,7 +134,10 @@ class Store:
 
     @staticmethod
     def view(row) -> dict:
-        return {"id": row["id"], "scenario_id": row["scenario"], "status": row["status"], "steps_used": row["steps"], "max_steps": row["max_steps"], "expires_at": iso(row["expires"]), "world": json.loads(row["world"]), "events": json.loads(row["events"]), "final_text": row["final_text"], "step_in_progress": bool(row["inflight"])}
+        result = {"id": row["id"], "scenario_id": row["scenario"], "status": row["status"], "steps_used": row["steps"], "max_steps": row["max_steps"], "expires_at": iso(row["expires"]), "world": json.loads(row["world"]), "events": json.loads(row["events"]), "final_text": row["final_text"], "step_in_progress": bool(row["inflight"])}
+        if row["experiment"]:
+            result["experiment"] = experiments.view(json.loads(row["experiment"]))
+        return result
 
     @staticmethod
     def _row(conn, run_id: str, invite_id: str):
@@ -136,6 +150,7 @@ class Store:
         with self.transaction() as conn:
             self.cleanup(conn)
             result = {"enabled": self.settings.enabled, "scenario_ids": ["signal-rescue"], "limits": {"daily_runs": self.settings.daily_runs, "max_steps": self.settings.max_steps, "run_seconds": self.settings.run_seconds, "max_output_tokens": self.settings.max_output_tokens, "global_concurrency": 1, "quota_timezone": "UTC"}, "busy": bool(conn.execute("SELECT 1 FROM runs WHERE status='active' OR inflight=1 LIMIT 1").fetchone())}
+            result["experiments"] = experiments.catalog(self.settings)
             if invite_id:
                 count = conn.execute("SELECT COUNT(*) FROM runs WHERE invite_id=? AND day=?", (invite_id, iso(self.clock())[:10])).fetchone()[0]
                 active = conn.execute("SELECT * FROM runs WHERE invite_id=? AND status='active' ORDER BY created DESC LIMIT 1", (invite_id,)).fetchone()
@@ -147,17 +162,22 @@ class Store:
             self.cleanup(conn)
             return self.view(self._row(conn, run_id, invite_id))
 
-    def create_run(self, invite_id: str, key: str, scenario: str):
+    def create_run(self, invite_id: str, key: str, scenario: str, experiment_type: str | None = None):
+        if scenario != "signal-rescue":
+            raise Problem(422, "invalid_request")
         now = self.clock()
         with self.transaction() as conn:
             self.cleanup(conn)
             old = conn.execute("SELECT * FROM runs WHERE invite_id=? AND create_key=?", (invite_id, key)).fetchone()
             if old:
-                if old["scenario"] != scenario:
+                previous_type = json.loads(old["experiment"])["type"] if old["experiment"] else None
+                if old["scenario"] != scenario or previous_type != experiment_type:
                     raise Problem(409, "idempotency_conflict")
                 return self.view(old)
             if not self.settings.enabled:
                 raise Problem(503, "lab_unavailable")
+            if experiment_type is not None and not experiments.available(self.settings, experiment_type):
+                raise Problem(503, "experiment_unavailable")
             day = iso(now)[:10]
             used = conn.execute("SELECT COUNT(*) FROM runs WHERE invite_id=? AND day=?", (invite_id, day)).fetchone()[0]
             if used >= self.settings.daily_runs:
@@ -165,7 +185,8 @@ class Store:
             if conn.execute("SELECT 1 FROM runs WHERE status='active' OR inflight=1 LIMIT 1").fetchone():
                 raise Problem(409, "lab_busy")
             ident = str(uuid.uuid4())
-            conn.execute("INSERT INTO runs(id,invite_id,create_key,scenario,created,day,expires,status,max_steps,world,messages,events) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)", (ident, invite_id, key, scenario, now, day, now + self.settings.run_seconds, "active", self.settings.max_steps, encode(initial_world()), encode(initial_messages()), "[]"))
+            experiment = experiments.create(self.settings, experiment_type) if experiment_type else None
+            conn.execute("INSERT INTO runs(id,invite_id,create_key,scenario,created,day,expires,status,max_steps,world,messages,events,experiment) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)", (ident, invite_id, key, scenario, now, day, now + self.settings.run_seconds, "active", self.settings.max_steps, encode(initial_world()), encode(initial_messages()) if not experiment else "[]", "[]", encode(experiment) if experiment else ""))
             return self.view(self._row(conn, ident, invite_id))
 
     def begin_step(self, invite_id: str, run_id: str, key: str) -> tuple[dict, bool]:
@@ -187,6 +208,11 @@ class Store:
                 raise Problem(409, "step_budget_exhausted")
             conn.execute("INSERT INTO operations(run_id,request_key,kind) VALUES(?,?,'step')", (run_id, key))
             conn.execute("UPDATE runs SET steps=steps+1,inflight=1 WHERE id=?", (run_id,))
+            if row["experiment"]:
+                experiment = json.loads(row["experiment"])
+                claim = experiments.claim(experiment)
+                conn.execute("UPDATE runs SET experiment=? WHERE id=?", (encode(experiment), run_id))
+                return {**claim, "expires": row["expires"]}, True
             return {"messages": json.loads(row["messages"]), "expires": row["expires"]}, True
 
     def finish_step(self, invite_id: str, run_id: str, key: str, message: dict | None = None, failure: str | None = None):
@@ -197,7 +223,15 @@ class Store:
             if row["status"] == "active":
                 events, messages, world = (json.loads(row[field]) for field in ["events", "messages", "world"])
                 status, final_text = "active", row["final_text"]
-                if failure:
+                experiment = json.loads(row["experiment"]) if row["experiment"] else None
+                if experiment:
+                    status, world, round_events, final_text = experiments.finish(experiment, message, failure)
+                    events.extend(round_events)
+                    if status == "active" and row["steps"] >= row["max_steps"]:
+                        status = "budget_exhausted"
+                        experiments.abort(experiment, status)
+                        events.append({"kind": "stop", "code": "step_budget_exhausted"})
+                elif failure:
                     status = "timed_out" if failure == "run_timeout" else "failed"
                     events.append({"kind": "stop", "code": failure})
                 else:
@@ -218,7 +252,7 @@ class Store:
                     elif row["steps"] >= row["max_steps"]:
                         status = "budget_exhausted"
                         events.append({"kind": "stop", "code": "step_budget_exhausted"})
-                conn.execute("UPDATE runs SET world=?,messages=?,events=?,status=?,final_text=?,inflight=0 WHERE id=?", (encode(world), encode(messages), encode(events), status, final_text, run_id))
+                conn.execute("UPDATE runs SET world=?,messages=?,events=?,status=?,final_text=?,inflight=0,experiment=? WHERE id=?", (encode(world), encode(messages), encode(events), status, final_text, encode(experiment) if experiment else "", run_id))
             else:
                 conn.execute("UPDATE runs SET inflight=0 WHERE id=?", (run_id,))
             result = self.view(self._row(conn, run_id, invite_id))
@@ -236,8 +270,11 @@ class Store:
                 return json.loads(previous["response"])
             if row["status"] == "active":
                 events = json.loads(row["events"]) + [{"kind": "stop", "code": "user_cancelled"}]
+                experiment = json.loads(row["experiment"]) if row["experiment"] else None
+                if experiment:
+                    experiments.abort(experiment, "cancelled")
                 # Keep inflight lease until pending HTTP finishes/cancels or deadline expires.
-                conn.execute("UPDATE runs SET status='cancelled',events=? WHERE id=?", (encode(events), run_id))
+                conn.execute("UPDATE runs SET status='cancelled',events=?,experiment=? WHERE id=?", (encode(events), encode(experiment) if experiment else "", run_id))
             result = self.view(self._row(conn, run_id, invite_id))
             conn.execute("INSERT INTO operations(run_id,request_key,kind,response) VALUES(?,?,'cancel',?)", (run_id, key, encode(result)))
             return result

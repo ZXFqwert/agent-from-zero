@@ -4,6 +4,7 @@ import { createGame, reduceGame } from "../engine";
 import { factLabels } from "../content/scenarios";
 import { uiStories } from "../content/stories";
 import { displayFact } from "../content/presentation";
+import {exportBlueprintPython,type PythonLearningStage} from '../exports/pythonBlueprint';
 import type {
   GameAction,
   GameState,
@@ -20,6 +21,7 @@ export default function Journal({
 }) {
   const [layer, setLayer] = useState<"story" | "system" | "code">("story"),
     [cursor, setCursor] = useState(actions.length);
+  const [pythonStage,setPythonStage]=useState<PythonLearningStage>('messages');
   const replay = useMemo(
     () =>
       actions
@@ -31,6 +33,7 @@ export default function Journal({
     [actions, cursor, scenario, state.seed],
   );
   const types: Record<string, string> = {
+    "lab-change":"宿主配置", "lab-request":"宿主请求", "lab-observation":"宿主观测", "lab-result":"宿主回执", "lab-verified":"宿主检查",
     "evaluation-change":"试验契约",
     "evaluation-request":"试验请求",
     "evaluation-observation":"试验量测",
@@ -168,12 +171,22 @@ export default function Journal({
           <p className="muted">
             这些是模拟内核的可观察消息，不能视为模型内部思考。
           </p>
+          <details className="callout"><summary>把这次构筑带进 Python</summary>
+            <p>从当前回放位置的已知资料导出学习骨架。你选择本次只练哪一层；工具实现保留给你亲手完成。</p>
+            <label>这一步练什么<select value={pythonStage} onChange={event=>setPythonStage(event.target.value as PythonLearningStage)}>
+              <option value="messages">01 · 一个消息来回</option><option value="tools">02 · 一件工具与精确回执</option><option value="loop">03 · 有限反馈循环</option>
+            </select></label>
+            <p>{exportBlueprintPython({scenario,blueprint:replay.blueprint,observed:replay.observed,stage:pythonStage}).learningTasks.at(-1)?.principle}</p>
+            <button className="button" onClick={()=>{const result=exportBlueprintPython({scenario,blueprint:replay.blueprint,observed:replay.observed,stage:pythonStage});const url=URL.createObjectURL(new Blob([result.source],{type:'text/x-python;charset=utf-8'}));const link=document.createElement('a');link.href=url;link.download=result.filename;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}}>下载本步 Python 骨架</button>
+            <small>使用 OpenAI SDK 的 Chat Completions；本次下载不连接模型。配置和真实工具由你在独立练习目录中填写。</small>
+          </details>
           <pre className="code-view">
             {JSON.stringify(
               {
                 blueprint: replay.blueprint,
                 context: replay.observed,
                 events: replay.events.slice(-8),
+                ...(replay.lab ? {host:replay.lab} : {}),
                 ...(replay.team ? {team:replay.team} : {}),
                 ...(replay.evaluation ? {evaluation:replay.evaluation} : {}),
               },
@@ -185,7 +198,7 @@ export default function Journal({
       ) : (
         <ol className="event-list">
           {replay.events
-            .filter((e) => layer === "system" || !["request","evaluation-request"].includes(e.type))
+            .filter((e) => layer === "system" || !["request","evaluation-request","lab-request"].includes(e.type))
             .map((e) => (
               <li key={e.id} className={`event-${e.type}`}>
                 <div className="event-mark">
@@ -203,6 +216,10 @@ export default function Journal({
                     {e.taskId && <span>任务 {e.taskId.split(':').at(-1)}</span>}
                     {e.evaluationCaseId && <span>试验：{scenario.evaluation?.cases.find(c=>c.id===e.evaluationCaseId)?.label??e.evaluationCaseId}</span>}
                     {e.evaluationRunId && <span>试验世界 · {e.evaluationRunId.split(':').at(-1)}</span>}
+                    {e.labTaskId&&<span>入口任务 {e.labTaskId.split(':').at(-1)}</span>}
+                    {e.labSource&&<span>真实入口 {e.labSource.channelId} / {e.labSource.senderId}</span>}
+                    {e.labModuleId&&<span>模块 {e.labModuleId}</span>}
+                    {e.labModelId&&<span>适配 {e.labModelId}</span>}
                     {e.tool && <span>{e.tool}</span>}
                     {e.delivered === false && (
                       <span className="warning">未送入回声上下文</span>

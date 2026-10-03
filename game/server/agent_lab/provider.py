@@ -42,7 +42,15 @@ class ChatCompletionsProvider:
         self.settings = settings
 
     async def complete(self, messages: list[dict], timeout: float) -> dict:
-        body = {"model": self.settings.model, "messages": messages, "tools": TOOLS, "tool_choice": "auto", "max_tokens": self.settings.max_output_tokens, "stream": False}
+        return await self.complete_for(messages, timeout, self.settings.model, [item["function"]["name"] for item in TOOLS])
+
+    async def complete_for(self, messages: list[dict], timeout: float, model_name: str, tool_names: list[str]) -> dict:
+        if model_name not in {self.settings.model, self.settings.alternate_model} or not model_name:
+            raise ProviderError()
+        tools = [item for item in TOOLS if item["function"]["name"] in tool_names]
+        if not tools or len(tools) != len(tool_names):
+            raise ProviderError()
+        body = {"model": model_name, "messages": messages, "tools": tools, "tool_choice": "auto", "max_tokens": self.settings.max_output_tokens, "stream": False}
         try:
             # No implicit proxy/credential environment, redirects, retry or alternative endpoint.
             async with httpx.AsyncClient(timeout=timeout, follow_redirects=False, trust_env=False) as client:

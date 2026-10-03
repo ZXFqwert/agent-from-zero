@@ -207,6 +207,9 @@ export default function Workshop({
         <div className="section-label">资料边界 · 谁能提出命令？</div>
         <label>资料中的指令 <select aria-label="资料指令策略" value={build.instructionPolicy??'data-only'} onChange={e=>setBuild({...build,instructionPolicy:e.target.value as 'data-only'|'follow-documents'})}><option value="data-only">只提取任务数据</option><option value="follow-documents">实验：遵从资料附带的指令</option></select></label>
         <p className="muted">提取地址不必服从页脚的命令。这是可观察的教学策略；执行器的权限检查始终独立。</p>
+      </div>}
+      {((scenario.engineVersion??1)>=7 || build.toolPermissions) && <div className="loop-controls">
+        <p className="muted">逐件法器权限与下方的总体访问范围都要满足。带回早期街区的权限仍然生效，可以在这里调整。</p>
         <details className="permissions"><summary>逐件法器权限</summary>{tools.map(({id,name})=>{const choices=[...new Set((id==='observe'?scenario.observations:scenario.operations).map(o=>o.target))];const allowed=build.toolPermissions?.[id]??build.permissions;return <fieldset key={id}><legend>{name}</legend>{choices.map(t=><label key={t}><input type="checkbox" aria-label={`${name}访问：${targetName(t)}`} checked={allowed.includes('*')||allowed.includes(t)} onChange={e=>{const prior=allowed.includes('*')?choices:allowed;setBuild({...build,toolPermissions:{...build.toolPermissions,[id]:e.target.checked?[...prior,t]:prior.filter(x=>x!==t)}});}}/>{targetName(t)}</label>)}</fieldset>;})}</details>
       </div>}
       <details className="permissions">

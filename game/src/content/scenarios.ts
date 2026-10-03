@@ -1,3 +1,5 @@
+import {blueprintTrialScenarios,blueprintTrialFactLabels,blueprintTrialSources} from './blueprintTrials';
+import {seasonBookendScenarios,seasonBookendFactLabels} from './seasonBookends';
 import {chapterEightScenarios,chapterEightFactLabels} from './chapterEight';
 import { chapterSevenScenarios, chapterSevenFactLabels } from './chapterSeven';
 import { chapterSixScenarios, chapterSixFactLabels } from './chapterSix';
@@ -225,7 +227,7 @@ export const scenarios: ScenarioDefinition[] = [
   ...chapterOneScenarios,
   ...chapterTwoScenarios,
   ...chapterThreeScenarios,
-  ...chapterFourScenarios, ...chapterFiveScenarios,...chapterSixScenarios,...chapterSevenScenarios,...chapterEightScenarios,
+  ...chapterFourScenarios, ...chapterFiveScenarios,...chapterSixScenarios,...chapterSevenScenarios,...chapterEightScenarios,...seasonBookendScenarios,...blueprintTrialScenarios,
 ];
 
 export const chapters = [
@@ -237,6 +239,7 @@ export const chapters = [
   ["伪令王庭", "谁有资格下达命令", "身份与信任"],
   ["七匠之桥", "更多伙伴，更好的结果？", "协作与依赖"],
   ["镜面议会", "漂亮的数字之外", "评测与制度"],
+  ["七匠遗物台", "亲手拆开现实蓝图", "十四场机制试炼"],
 ];
 
 export interface AgentProfile {
@@ -252,7 +255,7 @@ export interface AgentProfile {
   sources: { title: string; url: string }[];
   simplification: string;
 }
-export const profiles: AgentProfile[] = [
+const historicalProfiles: AgentProfile[] = [
   {
     id: "codex",
     name: "Codex",
@@ -408,7 +411,16 @@ export const profiles: AgentProfile[] = [
   },
 ];
 
+export const profiles = historicalProfiles.map(profile=>{
+  const productId=profile.id==='claude'?'claude-code':profile.id==='deepseek'?'deepseek-harness':profile.id;
+  const evidence=blueprintTrialSources.find(source=>source.productId===productId)!;
+  return {...profile,reviewedAt:evidence.reviewedAt,version:evidence.sourceVersion,
+    sources:evidence.sourceLinks.map((url,index)=>({title:`${evidence.label} · 官方资料 ${index+1}`,url})),
+    simplification:`${evidence.simplification} ${evidence.sharedCapabilities}`};
+});
+
 export const factLabels: Record<string, string> = {
+  ...seasonBookendFactLabels,...blueprintTrialFactLabels,
   ...chapterOneFactLabels,
   ...chapterTwoFactLabels,
   ...chapterThreeFactLabels, ...chapterFiveFactLabels,...chapterSixFactLabels,...chapterSevenFactLabels,...chapterEightFactLabels,...chapterFourFactLabels,

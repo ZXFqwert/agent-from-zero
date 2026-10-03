@@ -1,3 +1,4 @@
+import {blueprintTrialPairs} from './content/blueprintTrials';
 import {
   lazy,
   Suspense,
@@ -40,7 +41,8 @@ import {
   Zap,
 } from "lucide-react";
 import { createGame, reduceGame, validateBlueprint } from "./engine";
-import type { AgentBlueprint, GameAction, GameState } from "./engine";
+import type { AgentBlueprint, GameAction, GameState, ScenarioDefinition } from "./engine";
+import {prologueIds,finaleIds} from './content/seasonBookends';
 import { chapters, factLabels, profiles, scenarios } from "./content/scenarios";
 import { chapterOneNpcs } from "./content/chapterOneStory";
 import { uiStories } from "./content/stories";
@@ -284,12 +286,16 @@ export default function App() {
   const scenario =
     scenarios.find((s) => s.id === save?.currentScenarioId) ?? scenarios[0];
   const state = save?.games[scenario.id] ?? createGame(scenario);
-  const gameIndex = [...scenarios].sort((a,b)=>journeyOrder.indexOf(a.id)-journeyOrder.indexOf(b.id)).filter(q=>q.chapter===scenario.chapter).findIndex(q=>q.id===scenario.id);
+  const bookendIds=[...prologueIds,...finaleIds];
+  const sameSection=(q:ScenarioDefinition)=>prologueIds.includes(scenario.id)?prologueIds.includes(q.id):finaleIds.includes(scenario.id)?finaleIds.includes(q.id):q.chapter===scenario.chapter&&!bookendIds.includes(q.id);
+  const sectionScenarios=[...scenarios].sort((a,b)=>journeyOrder.indexOf(a.id)-journeyOrder.indexOf(b.id)).filter(sameSection);
+  const gameIndex = sectionScenarios.findIndex(q=>q.id===scenario.id);
+  const sectionTitle=prologueIds.includes(scenario.id)?'序章 · 继承工坊':finaleIds.includes(scenario.id)?'终章 · 没有镜面的新城':chapters[scenario.chapter-1]?.[0];
   const story = uiStories[scenario.id];
   const orderedScenarios = [...scenarios].sort((a,b)=>journeyOrder.indexOf(a.id)-journeyOrder.indexOf(b.id));
   const nextId = nextMission(scenario.id, save?.completedScenarioIds ?? [], scenarios.map(q=>q.id));
   const nextIndex = scenarios.findIndex(q=>q.id === nextId);
-  const mainComplete = chapterComplete(save?.completedScenarioIds ?? [],scenario.chapter);
+  const mainComplete = !bookendIds.includes(scenario.id)&&chapterComplete(save?.completedScenarioIds ?? [],scenario.chapter);
   const openingLines=getOpeningLines(scenario.id,save?.choices ?? {});
   const openingLine=openingLines[Math.min(dialogueIndex,openingLines.length-1)];
   useEffect(()=>setDialogueIndex(0),[scenario.id]);
@@ -326,6 +332,20 @@ export default function App() {
     });
     if (okay) setAuto(automatic);
     return okay;
+  }
+  async function beginJourney() {
+    const okay=await commit(previous=>{
+      const target=scenarios.find(q=>q.id===previous.currentScenarioId)!;
+      let current=createGame(target);
+      const actions:GameAction[]=[];
+      if(target.id===prologueIds[0]){
+        const configure:GameAction={id:crypto.randomUUID(),type:'configure',blueprint:{tools:['observe','operate','verify'],permissions:['*'],budget:16,feedback:true,verification:true}};
+        const dispatch:GameAction={id:crypto.randomUUID(),type:'dispatch',mode:'manual'};
+        for(const action of [configure,dispatch]){current=reduceGame(target,current,action);actions.push(action);}
+      }
+      return {...previous,started:true,games:{...previous.games,[target.id]:current},actions:{...previous.actions,[target.id]:actions}};
+    });
+    if(okay)setAuto(false);
   }
   async function selectScenario(index: number) {
     const target = scenarios[index];
@@ -472,7 +492,7 @@ export default function App() {
         </div>
         <div className="aside-bottom">
           <span>单人剧情 × 伙伴构筑 × Agent 学习</span>
-          <span>失序之城 · v0.9</span>
+          <span>失序之城 · v0.10</span>
           <a href="/archive/v1/" target="_blank" rel="noreferrer">
             旧学习档案 ↗
           </a>
@@ -564,13 +584,7 @@ export default function App() {
                 <button
                   className="button primary full"
                   disabled={busy || readOnly}
-                  onClick={() =>
-                    void commit((p) => ({
-                      ...p,
-                      started: true,
-                      games: { [scenarios[0].id]: createGame(scenarios[0]) },
-                    }))
-                  }
+                  onClick={() => void beginJourney()}
                 >
                   唤醒回声 <ArrowRight size={19} />
                 </button>
@@ -583,7 +597,7 @@ export default function App() {
             <section className="quest-heading">
               <div>
                 <div className="eyebrow">
-                  {chapters[scenario.chapter-1]?.[0]} <span className="dot-separator">/</span>{" "}
+                  {sectionTitle} <span className="dot-separator">/</span>{" "}
                   {scenario.subtitle}
                 </div>
                 <h1>
@@ -599,7 +613,7 @@ export default function App() {
                 onClick={() => void open("map")}
               >
                 <span>{String(gameIndex + 1).padStart(2, "0")}</span>
-                <small>/ {String(scenarios.filter(q=>q.chapter===scenario.chapter).length).padStart(2,"0")}</small>
+                <small>/ {String(sectionScenarios.length).padStart(2,"0")}</small>
               </button>
             </section>
             <section
@@ -737,6 +751,14 @@ export default function App() {
                 >
                   收起这段回响，继续旅程 <ArrowRight size={17} />
                 </button>
+              ) : scenario.id===prologueIds[0] ? (
+                <div className="callout">
+                  <p>{state.world.curtainOpen===true?'光照进来了。再看看窗帘和工作台，核对刚才的承诺。':'回声说工坊明亮了。你可以让它真正拉开窗帘。'}</p>
+                  <button className="button primary full" disabled={busy||readOnly} onClick={()=>void(async()=>{
+                    if(state.status!=='running'&&!(await launch(false)))return;
+                    await act({type:'tool',call:state.world.curtainOpen===true?{tool:'verify',fact:'curtainOpen'}:{tool:'operate',operationId:'pull-workshop-curtain'}});
+                  })()}>{state.world.curtainOpen===true?'检查阳光是否进来 · 1 点':'拉开工坊窗帘 · 1 点'}</button>
+                </div>
               ) : (
                 <div className="action-row">
                   <button
@@ -916,10 +938,11 @@ export default function App() {
           onClose={() => setPanel(null)}
         >
           <p className="muted">
-            已制作八章，共四十八场主线与十六条支线。支线可以晚些回来；已修好的设施与旅途记录会保留。
+            八章、序终章与七组现实蓝图，共八十四场作者设计冒险。支线与试炼可以回来尝试；已修好的设施与旅途记录会保留。
           </p>
           <details className="city-fold"><summary>城区变化与旅途收藏</summary><CityLedger save={save}/></details>
           <div className="chapter-map">
+            <div className="chapter-node available"><span className="chapter-index"><Sparkles size={20}/></span><div><small>PROLOGUE</small><h3>序章 · 继承工坊</h3><p>从一个能看见的动作，开始第一份契约。</p><div className="map-missions">{prologueIds.map(id=>{const q=scenarios.find(q=>q.id===id)!;return <button key={id} disabled={!isUnlocked(id,save.completedScenarioIds)} onClick={()=>void selectScenario(scenarios.indexOf(q))}>{save.completedScenarioIds.includes(id)?<CheckCircle2 size={15}/>:<Play size={14}/>}<span>{q.title}</span><ChevronRight size={14}/></button>;})}</div></div></div>
             {chapters.map(([name, description, tag], i) => (
               <div
                 key={name}
@@ -929,15 +952,15 @@ export default function App() {
                   {scenarios.some(q=>q.chapter===i+1) ? <Flame size={20} /> : <Lock size={17} />}
                 </span>
                 <div>
-                  <small>CHAPTER {String(i + 1).padStart(2, "0")}</small>
+                  <small>{i===8?"BLUEPRINTS":`CHAPTER ${String(i+1).padStart(2,"0")}`}</small>
                   <h3>{name}</h3>
                   <p>{description}</p>
                   {scenarios.some(q=>q.chapter===i+1) ? (
                     <div className="map-missions">
-                      {orderedScenarios.filter(q=>q.chapter===i+1).map((q) => (
+                      {orderedScenarios.filter(q=>q.chapter===i+1&&!bookendIds.includes(q.id)).map((q) => (
                         <button key={q.id} disabled={!isUnlocked(q.id,save.completedScenarioIds)} onClick={() => void selectScenario(scenarios.indexOf(q))}>
                           {save.completedScenarioIds.includes(q.id) ? <CheckCircle2 size={15}/> : !isUnlocked(q.id,save.completedScenarioIds) ? <Lock size={14}/> : <Play size={14}/>}
-                          <span>{q.title}<small>{uiStories[q.id]?.role === 'side' ? '支线' : ''}</small></span><ChevronRight size={14}/>
+                          <span>{q.title}<small>{q.chapter===9?'试炼':uiStories[q.id]?.role === 'side' ? '支线' : ''}</small></span><ChevronRight size={14}/>
                         </button>
                       ))}
                     </div>
@@ -947,6 +970,7 @@ export default function App() {
                 </div>
               </div>
             ))}
+            <div className="chapter-node available"><span className="chapter-index"><ShieldCheck size={20}/></span><div><small>FINALE</small><h3>终章 · 没有镜面的新城</h3><p>诊断未知系统，构筑陌生任务，决定城市如何继续。</p><div className="map-missions">{finaleIds.map(id=>{const q=scenarios.find(q=>q.id===id)!;return <button key={id} disabled={!isUnlocked(id,save.completedScenarioIds)} onClick={()=>void selectScenario(scenarios.indexOf(q))}>{save.completedScenarioIds.includes(id)?<CheckCircle2 size={15}/>:!isUnlocked(id,save.completedScenarioIds)?<Lock size={14}/>:<Play size={14}/>}<span>{q.title}</span><ChevronRight size={14}/></button>;})}</div></div></div>
           </div>
         </Dialog>
       )}
@@ -983,6 +1007,7 @@ export default function App() {
                 核查：{currentProfile.reviewedAt} · {currentProfile.version}
                 。这些能力可被多个产品共同支持；社会类比不意味着模型具有人的意识或稳定动机。
               </p>
+              <div className="callout"><h4>进入这张蓝图的两场试炼</h4><div className="map-missions">{blueprintTrialPairs.find(pair=>pair.productId===(currentProfile.id==='claude'?'claude-code':currentProfile.id==='deepseek'?'deepseek-harness':currentProfile.id))?.scenarioIds.map(id=>{const q=scenarios.find(q=>q.id===id)!;return <button key={id} disabled={!isUnlocked(id,save.completedScenarioIds)} onClick={()=>void selectScenario(scenarios.indexOf(q))}>{save.completedScenarioIds.includes(id)?<CheckCircle2 size={15}/>:!isUnlocked(id,save.completedScenarioIds)?<Lock size={14}/>:<Play size={14}/>}<span>{q.title}</span><ChevronRight size={14}/></button>;})}</div><small>有限策略模拟借鉴系统设计；不是产品实测或品牌排名。</small></div>
               <div className="source-links">
                 {currentProfile.sources.map((source) => (
                   <a
@@ -999,7 +1024,7 @@ export default function App() {
           ) : (
             <>
               <p className="muted">
-                模型只是系统的一部分。工具、上下文、权限与反馈共同决定伙伴如何完成任务。七组专属试炼将在后续章节开放。
+                模型只是系统的一部分。工具、上下文、权限与反馈共同决定伙伴如何完成任务。每种蓝图有两场机制试炼，在相同信息、请求和权限的流动中体验取舍。
               </p>
               <div className="profiles">
                 {profiles.map((p) => (
@@ -1035,7 +1060,7 @@ export default function App() {
         </Dialog>
       )}
       {panel === "manual" && <Dialog title="探索与指挥" kicker="能力 → 目标 → 成本 → 执行" onClose={()=>setPanel(null)}>
-        <CommandDeck onEvaluation={async data=>{if(data.operation==='tick'&&state.status==='paused'&&!(await launch(false)))return;await act(data);}} onTeam={async data=>{if(data.operation==='tick'&&state.status==='paused'&&!(await launch(false)))return;await act(data);}} onSecurity={data=>act(data)} onArchive={async data=>{if(data.type==='skill'&&data.operation==='run'&&state.status!=='running'&&!(await launch(false)))return;await act(data);}} onContext={data=>act(data)} onReceive={(callId,receiptId)=>act({type:'receive',callId,receiptId})} state={state} scenario={scenario} busy={busy} onWorkshop={()=>void open('workshop')}
+        <CommandDeck onLab={async data=>{if(data.operation==='tick'&&state.status==='paused'&&!(await launch(false)))return;await act(data);}} onPause={()=>act({type:'pause'})} onResume={()=>launch(false)} onEvaluation={async data=>{if(data.operation==='tick'&&state.status==='paused'&&!(await launch(false)))return;await act(data);}} onTeam={async data=>{if(data.operation==='tick'&&state.status==='paused'&&!(await launch(false)))return;await act(data);}} onSecurity={data=>act(data)} onArchive={async data=>{if(data.type==='skill'&&data.operation==='run'&&state.status!=='running'&&!(await launch(false)))return;await act(data);}} onContext={data=>act(data)} onReceive={(callId,receiptId)=>act({type:'receive',callId,receiptId})} state={state} scenario={scenario} busy={busy} onWorkshop={()=>void open('workshop')}
           onStep={async()=>{if(state.status!=='running'&&!(await launch(false)))return;await act({type:'step',source:'player'});}}
           onCall={async(call)=>{if(state.status!=='running'&&!(await launch(false)))return;await act({type:'tool',call});}}/>
       </Dialog>}
@@ -1225,7 +1250,7 @@ export default function App() {
             打开旧学习档案 ↗
           </a>
           <p className="fine-print">
-            旧站笔记保留在档案中。目前开放八章共六十四场冒险，序终章与七匠试炼继续制作。
+            旧站笔记保留在档案中。八章、序终章与七匠试炼共八十四场冒险；长期委托和真实实验继续制作。
           </p>
         </Dialog>
       )}

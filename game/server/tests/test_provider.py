@@ -36,3 +36,23 @@ def test_provider_does_not_follow_redirects_or_return_upstream_errors(monkeypatc
     with pytest.raises(ProviderError) as captured:
         asyncio.run(ChatCompletionsProvider(settings).complete([], 1))
     assert "never-expose" not in str(captured.value)
+
+
+def test_comparison_uses_server_selected_model_and_only_assigned_tools(monkeypatch):
+    settings = Settings(base_url="https://model.invalid/v1", model="fake-a", alternate_model="fake-b", api_key="server-key")
+    received = []
+    def handler(request):
+        received.append(request)
+        return httpx.Response(200, json={"choices": [{"message": {"role": "assistant", "content": "测试"}}]})
+    original = httpx.AsyncClient
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kwargs: original(transport=httpx.MockTransport(handler), **kwargs))
+    provider = ChatCompletionsProvider(settings)
+    asyncio.run(provider.complete_for([{"role": "user", "content": "测试资料"}], 1, "fake-b", ["verify"]))
+    payload = json.loads(received[0].content)
+    assert payload["model"] == "fake-b"
+    assert [item["function"]["name"] for item in payload["tools"]] == ["verify"]
+    assert str(received[0].url) == "https://model.invalid/v1/chat/completions"
+    for model, tools in [("client-override", ["observe"]), ("fake-a", ["shell"]), ("fake-a", ["observe", "observe"])]:
+        with pytest.raises(ProviderError):
+            asyncio.run(provider.complete_for([], 1, model, tools))
+    assert len(received) == 1

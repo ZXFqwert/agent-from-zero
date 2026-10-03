@@ -8,6 +8,7 @@ function sceneArt(scenario: ScenarioDefinition): SceneArt {
 }
 function sceneTexture(scenario: ScenarioDefinition, state: GameState): string {
   const art = sceneArt(scenario);
+  if (art === "workshop") return state.world.curtainOpen === false ? "workshop" : "workshop-day";
   if (art === "warehouse") return state.world.gate === true || !("gate" in state.world) ? "warehouse-open" : "warehouse";
   if (art === "ferry") {
     if (state.world.boatAt === "far") return state.world.cargoLoaded === true || state.world.cargoDelivered === true ? "ferry-far" : "ferry-far-empty";
@@ -39,6 +40,7 @@ export default function Scene({ state, scenario, reducedMotion }: {
       preload() {
         for (const [key, file] of [
           ["harbor", "harbor-background"], ["warehouse", "warehouse-background"],
+          ["workshop", "workshop-shut-background"], ["workshop-day", "workshop-day-background"],
           ["warehouse-open", "warehouse-open-background"], ["tide", "tide-background"],
           ["ferry", "ferry-background"], ["ferry-far", "ferry-far-background"],
           ["ferry-far-empty", "ferry-far-empty-background"], ["ferry-loaded", "ferry-loaded-background"],
@@ -52,8 +54,10 @@ export default function Scene({ state, scenario, reducedMotion }: {
           ["archive", "archive-background"], ["keeper", "palimpsest-keeper"],
           ["corridor", "corridor-background"], ["archivist", "many-faced-archivist"],
         ]) {
-          const allowed=({1:['harbor','warehouse','warehouse-open','tide','ferry','ferry-far','ferry-far-empty','ferry-loaded','phantom'],2:['forge','clerk'],3:['clock','warden'],4:['corridor','archivist'],5:['archive','keeper'],6:['court','regent'],7:['bridge','chorus','mideng','zhenzhou'],8:['council','speaker']} as Record<number,string[]>)[latest.current.scenario.chapter]??[];
+          const allowed=({workshop:['workshop','workshop-day'],harbor:['harbor','phantom'],warehouse:['warehouse','warehouse-open','phantom'],tide:['tide','phantom'],ferry:['ferry','ferry-far','ferry-far-empty','ferry-loaded','phantom'],forge:['forge','clerk'],clock:['clock','warden'],corridor:['corridor','archivist'],archive:['archive','keeper'],court:['court','regent'],bridge:['bridge','chorus','mideng','zhenzhou'],council:['council','speaker']} as Record<string,string[]>)[sceneArt(latest.current.scenario)]??[];
           if(key!=='echo'&&!allowed.includes(key))continue;
+          if(['phantom','clerk','warden','regent','speaker','chorus','keeper','archivist'].includes(key)&&latest.current.scenario.kind!=='boss')continue;
+          if(['mideng','zhenzhou'].includes(key)&&!latest.current.scenario.team)continue;
           this.load.image(key, `${import.meta.env.BASE_URL}art/${file}.webp`);
         }
       }
@@ -62,9 +66,9 @@ export default function Scene({ state, scenario, reducedMotion }: {
         this.background = this.add.image(0, 0, sceneTexture(latest.current.scenario,latest.current.state)).setOrigin(0.5, 0);
         this.oldBackground = this.add.image(0, 0, sceneTexture(latest.current.scenario,latest.current.state)).setOrigin(0.5, 0).setAlpha(0);
         this.glow = this.add.graphics();
-        this.phantom = this.add.image(0, 0, latest.current.scenario.chapter===8?"speaker":latest.current.scenario.chapter===7?"chorus":latest.current.scenario.chapter===6?"regent":latest.current.scenario.chapter===5?"keeper":latest.current.scenario.chapter===4?"archivist":latest.current.scenario.chapter===3?"warden":latest.current.scenario.chapter===2?"clerk":"phantom");
+        this.phantom = this.add.image(0, 0, latest.current.scenario.kind==='boss'?({council:'speaker',bridge:'chorus',court:'regent',archive:'keeper',corridor:'archivist',clock:'warden',forge:'clerk'} as Record<string,string>)[sceneArt(latest.current.scenario)]??'phantom':'echo');
         this.echo = this.add.image(0, 0, "echo").setOrigin(0.5, 1);
-        if(latest.current.scenario.chapter===7){this.mideng=this.add.image(0,0,'mideng').setOrigin(0.5,1);this.zhenzhou=this.add.image(0,0,'zhenzhou').setOrigin(0.5,1);}
+        if(latest.current.scenario.team&&sceneArt(latest.current.scenario)==='bridge'){this.mideng=this.add.image(0,0,'mideng').setOrigin(0.5,1);this.zhenzhou=this.add.image(0,0,'zhenzhou').setOrigin(0.5,1);}
         if (!latest.current.reducedMotion) {
           this.tweens.add({ targets: this.echo, angle: { from: -1, to: 1 }, duration: 2400, yoyo: true, repeat: -1, ease: "Sine.inOut" });
           for (let i = 0; i < 10; i++) {
@@ -252,10 +256,11 @@ export default function Scene({ state, scenario, reducedMotion }: {
     const render = () => liveScene?.paint();
     renderer.events.on("echo-state", render);
     return () => { renderer.events.off("echo-state", render); renderer.destroy(true); game.current = null; };
-  }, [scenario.chapter]);
+  }, [scenario.chapter, scenario.art, Boolean(scenario.team)]);
   useEffect(() => { game.current?.events.emit("echo-state"); }, [state, scenario, reducedMotion]);
   const statusText = state.status === "won" ? "真实目标已验收" : state.status === "running" ? "回声正在行动" : "回声等待你的下一步指令";
   const visibleChange = sceneArt(scenario) === "ferry" && state.world.boatAt === "far" ? "，渡船已到达远岸" : sceneArt(scenario) === "warehouse" && state.world.gate === true ? "，仓库门已经开启" : "";
-  const fallback = sceneTexture(scenario, state);
+  const texture = sceneTexture(scenario, state);
+  const fallback = texture === 'workshop' ? 'workshop-shut' : texture;
   return <div ref={element} className="phaser-scene" role="img" aria-label={`${state.security?.realm==='sandbox'?'镜砂沙箱 · ':''}${scenario.title}。${statusText}${visibleChange}。`} style={{ backgroundImage: `url(${import.meta.env.BASE_URL}art/${fallback}-background.webp)`, backgroundSize: "100% auto", backgroundPosition: "center top", backgroundRepeat: "no-repeat" }} />;
 }

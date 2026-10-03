@@ -18,7 +18,10 @@
         "ferry-loaded-background",
         "ferry-far-background",
         "ferry-far-empty-background",
-        "hollow-herald"
+        "hollow-herald",
+        "forge-background",
+        "workshop-shut-background",
+        "workshop-day-background"
       ]
     },
     {
@@ -83,7 +86,25 @@
       "title": "镜面议会",
       "art": [
         "council-background",
-        "mirror-speaker"
+        "mirror-speaker",
+        "archive-background",
+        "bridge-background",
+        "mideng-companion",
+        "zhenzhou-companion"
+      ]
+    },
+    {
+      "number": 9,
+      "chapterId": "chapter-09",
+      "title": "七匠遗物台",
+      "art": [
+        "forge-background",
+        "clock-background",
+        "archive-background",
+        "court-background",
+        "bridge-background",
+        "mideng-companion",
+        "zhenzhou-companion"
       ]
     }
   ]

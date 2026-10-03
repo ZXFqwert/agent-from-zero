@@ -1,5 +1,7 @@
 import type { EvaluationAction, EvaluationDefinition, EvaluationEventFields, EvaluationEventType, EvaluationState } from './evaluation-contract';
+import type { BlueprintLabDefinition, BlueprintLabState, LabAction, LabEventFields, LabEventType, LabOperation, LabTransferRequirement } from './blueprint-contract';
 export type * from './evaluation-contract';
+export type * from './blueprint-contract';
 
 export type FactValue = boolean | number | string;
 export type FactMap = Record<string, FactValue>;
@@ -47,6 +49,7 @@ export interface OperationDefinition {
   collaboration?: { draftArtifactId?: string; actorIds?: string[] };
   /** Requires current isolated-case certification before actual city execution. */
   evaluationRequires?: boolean;
+  lab?: LabOperation;
   security?: { principalIds?: string[]; approval?: boolean; liveOnly?: boolean; trustedInputs?: string[]; sandboxRequires?: string[] };
 }
 
@@ -102,7 +105,7 @@ export interface ScenarioDefinition {
   brief: string;
   npc: string;
   location: 'lighthouse' | 'warehouse' | 'boss';
-  art?: 'council' | 'bridge' | 'harbor' | 'warehouse' | 'tide' | 'ferry' | 'forge' | 'clock' | 'corridor' | 'archive' | 'court';
+  art?: 'workshop' | 'council' | 'bridge' | 'harbor' | 'warehouse' | 'tide' | 'ferry' | 'forge' | 'clock' | 'corridor' | 'archive' | 'court';
   chapter: number;
   kind: 'guided' | 'transfer' | 'boss';
   initialWorld: FactMap;
@@ -111,15 +114,16 @@ export interface ScenarioDefinition {
   goals: GoalDefinition[];
   concepts: string[];
   /** Existing v1 adventures retain their original reducer and replay format. */
-  engineVersion?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+  engineVersion?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
   contextCapacity?: number;
   memory?: { slots: Array<{key: string; label: string; observationIds: string[]}>; initial: MemorySeed[]; skills: SkillDefinition[]; initialSkills?: string[] };
   security?: { principals: Array<{id: string; label: string; registryObservationId: string; credentialFact: string; grants: string[]}>; sandbox?: boolean };
   team?: TeamDefinition;
   evaluation?: EvaluationDefinition;
+  blueprintLab?: BlueprintLabDefinition;
   limits?: ScenarioLimits;
   hooks?: WorldHook[];
-  transferRequirement?: { operationIds?: string[]; reconfiguration?: boolean; receiptCount?: number; contextIds?: string[]; summaryIds?: string[]; memoryKeys?: string[]; skillIds?: string[]; freshSessions?: number; team?: { actorIds?: string[]; receivedJobs?: string[]; dependency?: boolean; mergedArtifactIds?: string[]; observedSourceIds?: string[]; echoVerified?: boolean }; evaluation?: {caseIds?: string[]; freshCaseIds?: string[]; certified?: boolean}; security?: { authenticatedPrincipalIds?: string[]; approvedOperationIds?: string[]; sandboxOperationIds?: string[]; dataOnly?: boolean } };
+  transferRequirement?: { operationIds?: string[]; reconfiguration?: boolean; receiptCount?: number; contextIds?: string[]; summaryIds?: string[]; memoryKeys?: string[]; skillIds?: string[]; freshSessions?: number; lab?: LabTransferRequirement; team?: { actorIds?: string[]; receivedJobs?: string[]; dependency?: boolean; mergedArtifactIds?: string[]; observedSourceIds?: string[]; echoVerified?: boolean }; evaluation?: {caseIds?: string[]; freshCaseIds?: string[]; certified?: boolean}; security?: { authenticatedPrincipalIds?: string[]; approvedOperationIds?: string[]; sandboxOperationIds?: string[]; dataOnly?: boolean } };
 }
 
 export interface AgentBlueprint {
@@ -146,11 +150,11 @@ export interface ObservationRecord {
   provenance?: SourceProvenance;
 }
 
-export interface GameEvent extends EvaluationEventFields {
+export interface GameEvent extends EvaluationEventFields, LabEventFields {
   id: string;
   sequence: number;
   attempt: number;
-  type: 'configured' | 'dispatched' | 'request' | 'observation' | 'result' | 'claim' | 'verified' | 'victory' | 'paused' | 'resumed' | 'exhausted' | 'blocked' | 'reset' | 'world-change' | 'untrusted-message' | 'environment' | 'policy-stop' | 'context-change' | 'memory-change' | 'session-change' | 'skill-change' | 'security-change' | 'team-change' | EvaluationEventType;
+  type: 'configured' | 'dispatched' | 'request' | 'observation' | 'result' | 'claim' | 'verified' | 'victory' | 'paused' | 'resumed' | 'exhausted' | 'blocked' | 'reset' | 'world-change' | 'untrusted-message' | 'environment' | 'policy-stop' | 'context-change' | 'memory-change' | 'session-change' | 'skill-change' | 'security-change' | 'team-change' | EvaluationEventType | LabEventType;
   text: string;
   tool?: ToolName;
   target?: string;
@@ -187,7 +191,7 @@ export interface LearningEvidence {
 export type GameStatus = 'ready' | 'running' | 'paused' | 'stalled' | 'exhausted' | 'won';
 
 export interface GameState {
-  kernelVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+  kernelVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
   scenarioId: string;
   scenarioVersion: number;
   seed: number;
@@ -206,6 +210,7 @@ export interface GameState {
   security?: SecurityState;
   team?: TeamState;
   evaluation?: EvaluationState;
+  lab?: BlueprintLabState;
   memory?: { entries: MemoryEntry[]; skills: Array<{id: string; source: string; actionIds: string[]}>;
     queue?: {skillId: string; cursor: number; status: 'running' | 'failed'};
     runs: Array<{skillId: string; actionId: string; sequence: number; realm?:ExecutionRealm}> };
@@ -273,6 +278,7 @@ export type GameAction =
   | { id: string; type: 'security'; operation: 'realm'; realm: ExecutionRealm }
   | TeamAction
   | EvaluationAction
+  | LabAction
   | { id: string; type: 'hint' }
   | { id: string; type: 'reset'; preserveBlueprint?: boolean };
 

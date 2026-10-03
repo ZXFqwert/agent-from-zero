@@ -20,6 +20,7 @@ class Settings:
     base_url: str = ""
     model: str = ""
     api_key: str = field(default="", repr=False)
+    alternate_model: str = ""
     daily_runs: int = 10
     max_steps: int = 8
     run_seconds: float = 120
@@ -43,6 +44,7 @@ class Settings:
             base_url=base,
             model=os.environ.get("MODEL_NAME", "").strip(),
             api_key=os.environ.get("MODEL_API_KEY", "").strip(),
+            alternate_model=os.environ.get("LAB_ALTERNATE_MODEL_NAME", "").strip(),
             daily_runs=bounded_env("LAB_DAILY_RUNS", 10, 1, 10),
             max_steps=bounded_env("LAB_MAX_STEPS", 8, 1, 8),
             run_seconds=bounded_env("LAB_RUN_SECONDS", 120, 1, 120),

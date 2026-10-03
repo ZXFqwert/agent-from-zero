@@ -1,5 +1,32 @@
 # 第一段冒险美术资产
 
+## 继承工坊 v0.10 · 序章窗帘状态
+
+两张素材由本会话内置 imagegen 生成/编辑；第二张以第一张为参考，家具、窗口、构图保持一致。原图保留，PNG 转 WebP 只进行格式压缩（quality85/method6），没有用 Python 改画面；中文、控件和角色由界面叠加。
+
+### workshop-shut-background
+
+原件 E:/CodexState/home/generated_images/01a09442-5f82-71c1-bdd3-70f8d293450b/exec-5edd5724-f4de-42fb-becc-3ba375f2f767.png；项目原稿 art-source/workshop-shut-background.png（1024×1536 RGB，2331417字节，SHA-256 19ac89c3da4306ed25474eb12e1766715d98782893c532abe2b7326d6de6580c）。发布 public/art/workshop-shut-background.webp（182376字节，SHA-256 3d4b7cf606583143e1d86e8f6d72fb67da0454ecb0d29ee9aebbaa794f65ac66）。transparent_background=false。
+
+完整提示词：
+
+```text
+Create one finished hand painted 2D mobile fantasy adventure game background, portrait 1024 x1536. The world is The Echo Workshop: a thoughtful small brass and timber contract-maker's workshop above a mysterious misty harbor. Chinese fantasy storybook gouache illustration, delicate ink texture, teal/indigo shadows, weathered brass details, elegant quiet warm palette, premium game environment art, never photorealistic. No text, no letters, no UI, no people or creatures. Focal point is a LARGE rounded top window in the upper middle, its two thick indigo cloth curtains FULLY CLOSED and visibly meeting in the center. This CLOSED curtain scene must be dim before dawn: tiny brass lamp on left softly lights desk; only faint light leaks around edges of curtains, no direct sunlight beams. Window and curtains must occupy enough width (central 55%) to be unmistakable at phone size. Around it visible shelves of rolled parchment, a hanging brass key, tools and contract seals on edges. Keep center and bottom 35% unobstructed clear wooden floor and low simple workbench edge for an overlaid small golem character. Camera composition has depth, readable silhouettes, distinct central curtains. Leave top 10% quiet for UI, center-lower room empty. Entire room shown full bleed, no frame/border, no watermarks. Design the identical-room AFTER scene later so these curtains can be pulled apart letting golden daylight fall on the workspace. This is the BEFORE/CLOSED scene ONLY.
+```
+
+### workshop-day-background
+
+参考上面的关闭窗帘原件执行内置图像编辑。原件 E:/CodexState/home/generated_images/01a09442-5f82-71c1-bdd3-70f8d293450b/exec-7817efdc-780e-4cd8-b7e4-90a2a4a7a1e7.png；项目原稿 art-source/workshop-day-background.png（1024×1536 RGB，2529471字节，SHA-256 4ae9a6345b7b76f234614426d6c716ad49d2ae763e4c5effb3dcee447cdf2654）。发布 public/art/workshop-day-background.webp（281498字节，SHA-256 9071b0d56a7a314937e21c5c27ed31c938134c5f801dedacb595fff91bf6bdfa）。transparent_background=false。
+
+完整编辑提示词：
+
+```text
+Edit this game background to create the AFTER state of the EXACT SAME workshop, preserve camera, furniture, shelves, floor, hanging keys, window frame and painted fantasy style with pixel-consistent layout. The two indigo central curtains are now pulled apart and neatly tied at the left/right inner edges of the big arched window. Reveal a luminous dawn harbor city and sky outside, golden sunlight coming through this central window into the room and illuminating the central wooden workspace floor. It must be an unmistakable warm bright improvement from the dim CLOSED version, without repainting or rearranging the room. Keep a clear center/lower floor for an overlaid small golem, no characters, no words/text/UI. Full bleed portrait 1024 x1536, storybook gouache, teal and brass shadows with warm golden daylight. Preserve all background details as closely as possible except opened curtains and the resulting authentic sunlight.
+```
+
+窗帘图由实际 world.curtainOpen 选择，动画不改变事实和胜负；已检查两张原图与移动画面，真机触控另行验收。
+
+
 制作日期：2026-10-02。所有图像均由内置 `image_gen__imagegen` 生成，并由 `view_image` 实际查看；未使用外部图库、API/CLI 回退或手绘占位图。项目 `art-source/` 保存原始 PNG，默认生成目录的原件保留。`public/art/` 仅保留发布用 WebP。
 
 统一美术：手绘奇幻港城；墨蓝、海青夜色与旧铜、琥珀暖光；有磨损的石、木、金属与羊皮纸。文字和游戏状态由界面层绘制，图像不含文字。背景是 2:3 竖构图，可配合画布裁切；角色是透明 PNG。
@@ -335,7 +362,7 @@ PNG SHA-256：`9832e48a38acced4a7012f866d8f394fc48ac2480584d4ed1c150b693d36b97b`
 
 > One original friendly recruitable companion sprite for Echo Workshop mobile 2D hand painted fantasy game. Zhenzhou, a compact sturdy wooden and brass artisan golem, warm expressive amber eyes under a small practical ivory workshop cap, deep indigo work apron, brass jointed arms, a folding wooden ruler resting over shoulder and a short construction mallet in one hand. Patient capable builder, charming small broad body, clearly distinct from a slender surveying lantern golem. Full body with all tools and feet visible, clear silhouette readable at 90 pixels, three quarter front facing slightly left, generous transparent margins. Storybook gouache watercolor, fine ink edges, weathered brass wood and deep teal indigo with warm amber accents. Square composition. Truly transparent alpha background, no scenery, ground or external shadow, no text, letters, numbers, logos, UI, watermark or border. Not 3D, not pixel art.
 
-## 镜面议会 v0.9 · 第八章资源（制作中）
+## 镜面议会 v0.9 · 第八章资源（已发布）
 
 使用会话内置图像生成工具独立生成两张原创素材；原图保留，发布用WebP只压缩格式，不编辑背景或透明边界。文字由界面绘制，不烘焙在图像。
 

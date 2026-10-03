@@ -1,6 +1,12 @@
 import type { GameAction, GameState, ToolCall, TeamBlueprint } from '../engine';
 import type { EvaluationAction } from '../engine/evaluation-contract';
+import type { LabAction } from '../engine/blueprint-contract';
 type WithoutId<T> = T extends {id:string} ? Omit<T,'id'> : never;
+export interface AuthoredMessageRef {messageId:string; occurrence?:number;}
+type LabStep = Exclude<WithoutId<LabAction>,{operation:'tick'|'cancel'|'approve'}>
+  | {type:'lab';operation:'tick';taskFrom:AuthoredMessageRef}
+  | {type:'lab';operation:'cancel';taskFrom:AuthoredMessageRef}
+  | {type:'lab';operation:'approve';call:ToolCall;taskFrom?:AuthoredMessageRef;moduleId?:string};
 export interface AuthoredTaskRef {jobId:string; occurrence?:number;}
 type TeamStep = (
   | {type:'team';operation:'configure';actorId:string;blueprint:TeamBlueprint}
@@ -12,7 +18,7 @@ type TeamStep = (
   | {type:'team';operation:'merge';task:AuthoredTaskRef;artifactId:string;expectedRevision:number}
   | {type:'team';operation:'cancel';task:AuthoredTaskRef}
 ) & {expectRejected?:boolean};
-export type AuthoredStep =
+export type AuthoredStep = (
   | {type:'tool'; call:ToolCall}
   | {type:'context'; observationId:string; operation:'include'|'exclude'|'summarize'|'expand'; summaryId?:string; origin?:'memory'|'observation'}
   | {type:'memory'; operation:'write'|'revise'|'retire'|'recall'; key:string; observationId?:string}
@@ -24,12 +30,33 @@ export type AuthoredStep =
   | {type:'security';operation:'realm';realm:'live'|'sandbox'}
   | TeamStep
   | (WithoutId<EvaluationAction> & {expectRejected?:boolean})
-  | {type:'step'};
+  | LabStep
+  | {type:'pause'}
+  | {type:'resume';mode:'manual'|'automatic'}
+  | {type:'receipt';operationId:string}
+  | {type:'step'}) & {expectRejected?:boolean};
 /** Resolve only recorded material and known branches; never synthesize facts or completions. */
-export function resolveAuthoredStep(state:GameState,step:AuthoredStep,id:string):GameAction{
+export function resolveAuthoredStep(state:GameState,authored:AuthoredStep,id:string):GameAction{
+  const {expectRejected: _assertion,...step}=authored;
+  if(step.type==='lab'){
+    if(step.operation==='tick'||step.operation==='cancel'||step.operation==='approve'){
+      const ref=step.taskFrom;
+      const task=ref?state.lab?.tasks.filter(t=>t.messageId===ref.messageId)[(ref.occurrence??1)-1]:undefined;
+      if(ref&&!task)throw new Error('路径引用尚未创建的入口消息任务');
+      if(step.operation==='approve')return {id,type:'lab',operation:'approve',call:step.call,...(task?{taskId:task.id}:{}),...(step.moduleId?{moduleId:step.moduleId}:{})};
+      if(!task)throw new Error('入口推进需要实际任务实例');
+      return {id,type:'lab',operation:step.operation,taskId:task.id};
+    }
+    return {...step,id};
+  }
+  if(step.type==='receipt'){
+    const receipt=state.protocol?.receipts.find(r=>r.operationId===step.operationId&&!r.collected);
+    if(!receipt)throw new Error('路径引用尚未取得的实际回执');
+    return {id,type:'receive',callId:receipt.callId,receiptId:receipt.id};
+  }
+  if(step.type==='pause'||step.type==='resume')return {...step,id};
   if(step.type==='evaluation'){
-    const {expectRejected: _assertion,...request}=step;
-    return {...request,id};
+    return {...step,id};
   }
   if(step.type==='team'){
     const task=(ref:AuthoredTaskRef)=>{const match=state.team?.tasks.filter(t=>t.jobId===ref.jobId)[(ref.occurrence??1)-1];if(!match)throw new Error('路径引用尚未派出的协作任务');return match;};

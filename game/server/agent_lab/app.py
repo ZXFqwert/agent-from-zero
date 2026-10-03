@@ -28,6 +28,7 @@ class Operation(StrictBody):
 
 class NewRun(Operation):
     scenario_id: Literal["signal-rescue"] = "signal-rescue"
+    experiment_type: Literal["same-model-blueprints", "same-blueprint-models", "solo-team"] | None = None
 
 
 def redact(value, secret: str):
@@ -119,7 +120,7 @@ def create_app(settings: Settings | None = None, provider=None, clock=time.time)
 
     @app.post("/api/lab/runs")
     async def new_run(body: NewRun, invite: str = Depends(identity)):
-        return store.create_run(invite, body.request_id, body.scenario_id)
+        return store.create_run(invite, body.request_id, body.scenario_id, body.experiment_type)
 
     @app.get("/api/lab/runs/{run_id}")
     async def get_run(run_id: str, invite: str = Depends(identity)):
@@ -132,7 +133,11 @@ def create_app(settings: Settings | None = None, provider=None, clock=time.time)
             return claim
         try:
             remaining = max(0.001, claim["expires"] - clock())
-            task = asyncio.create_task(provider.complete(claim["messages"], remaining))
+            if "model_name" in claim and hasattr(provider, "complete_for"):
+                completion = provider.complete_for(claim["messages"], remaining, claim["model_name"], claim["tool_names"])
+            else:
+                completion = provider.complete(claim["messages"], remaining)
+            task = asyncio.create_task(completion)
             pending[run_id] = task
             message = await asyncio.wait_for(task, timeout=remaining)
             # Fake providers and actual providers share the same normalization boundary.

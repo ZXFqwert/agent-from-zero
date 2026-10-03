@@ -1,3 +1,5 @@
+import BlueprintDeck,{type BlueprintInput} from './BlueprintDeck';
+import {labCallDenial} from '../engine/blueprint';
 import EvaluationDeck, {type EvaluationInput} from './EvaluationDeck';
 import { useState } from 'react';
 import { Eye, Wrench, ShieldCheck, Zap, ArrowRight } from 'lucide-react';
@@ -16,8 +18,10 @@ const abilities = [
   {id:'operate' as const, label:'行动', Icon:Wrench},
   {id:'verify' as const, label:'验收', Icon:ShieldCheck},
 ];
-export default function CommandDeck({state, scenario, busy, onCall, onStep, onWorkshop, onReceive, onContext, onArchive, onSecurity, onTeam, onEvaluation}: {
+export default function CommandDeck({state, scenario, busy, onCall, onStep, onWorkshop, onReceive, onContext, onArchive, onSecurity, onTeam, onEvaluation, onLab, onPause, onResume}: {
   state:GameState; scenario:ScenarioDefinition; busy:boolean;
+  onLab:(action:BlueprintInput)=>Promise<unknown>;
+  onPause:()=>Promise<unknown>; onResume:()=>Promise<unknown>;
   onEvaluation:(action:EvaluationInput)=>Promise<unknown>;
   onCall:(call:ToolCall)=>Promise<unknown>; onStep:()=>Promise<unknown>; onWorkshop:()=>void;
   onReceive:(callId:string,receiptId:string)=>Promise<unknown>;
@@ -48,10 +52,11 @@ export default function CommandDeck({state, scenario, busy, onCall, onStep, onWo
   const requestKey=keys[selected]??(state.blueprint.stableRequestKeys?`auto-order/${scenario.operations.findIndex(operation=>operation.id===selected)+1}`:'');
   const call:ToolCall|undefined=chosen?.call.tool==='operate'&&operation?.protocol?{...chosen.call,arguments:{...args},...(requestKey.trim()?{requestKey:requestKey.trim()}:{})}:chosen?.call;
   const cost=chosen ? getToolCost(scenario,chosen.call) : 0;
+  const hostDenial=state.lab&&call?labCallDenial(scenario,state,call):undefined;
   const failureCost=chosen?.call.tool === 'operate' ? scenario.operations.find(o=>o.id === (chosen.call as Extract<ToolCall,{tool:'operate'}>).operationId)?.failureCost : undefined;
   const mission=state.runtime?.missionRemaining ?? Infinity;
   const equipped=state.blueprint.tools.includes(ability);
-  const latest=state.events.filter(e=>['observation','result','verified','world-change','exhausted','blocked','policy-stop','security-change'].includes(e.type)).at(-1);
+  const latest=state.events.filter(e=>['observation','result','verified','world-change','exhausted','blocked','policy-stop','security-change','lab-change','lab-observation','lab-result','lab-verified'].includes(e.type)).at(-1);
   const notice=state.events.filter(event=>event.type==='untrusted-message').at(-1);
   return <div className="command-deck">
     {state.control&&<p className="notice">本次调用 {state.control.dispatchCalls}/{state.blueprint.loopPolicy?.maxCalls??8} · 故障重试上限 {state.blueprint.loopPolicy?.maxRetries??0}</p>}
@@ -74,6 +79,7 @@ export default function CommandDeck({state, scenario, busy, onCall, onStep, onWo
     {state.context&&ability==='observe'&&!options.some(o=>o.label.includes(search.trim()))&&<p className="notice">索引没有命中，试试另一个词。</p>}
     {chosen&&<div className="action-preview"><span>{displayActionLabel(chosen.label)}</span><strong>{failureCost?`成功 ${cost} / 失败 ${failureCost}`:`${cost} 能量`}</strong>
       <small>任务剩余 {Number.isFinite(mission)?mission:state.budgetRemaining}；当前派遣剩余 {state.budgetRemaining}</small></div>}
+    {hostDenial&&<p className="notice" role="status">宿主边界：{hostDenial} 本次法器没有执行。</p>}
     {operation?.protocol&&<div className="protocol-form"><h4>填写法器刻度</h4>
       <ParameterEditor protocol={operation.protocol} value={args!} prefix="command" disabled={busy} onChange={value=>setArgumentsById({...argumentsById,[selected]:value})}/>
       <label>业务凭证 <small>同一笔业务重试保留；另一笔业务另填。</small><input aria-label="业务凭证" maxLength={64} value={requestKey} placeholder="可留空，例如 medicine-17" onChange={event=>setKeys({...keys,[selected]:event.target.value})}/></label>
@@ -82,7 +88,7 @@ export default function CommandDeck({state, scenario, busy, onCall, onStep, onWo
     </div>}
     <div className="button-row">
       <button className="button" disabled={busy||state.status==='won'||mission<=0} onClick={()=>void onStep()}>伙伴决定一步</button>
-      <button className="button primary" disabled={!chosen||!equipped||busy||mission<cost||state.status==='won'}
+      <button className="button primary" disabled={!chosen||!equipped||busy||mission<cost||state.status==='won'||Boolean(hostDenial)}
         onClick={()=>call&&void onCall(call)}>执行选中法器{chosen?` · ${cost} 点`:''}</button>
     </div>
     {pending.length>0&&<div className="receipt-desk"><h4>风管回执台 · {pending.length} 张待归档</h4><p>回执按到达顺序摆放。把每张回执放回它对应的请求；编号不符就不入卷轴。</p>
@@ -98,9 +104,10 @@ export default function CommandDeck({state, scenario, busy, onCall, onStep, onWo
     </div>}
     {latest&&<div className="callout" aria-live="polite"><h4>{latest.type==='world-change'?'现场变化':latest.type==='untrusted-message'?'收到一份外部报告':'最近回响'}</h4><p>{latest.text}</p>{latest.facts&&<div className="live-facts">{Object.entries(latest.facts).map(([fact,value])=><span key={fact}>{factLabels[fact]??fact}：{displayFact(fact,value)}</span>)}</div>}</div>}
     {notice&&<div className="callout untrusted-note"><h4>外部纸条 · 未经核验</h4><p>{notice.text}</p><small>它是资料中的宣称，未替代现场事实，也未进入回声的已知信息。</small></div>}
+    {state.lab&&<BlueprintDeck state={state} scenario={scenario} busy={busy} onLab={onLab} onPause={onPause} onResume={onResume} selectedCall={call}/>}
     {state.evaluation&&<EvaluationDeck state={state} scenario={scenario} busy={busy} onEvaluation={onEvaluation}/>}
     {state.team&&<TeamDeck state={state} scenario={scenario} busy={busy} onTeam={onTeam}/>}
-    {state.security&&((scenario.engineVersion??1)<8||scenario.security?.principals.length||scenario.operations.some(o=>o.security)||scenario.observations.some(o=>o.directiveOperationId))&&<SecurityDeck state={state} scenario={scenario} busy={busy} onSecurity={onSecurity}/>}
+    {state.security&&((scenario.engineVersion??1)<8||scenario.security?.principals.length||scenario.blueprintLab&&scenario.security?.sandbox||scenario.operations.some(o=>o.security)||scenario.observations.some(o=>o.directiveOperationId))&&<SecurityDeck state={state} scenario={scenario} busy={busy} onSecurity={onSecurity}/>}
     {state.memory&&((scenario.engineVersion??1)<8||scenario.memory?.slots.length||scenario.memory?.skills.length)&&<ArchiveDeck state={state} scenario={scenario} busy={busy} onChange={onArchive}/>}
     {state.context&&<ContextDeck state={state} scenario={scenario} busy={busy} onChange={onContext}/>}
   </div>;
