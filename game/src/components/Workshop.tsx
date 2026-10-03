@@ -185,7 +185,7 @@ export default function Workshop({
         </div>)}
         <small>顺序会改变资源消耗；完成条件仍须全部验收。</small>
       </div>}
-      {scenario.engineVersion === 3 && <div className="protocol-presets">
+      {(scenario.engineVersion ?? 1) >= 3 && scenario.operations.some(operation=>operation.protocol) && <div className="protocol-presets">
         <div className="section-label">{scenario.goals.length>1?"05":"04"} / 保存法器刻度</div>
         <p className="muted">伙伴自动决定行动时，会使用这里保存的实际参数。错误预设仍会产生真实的参数错误。</p>
         {scenario.operations.filter(operation=>operation.protocol?.parameters.length).map(operation=><details key={operation.id}><summary>{operation.label} · 参数预设</summary>
@@ -195,6 +195,13 @@ export default function Workshop({
         <button role="switch" aria-checked={build.stableRequestKeys??false} className="switch-row" onClick={()=>setBuild({...build,stableRequestKeys:!build.stableRequestKeys})}>
           <Repeat2/><span><strong>重试保留同一业务凭证</strong><small>当前每种操作代表一笔业务。自动重试保留凭证；参数改变会触发冲突，需要你介入。</small></span><i className={build.stableRequestKeys?'switch on':'switch'}/>
         </button>
+      </div>}
+      {scenario.engineVersion===4&&<div className="loop-controls">
+        <div className="section-label">回路保险 · 决定什么时候停</div>
+        <label>每次派遣最多调用 <strong>{build.loopPolicy?.maxCalls??8} 次</strong><input aria-label="调用次数上限" type="range" min="1" max="24" value={build.loopPolicy?.maxCalls??8} onChange={event=>setBuild({...build,loopPolicy:{maxCalls:Number(event.target.value),maxRetries:build.loopPolicy?.maxRetries??0,permanentFailure:build.loopPolicy?.permanentFailure??'stop'}})}/></label>
+        <label>短暂故障的额外重试 <select aria-label="短暂故障重试上限" value={build.loopPolicy?.maxRetries??0} onChange={event=>setBuild({...build,loopPolicy:{maxCalls:build.loopPolicy?.maxCalls??8,maxRetries:Number(event.target.value),permanentFailure:build.loopPolicy?.permanentFailure??'stop'}})}>{[0,1,2,3,4].map(number=><option key={number} value={number}>{number} 次</option>)}</select></label>
+        <label>需要改方案的故障 <select aria-label="永久故障处理" value={build.loopPolicy?.permanentFailure??'stop'} onChange={event=>setBuild({...build,loopPolicy:{maxCalls:build.loopPolicy?.maxCalls??8,maxRetries:build.loopPolicy?.maxRetries??0,permanentFailure:event.target.value as 'stop'|'repair'}})}><option value="stop">停下来，交给我</option><option value="repair">依据已收到的条件寻找修复步骤</option></select></label>
+        <p className="muted">调用上限、能量预算与重试次数分别约束不同的成本。暂停和换装会保留现场；不会退回已经消耗的能量。</p>
       </div>}
       <details className="permissions">
         <summary>

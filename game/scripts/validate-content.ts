@@ -5,6 +5,7 @@ import ts from 'typescript';
 import { scenarios, profiles } from '../src/content/scenarios';
 import { chapterOneWalkthroughs } from '../src/content/chapterOne';
 import { chapterTwoWalkthroughs } from '../src/content/chapterTwo';
+import { chapterThreeWalkthroughs } from '../src/content/chapterThree';
 import { stories, uiStories } from '../src/content/stories';
 import { chapterOneNpcs } from '../src/content/chapterOneStory';
 import { prerequisites, journeyOrder, mainScenarioIds } from '../src/content/progression';
@@ -15,7 +16,7 @@ import type { GameAction, GameState, ScenarioDefinition } from '../src/engine';
 export const contentBundle = {
   scenarios, prerequisites, journeyOrder, mainScenarioIds,
   stories, uiStories, npcs: chapterOneNpcs,
-  profiles, walkthroughs: [...chapterOneWalkthroughs,...chapterTwoWalkthroughs],
+  profiles, walkthroughs: [...chapterOneWalkthroughs,...chapterTwoWalkthroughs,...chapterThreeWalkthroughs],
 };
 export type ContentBundle = typeof contentBundle;
 export interface ContentReport { errors: string[]; counts: { scenarios: number; stories: number; profiles: number; paths: number; art: number }; }
@@ -101,10 +102,10 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
     if (!keys(scenario, path, ['id', 'version', 'engineVersion', 'title', 'subtitle', 'brief', 'npc', 'location', 'art', 'chapter', 'kind', 'initialWorld', 'observations', 'operations', 'goals', 'concepts', 'limits', 'hooks', 'transferRequirement'], ['id', 'title', 'subtitle', 'brief', 'npc', 'location', 'chapter', 'kind', 'initialWorld', 'observations', 'operations', 'goals', 'concepts'])) continue;
     for (const key of ['title', 'subtitle', 'brief', 'npc']) text(scenario[key as keyof ScenarioDefinition], `${path}.${key}`);
     integer(scenario.chapter, `${path}.chapter`, 8); if (scenario.version !== undefined) integer(scenario.version, `${path}.version`, 10000);
-    check([undefined, 1, 2, 3].includes(scenario.engineVersion), path, '未知内核版本');
+    check([undefined, 1, 2, 3, 4].includes(scenario.engineVersion), path, '未知内核版本');
     check(['lighthouse', 'warehouse', 'boss'].includes(scenario.location), path, '未知 location');
     check(['guided', 'transfer', 'boss'].includes(scenario.kind), path, '未知 kind');
-    if (scenario.art !== undefined) check(['harbor', 'warehouse', 'tide', 'ferry', 'forge'].includes(scenario.art), path, '未知 art');
+    if (scenario.art !== undefined) check(['harbor', 'warehouse', 'tide', 'ferry', 'forge', 'clock'].includes(scenario.art), path, '未知 art');
     factMap(scenario.initialWorld, `${path}.initialWorld`, undefined, 1);
     strings(scenario.concepts, `${path}.concepts`, 1);
     if (!list(scenario.observations, `${path}.observations`) || !list(scenario.operations, `${path}.operations`, 1) || !list(scenario.goals, `${path}.goals`, 1) || !record(scenario.initialWorld)) continue;
@@ -118,12 +119,12 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
     }
     for (const operation of scenario.operations) {
       const at = `${path}.operation/${operation?.id}`;
-      if (!keys(operation, at, ['id', 'target', 'label', 'requires', 'effects', 'successText', 'failureText', 'cost', 'failureCost', 'protocol'], ['id', 'target', 'label', 'effects', 'successText', 'failureText'])) continue;
+      if (!keys(operation, at, ['id', 'target', 'label', 'requires', 'effects', 'successText', 'failureText', 'cost', 'failureCost', 'protocol', 'failureKind', 'retryWindow'], ['id', 'target', 'label', 'effects', 'successText', 'failureText'])) continue;
       validId(operation.target, `${at}.target`);
       for (const key of ['label', 'successText', 'failureText'] as const) text(operation[key], `${at}.${key}`);
       factMap(operation.effects, `${at}.effects`, scenario.initialWorld, operation.protocol ? 0 : 1);
       if(operation.protocol !== undefined) {
-        check(scenario.engineVersion === 3, at, '工具协议必须由 v3 内核执行');
+        check((scenario.engineVersion??1)>=3, at, '工具协议必须由 v3 或更新内核执行');
         const p=operation.protocol;
         if(keys(p, `${at}.protocol`, ['parameters','defaults','delivery','receiptEffects','variants'], ['parameters','defaults','variants'])) {
           if(list(p.parameters, `${at}.parameters`)) for(const field of p.parameters) {
@@ -143,6 +144,8 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
           }
         }
       }
+      if(operation.failureKind!==undefined) check(scenario.engineVersion===4&&['temporary','permanent'].includes(operation.failureKind),at,'故障分类只由 v4 回路执行');
+      if(operation.retryWindow!==undefined&&keys(operation.retryWindow,at,['attempts','readyFact'],['attempts','readyFact'])) {integer(operation.retryWindow.attempts,at,8);check(scenario.engineVersion===4,at,'冷却窗口仅由 v4 执行');}
       if (operation.requires !== undefined) factMap(operation.requires, `${at}.requires`, scenario.initialWorld);
       for (const key of ['cost', 'failureCost'] as const) if (operation[key] !== undefined) integer(operation[key], `${at}.${key}`);
     }
@@ -227,7 +230,7 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
         text(choice.label, `${at}.label`); text(choice.value, `${at}.value`); dialogue(choice.reply, `${at}.reply`);
         if (keys(choice.consequence, `${at}.consequence`, ['worldFlags', 'trustFlags', 'visibleResult', 'nextAppearance'], ['worldFlags', 'trustFlags', 'visibleResult', 'nextAppearance'])) {
           const result = choice.consequence; text(result.visibleResult, `${at}.visibleResult`);
-          check([...scenarioIds, 'harbor-hub', 'chapter-2', 'chapter-3'].includes(result.nextAppearance), at, '后续呼应引用未知地点');
+          check([...scenarioIds, 'harbor-hub', 'chapter-2', 'chapter-3', 'chapter-4'].includes(result.nextAppearance), at, '后续呼应引用未知地点');
           if (record(result.worldFlags)) for (const [flag, value] of Object.entries(result.worldFlags)) { check(flag.startsWith('story.'), at, '叙事旗标必须在 story. 命名空间'); check(typeof value === 'string' || typeof value === 'boolean', at, '叙事旗标只能为字符串或布尔值'); } else fail(at, '缺少叙事世界旗标');
           if (record(result.trustFlags)) for (const [npc, value] of Object.entries(result.trustFlags)) { check(npcIds.includes(npc), at, '信任关系引用未知 NPC'); text(value, at); } else fail(at, '缺少信任关系旗标');
         }
@@ -312,15 +315,16 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
     if (route.purpose === 'recovery') check(route.stages.some(stage => stage.expectWorld && Object.keys(stage.expectWorld).length), path, '恢复路线必须断言失败后的中间世界状态');
     for (const [index, stage] of route.stages.entries()) {
       const at = `${path}.stages[${index}]`;
-      if (!keys(stage, at, ['tools', 'calls', 'collectReceipts', 'expectWorld', 'absentProofs'], ['tools', 'calls'])) continue;
+      if (!keys(stage, at, ['tools', 'calls', 'collectReceipts', 'expectWorld', 'absentProofs', 'loopPolicy'], ['tools', 'calls'])) continue;
       if (strings(stage.tools, `${at}.tools`, 1)) check(stage.tools.every(tool => ['observe', 'operate', 'verify'].includes(tool)), at, '未知法器');
+      if(stage.loopPolicy!==undefined)check(scenario.engineVersion===4,at,'回路配置只能用于 v4');
       if (stage.collectReceipts !== undefined) check(typeof stage.collectReceipts === 'boolean', at, 'collectReceipts 必须为布尔值');
       if (stage.expectWorld !== undefined) factMap(stage.expectWorld, `${at}.expectWorld`, scenario.initialWorld);
       if (stage.absentProofs !== undefined && strings(stage.absentProofs, `${at}.absentProofs`)) for (const fact of stage.absentProofs) check(scenario.goals.some(goal => goal.fact === fact), at, 'absentProofs 引用未知完成条件');
       if (list(stage.calls, `${at}.calls`, 1)) for (const call of stage.calls) {
         if (!record(call)) { fail(at, '工具请求必须为对象'); continue; }
         const argument = call.tool === 'observe' ? 'observationId' : call.tool === 'operate' ? 'operationId' : 'fact';
-        keys(call, `${at}.call`, call.tool === 'operate' && scenario.engineVersion === 3 ? ['tool', argument, 'arguments', 'requestKey'] : ['tool', argument], ['tool', argument]);
+        keys(call, `${at}.call`, call.tool === 'operate' && (scenario.engineVersion??1)>=3 ? ['tool', argument, 'arguments', 'requestKey'] : ['tool', argument], ['tool', argument]);
         if(call.arguments !== undefined) factMap(call.arguments, `${at}.arguments`);
         if(call.requestKey !== undefined) text(call.requestKey, `${at}.requestKey`, 64); check(['observe', 'operate', 'verify'].includes(String(call.tool)), at, '未知工具请求'); validId(call[argument], `${at}.${argument}`);
       }
@@ -336,7 +340,7 @@ export function validateContent(input: unknown, root = projectRoot): ContentRepo
       };
       for (const stage of route.stages) {
         if (state.status === 'running') action({type: 'pause'});
-        action({type: 'configure', blueprint: {tools: stage.tools, feedback: true, verification: true, budget: scenario.limits?.maxBudget ?? 12, permissions: ['*']}} as GameAction);
+        action({type: 'configure', blueprint: {tools: stage.tools, feedback: true, verification: true, budget: scenario.limits?.maxBudget ?? 12, permissions: ['*'],...(stage.loopPolicy?{loopPolicy:stage.loopPolicy}:{})}} as GameAction);
         action({type: 'dispatch', mode: 'manual'} as GameAction);
         for (const call of stage.calls) action({type: 'tool', call} as GameAction);
         if(stage.collectReceipts) for(const receipt of state.protocol?.receipts.filter(receipt=>!receipt.collected) ?? []) action({type:'receive',callId:receipt.callId,receiptId:receipt.id} as GameAction);
@@ -377,7 +381,7 @@ function main(): void {
   const result = validateContent(input);
   if (result.errors.length) { process.stderr.write(`内容校验失败（${result.errors.length} 项）：\n${result.errors.map(error => `- ${error}`).join('\n')}\n`); process.exitCode = 1; return; }
   const {scenarios, stories, profiles, paths, art} = result.counts;
-  process.stdout.write(`内容校验通过：${scenarios} 个任务，${stories} 份剧情，${profiles} 份官方档案，${paths} 条参考/替代/恢复路线，${art} 项场景美术。\n范围：已制作的第一、二章；不代表完整第一季、真人学习效果或真机验收。官方链接仅校验来源归属与元数据，未重新联网核查正文。\n`);
+  process.stdout.write(`内容校验通过：${scenarios} 个任务，${stories} 份剧情，${profiles} 份官方档案，${paths} 条参考/替代/恢复路线，${art} 项场景美术。\n范围：已制作的第一至三章；不代表完整第一季、真人学习效果或真机验收。官方链接仅校验来源归属与元数据，未重新联网核查正文。\n`);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   try { main(); } catch (error) { process.stderr.write(`内容校验失败：${String(error)}\n`); process.exitCode = 1; }

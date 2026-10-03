@@ -40,9 +40,10 @@ export default function CommandDeck({state, scenario, busy, onCall, onStep, onWo
   const failureCost=chosen?.call.tool === 'operate' ? scenario.operations.find(o=>o.id === (chosen.call as Extract<ToolCall,{tool:'operate'}>).operationId)?.failureCost : undefined;
   const mission=state.runtime?.missionRemaining ?? Infinity;
   const equipped=state.blueprint.tools.includes(ability);
-  const latest=state.events.filter(e=>['observation','result','verified','world-change','exhausted','blocked'].includes(e.type)).at(-1);
+  const latest=state.events.filter(e=>['observation','result','verified','world-change','exhausted','blocked','policy-stop'].includes(e.type)).at(-1);
   const notice=state.events.filter(event=>event.type==='untrusted-message').at(-1);
   return <div className="command-deck">
+    {state.control&&<p className="notice">本次调用 {state.control.dispatchCalls}/{state.blueprint.loopPolicy?.maxCalls??8} · 故障重试上限 {state.blueprint.loopPolicy?.maxRetries??0}</p>}
     <p className="muted">你来决定下一步，回声只携带已经收到的信息。先选能力，再选现场目标。</p>
     <div className="segmented ability-tabs">
       {abilities.map(({id,label,Icon})=><button key={id} className={ability===id?'active':''}

@@ -53,6 +53,7 @@ import {
   downloadSave,
   emptySave,
   readSave,
+  recordCompletion,
   resetCurrentScenario,
   restoreCheckpoint,
   validateSave,
@@ -261,14 +262,7 @@ export default function App() {
         ];
         if (next.status === "won" && current.status !== "won") {
           victory = true;
-          previous.completedGames[scenario.id] = structuredClone(next);
-          previous.completedScenarioIds = [
-            ...new Set([...previous.completedScenarioIds, scenario.id]),
-          ];
-          previous.evidence = [
-            ...previous.evidence.filter((e) => e.scenarioId !== scenario.id),
-            ...next.learningEvidence,
-          ];
+          recordCompletion(previous,next);
         }
         return previous;
       });
@@ -350,7 +344,8 @@ export default function App() {
           const inherited={...structuredClone(prior),budget:Math.min(prior.budget,target.limits?.maxBudget ?? 20)};
           delete inherited.goalOrder;
           delete inherited.toolArguments;
-          if(target.engineVersion!==3)delete inherited.stableRequestKeys;
+          if((target.engineVersion??1)<3)delete inherited.stableRequestKeys;
+          if(target.engineVersion!==4)delete inherited.loopPolicy;
           if(validateBlueprint(target,inherited).length === 0) {
             const action:GameAction={id:crypto.randomUUID(),type:'configure',blueprint:inherited};
             previous.games[target.id]=reduceGame(target,previous.games[target.id],action);
@@ -468,7 +463,7 @@ export default function App() {
             以及，你写下的第一份契约。
           </p>
           <div className="aside-line" />
-          <span className="aside-chapter">第一、二章 / 港口与法器街</span>
+          <span className="aside-chapter">前三章 / 港口、法器街与钟楼</span>
           <p className="muted">从一句“完成了”，到真正改变世界。</p>
         </div>
         <div className="aside-bottom">
@@ -639,7 +634,7 @@ export default function App() {
               {scenario.kind === "boss" && (
                 <div className="boss-hud">
                   <span>
-                    <Shield size={14} /> 空言护盾
+                    <Shield size={14} /> {scenario.chapter===3?"续刻护盾":scenario.chapter===2?"纸甲护盾":"空言护盾"}
                   </span>
                   <div>
                     {scenario.goals.map((g) => (
@@ -803,7 +798,7 @@ export default function App() {
               {scenario.kind === "guided" &&
                 ["stalled", "exhausted"].includes(state.status) && (
                   <div className="guide-note">
-                    <span>莫拉的便笺</span>
+                    <span>{scenario.chapter===1?'莫拉':'奥伦'}的便笺</span>
                     <p>{guidance()}</p>
                   </div>
                 )}
@@ -917,7 +912,7 @@ export default function App() {
           onClose={() => setPanel(null)}
         >
           <p className="muted">
-            已制作两章，共十二场主线与四条支线。支线可以晚些回来；已修好的设施与旅途记录会保留。
+            已制作三章，共十八场主线与六条支线。支线可以晚些回来；已修好的设施与旅途记录会保留。
           </p>
           <details className="city-fold"><summary>城区变化与旅途收藏</summary><CityLedger save={save}/></details>
           <div className="chapter-map">
@@ -1226,7 +1221,7 @@ export default function App() {
             打开旧学习档案 ↗
           </a>
           <p className="fine-print">
-            旧站笔记保留在档案中。目前开放两章共十六场冒险，后续章节继续制作。
+            旧站笔记保留在档案中。目前开放三章共二十四场冒险，后续章节继续制作。
           </p>
         </Dialog>
       )}

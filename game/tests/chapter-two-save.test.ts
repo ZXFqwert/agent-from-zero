@@ -32,7 +32,7 @@ test('v0.2 migrates unchanged into a complete v1/v2/v3 season save with receipt 
     if(save.completedScenarioIds.length===8)save.contentVersion='harbor-0.2.0';
   }
   assert.equal(save.completedScenarioIds.length,16);assert.equal(chapterComplete(save.completedScenarioIds,2),true);
-  assert.equal(chapterComplete(save.completedScenarioIds,3),false);assert.equal(nextMission('reusable-scale',save.completedScenarioIds,scenarios.map(s=>s.id)),undefined);
+  assert.equal(chapterComplete(save.completedScenarioIds,3),false);assert.equal(nextMission('reusable-scale',save.completedScenarioIds,scenarios.map(s=>s.id)),'brass-order');
   assert.equal(save.completedGames['courier-lock'].learningEvidence[0].level,'independent-transfer');
   const tampered=structuredClone(save);tampered.completedGames['missing-crate'].protocol!.ledger[0].fingerprint='forged';assert.throws(()=>validateSave(tampered));
   const mislabeled=structuredClone(save);mislabeled.contentVersion='harbor-0.2.0';assert.throws(()=>validateSave(mislabeled));

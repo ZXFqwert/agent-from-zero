@@ -14,9 +14,19 @@ export interface PlayerSave extends SaveEnvelope {
   completedGames: Record<string, GameState>;
   checkpoints: Array<{ scenarioId: string; state: GameState; actions: GameAction[] }>;
 }
-export const CONTENT_VERSION = 'season-0.3.0';
+export const CONTENT_VERSION = 'season-0.4.0';
 export const MAX_SAVE_BYTES = 8_000_000;
 export const emptySave = (): PlayerSave => ({saveVersion:1,kernelVersion:1,contentVersion:CONTENT_VERSION,savedAt:new Date().toISOString(),currentScenarioId:scenarios[0].id,games:{},completedScenarioIds:[],evidence:[],checkpoints:[],playerVersion:1,started:false,choices:{},actions:{},notes:'',sound:false,completedGames:{}});
+
+/** A guided repeat cannot erase a previous independent transfer and its real proof. */
+export function recordCompletion(save:PlayerSave,state:GameState):void {
+  if(state.status!=='won')return;
+  const rank=(game:GameState)=>game.learningEvidence.reduce((sum,item)=>sum+({seen:0,guided:1,'independent-transfer':2}[item.level]),0);
+  const prior=save.completedGames[state.scenarioId];
+  if(!prior||rank(state)>=rank(prior))save.completedGames[state.scenarioId]=structuredClone(state);
+  save.completedScenarioIds=[...new Set([...save.completedScenarioIds,state.scenarioId])];
+  save.evidence=save.completedScenarioIds.flatMap(id=>save.completedGames[id].learningEvidence);
+}
 
 let connection: Promise<IDBDatabase> | undefined;
 function db() {
@@ -63,11 +73,11 @@ export function validateSave(input:unknown):PlayerSave {
   try { size = new TextEncoder().encode(JSON.stringify(input)).byteLength; } catch { throw new Error('存档包含无法读取的循环引用。'); }
   if(size > MAX_SAVE_BYTES) throw new Error('存档不能超过 8 MB。');
   const save=structuredClone(input) as unknown as PlayerSave;
-  const legacy = ['harbor-0.1.0','harbor-0.2.0'].includes(save.contentVersion);
+  const legacy = ['harbor-0.1.0','harbor-0.2.0','season-0.3.0'].includes(save.contentVersion);
   if(save.saveVersion!==1||save.kernelVersion!==1||save.playerVersion!==1||(!legacy&&save.contentVersion!==CONTENT_VERSION)) throw new Error('存档版本不兼容。请保留原文件，在对应版本中打开。');
   // Migration changes the content envelope only. Legacy action logs still replay in the frozen v1 kernel.
   if(legacy) {
-    const oldIds=save.contentVersion === 'harbor-0.1.0' ? ['harbor-light','warehouse-gate','hollow-regent'] : scenarios.filter(scenario=>scenario.chapter===1).map(scenario=>scenario.id);
+    const oldIds=save.contentVersion === 'harbor-0.1.0' ? ['harbor-light','warehouse-gate','hollow-regent'] : scenarios.filter(scenario=>scenario.chapter<=(save.contentVersion==='season-0.3.0'?2:1)).map(scenario=>scenario.id);
     if(!oldIds.includes(save.currentScenarioId)||!record(save.games)||!record(save.completedGames)||!Array.isArray(save.completedScenarioIds)||save.completedScenarioIds.some(id=>!oldIds.includes(id))||Object.keys(save.games).some(id=>!oldIds.includes(id))) throw new Error('旧存档包含未知关卡，迁移已停止。');
     if(!record(save.actions)||!record(save.choices)||!Array.isArray(save.checkpoints)||!Array.isArray(save.evidence)||Object.keys(save.completedGames).some(id=>!oldIds.includes(id))||Object.keys(save.actions).some(id=>!oldIds.includes(id))||Object.keys(save.choices).some(id=>!oldIds.includes(id))||save.checkpoints.some(checkpoint=>!oldIds.includes(checkpoint?.scenarioId))||save.evidence.some(evidence=>!oldIds.includes(evidence?.scenarioId)))throw new Error('旧存档包含当时不存在的内容，迁移已停止。');
     save.contentVersion=CONTENT_VERSION;

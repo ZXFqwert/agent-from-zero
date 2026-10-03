@@ -47,6 +47,7 @@ export default function Journal({
     "world-change": "现场变化",
     "untrusted-message": "外部报告",
     environment: "环境告知",
+    "policy-stop": "回路保险",
   };
   return (
     <div>

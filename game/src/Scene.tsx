@@ -42,8 +42,10 @@ export default function Scene({ state, scenario, reducedMotion }: {
           ["ferry-far-empty", "ferry-far-empty-background"], ["ferry-loaded", "ferry-loaded-background"],
           ["echo", "echo-companion"], ["phantom", "hollow-herald"],
           ["forge", "forge-background"], ["clerk", "paper-clerk"],
+          ["clock", "clock-background"], ["warden", "endless-warden"],
         ]) {
-          if(latest.current.scenario.chapter===1 ? ['forge','clerk'].includes(key) : !['forge','clerk','echo'].includes(key))continue;
+          const allowed=latest.current.scenario.chapter===1?['harbor','warehouse','warehouse-open','tide','ferry','ferry-far','ferry-far-empty','ferry-loaded','phantom']:latest.current.scenario.chapter===2?['forge','clerk']:['clock','warden'];
+          if(key!=='echo'&&!allowed.includes(key))continue;
           this.load.image(key, `${import.meta.env.BASE_URL}art/${file}.webp`);
         }
       }
@@ -52,7 +54,7 @@ export default function Scene({ state, scenario, reducedMotion }: {
         this.background = this.add.image(0, 0, sceneTexture(latest.current.scenario,latest.current.state)).setOrigin(0.5, 0);
         this.oldBackground = this.add.image(0, 0, sceneTexture(latest.current.scenario,latest.current.state)).setOrigin(0.5, 0).setAlpha(0);
         this.glow = this.add.graphics();
-        this.phantom = this.add.image(0, 0, latest.current.scenario.chapter===2?"clerk":"phantom");
+        this.phantom = this.add.image(0, 0, latest.current.scenario.chapter===3?"warden":latest.current.scenario.chapter===2?"clerk":"phantom");
         this.echo = this.add.image(0, 0, "echo").setOrigin(0.5, 1);
         if (!latest.current.reducedMotion) {
           this.tweens.add({ targets: this.echo, angle: { from: -1, to: 1 }, duration: 2400, yoyo: true, repeat: -1, ease: "Sine.inOut" });
@@ -93,9 +95,18 @@ export default function Scene({ state, scenario, reducedMotion }: {
         this.background.setPosition(w / 2, 0).setDisplaySize(w, backdropHeight).setTint(boss ? 0xadb6d5 : 0xffffff);
         this.oldBackground.setPosition(w / 2, 0).setDisplaySize(w, backdropHeight).setTint(boss ? 0xadb6d5 : 0xffffff);
         this.echo.setPosition(w * (boss || art === "ferry" ? 0.23 : 0.28), h * 0.8).setDisplaySize(w * 0.28, w * 0.315);
-        this.phantom.setVisible(boss && s.status !== "won").setPosition(w * 0.65, h * 0.39).setDisplaySize(w * (art === "forge"?0.43:0.53), w * (art === "forge"?0.645:0.555));
+        this.phantom.setVisible(boss && s.status !== "won").setPosition(w * 0.65, h * 0.39).setDisplaySize(w * (art === "clock"?0.5:art === "forge"?0.43:0.53), w * (art === "clock"?0.557:art === "forge"?0.645:0.555));
         this.phantom.setAlpha(Math.max(0.35, 1 - s.verifiedGoals.length * 0.28));
         this.glow.clear();
+        if(art==='clock') {
+          const cx=px(0.5),cy=py(0.135),angle=(s.runtime?.toolCalls??0)*0.42;
+          const spinning=s.world.ritualActive!==false && s.world.turnstileStopped!==true;
+          this.glow.lineStyle(2,spinning?0xd9b373:0x95d7c3,0.85).beginPath().moveTo(cx,cy).lineTo(cx+Math.sin(angle)*w*0.095,cy-Math.cos(angle)*w*0.095).strokePath();
+          this.glow.lineStyle(3,0xd9b373,0.9).beginPath().moveTo(cx,cy).lineTo(cx+Math.sin(angle/12)*w*0.065,cy-Math.cos(angle/12)*w*0.065).strokePath();
+          if(!spinning)this.ring(cx,cy,0x95d7c3,w*0.13);
+          for(const [fact,x]of [['gearsLubricated',0.22],['balanceTuned',0.38],['pulseDelivered',0.5],['sealRestored',0.62],['residentsSafe',0.8]] as const)if(s.world[fact]===true)this.aura(px(x),h*0.55,0x95d7c3,0.6);
+          if(boss)for(let i=0;i<q.goals.length;i++)if(!s.verifiedGoals.includes(q.goals[i].fact))this.ring(px(0.58+i*0.06),h*0.3,0xba9be0,9);
+        }
         if(art==='forge') {
           // These are visible physical objects; the policy still only reads its received context.
           if('depotCrates' in s.world)for(const [fact,x] of [['depotCrates',0.64],['clinicCrates',0.87]] as const) {

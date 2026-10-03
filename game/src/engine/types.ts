@@ -24,6 +24,9 @@ export interface OperationDefinition {
   /** Actual cost when physical prerequisites fail; defaults to the normal cost. */
   failureCost?: number;
   protocol?: ToolProtocol;
+  failureKind?: 'temporary' | 'permanent';
+  /** Authored clock: after N rejected attempts the physical device becomes ready. */
+  retryWindow?: { attempts: number; readyFact: string };
 }
 
 export interface ParameterField {
@@ -78,7 +81,7 @@ export interface ScenarioDefinition {
   brief: string;
   npc: string;
   location: 'lighthouse' | 'warehouse' | 'boss';
-  art?: 'harbor' | 'warehouse' | 'tide' | 'ferry' | 'forge';
+  art?: 'harbor' | 'warehouse' | 'tide' | 'ferry' | 'forge' | 'clock';
   chapter: number;
   kind: 'guided' | 'transfer' | 'boss';
   initialWorld: FactMap;
@@ -87,7 +90,7 @@ export interface ScenarioDefinition {
   goals: GoalDefinition[];
   concepts: string[];
   /** Existing v1 adventures retain their original reducer and replay format. */
-  engineVersion?: 1 | 2 | 3;
+  engineVersion?: 1 | 2 | 3 | 4;
   limits?: ScenarioLimits;
   hooks?: WorldHook[];
   transferRequirement?: { operationIds?: string[]; reconfiguration?: boolean; receiptCount?: number };
@@ -104,7 +107,10 @@ export interface AgentBlueprint {
   toolPermissions?: Partial<Record<ToolName, string[]>>;
   toolArguments?: Record<string, FactMap>;
   stableRequestKeys?: boolean;
+  loopPolicy?: LoopPolicy;
 }
+
+export interface LoopPolicy { maxCalls: number; maxRetries: number; permanentFailure: 'stop' | 'repair'; }
 
 export interface ObservationRecord {
   value: FactValue;
@@ -116,7 +122,7 @@ export interface GameEvent {
   id: string;
   sequence: number;
   attempt: number;
-  type: 'configured' | 'dispatched' | 'request' | 'observation' | 'result' | 'claim' | 'verified' | 'victory' | 'paused' | 'resumed' | 'exhausted' | 'blocked' | 'reset' | 'world-change' | 'untrusted-message' | 'environment';
+  type: 'configured' | 'dispatched' | 'request' | 'observation' | 'result' | 'claim' | 'verified' | 'victory' | 'paused' | 'resumed' | 'exhausted' | 'blocked' | 'reset' | 'world-change' | 'untrusted-message' | 'environment' | 'policy-stop';
   text: string;
   tool?: ToolName;
   target?: string;
@@ -134,6 +140,7 @@ export interface GameEvent {
   requestKey?: string;
   receiptId?: string;
   replayed?: boolean;
+  failureKind?: 'temporary' | 'permanent';
 }
 
 export interface LearningEvidence {
@@ -146,7 +153,7 @@ export interface LearningEvidence {
 export type GameStatus = 'ready' | 'running' | 'paused' | 'stalled' | 'exhausted' | 'won';
 
 export interface GameState {
-  kernelVersion: 1 | 2 | 3;
+  kernelVersion: 1 | 2 | 3 | 4;
   scenarioId: string;
   scenarioVersion: number;
   seed: number;
@@ -162,6 +169,9 @@ export interface GameState {
   learningEvidence: LearningEvidence[];
   hintUsed: boolean;
   protocol?: { receipts: ProtocolReceipt[]; ledger: ProtocolLedgerEntry[]; droppedOperations: string[] };
+  control?: { dispatchCalls: number; failures: Record<string, number>; attempts: Record<string, number>;
+    lastFailure?: { operationId: string; call: ToolCall; kind: 'temporary' | 'permanent'; eventId: string };
+    stopReason?: 'call-limit' | 'retry-limit' | 'permanent-failure' };
   runtime?: {
     missionRemaining: number;
     toolCalls: number;

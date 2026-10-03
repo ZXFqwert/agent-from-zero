@@ -190,3 +190,27 @@ PNG SHA-256：`9832e48a38acced4a7012f866d8f394fc48ac2480584d4ed1c150b693d36b97b`
 > Original 2D fantasy mobile RPG enemy sprite, full body, isolated on genuinely transparent background. A magical guild clerk made of folded parchment and drifting blank receipt slips. A crooked brass stamp helmet, small narrow glowing violet eye slits, floating paper robe, bent arms holding a big quill and a wax seal stamp, paper receipt plates orbiting like a shield. Mysterious mischievous bureaucrat, not horror, no human face. Storybook hand-painted gouache and watercolor with fine ink contours. Dusty cream and ochre parchment, dark teal shaded creases, small purple and warm golden magic accents. Single character fills frame vertically, clean readable silhouette, three-quarter front view facing slightly left toward the protagonist, feet and all accessories included. No backdrop, no ground, no shadow outside character, no interface, no letters, words, numbers, logos or watermark; all papers blank. Designed to overlay a moody teal enchanted workshop street. Keep asymmetrical personality and small exaggerated hands.
 
 纸甲书记原稿具有实际 Alpha 通道，保留转换后的透明度。纸盾、库存和光环由 Phaser 按实际世界与验收事实绘制；精灵是静态原画，呼吸/位移与脉冲由场景动画提供，不宣称逐帧手绘动画。
+
+## 第三章原创美术 · 2026-10-03
+
+内置 imagegen 生成并实际查看；Pillow 仅做 WebP 格式压缩（quality=85, method=6）。最终场景在 390×844 浏览器中检查，护盾移至左侧以露出守卫面部。静态精灵叠加程序绘制的指针、能量光环与验收护盾；动画不能改变胜负。
+
+### clock-background
+
+原稿 `art-source/clock-background.png`，发布 `public/art/clock-background.webp`；1024×1536 RGB，透明背景 False，发布 241022 字节。
+
+默认原件 `E:/CodexState/home/generated_images/01a09442-5f82-71c1-bdd3-70f8d293450b/exec-24c5e009-1347-418a-be7b-540062b17fe4.png`。PNG SHA-256 `02f68e97396710f916425c0bd75975c3299f3f3e37827c134822355378c48587`。
+
+最终提示词：
+
+> Original 2D hand-painted portrait fantasy RPG environment for 'Echo Workshop: City of Broken Order', chapter 'The Endless Clocktower'. Interior of a huge forgotten brass clocktower at blue twilight: giant worn brass clock mechanism and a round blank clock face high in the upper center, suspended pendulum and layered cogwheels, deep teal masonry arches, warm amber lanterns, an accessible little workbench with a key and oil bottle mid-left, an illuminated exit stair mid-right. Empty lower third stone floor for companion and enemy sprites. Atmospheric storybook gouache and watercolor, dusty indigo, petrol teal, antique bronze, muted gold accents; charming mysterious adventure, not horror, very readable silhouettes. No characters, no letters, no written numbers, no symbols or text on clock face, no UI, no watermark, no logos. Full image environment, tall vertical depth, clean focal hierarchy matching a mobile fantasy workshop game.
+
+### endless-warden
+
+原稿 `art-source/endless-warden.png`，发布 `public/art/endless-warden.webp`；1188×1324 RGBA，透明背景 True，真实 Alpha 范围 0–255，发布 416328 字节；转换保留透明度。
+
+默认原件 `E:/CodexState/home/generated_images/01a09442-5f82-71c1-bdd3-70f8d293450b/exec-aa0fea84-a1bd-46b6-b7fd-a386f6045c12.png`。PNG SHA-256 `c7ba36198cda8fbb75f65801d2957f15c7ff1680e2e77b51daca1d0e679c8bb5`。
+
+最终提示词：
+
+> Original hand-painted 2D fantasy mobile RPG boss sprite for Echo Workshop, full body isolated on transparent background. 'The Endless Warden': an ancient brass clockwork sentinel with a round blank clock-face chest and a glowing violet pendulum heart, asymmetrical armored shoulders built from worn bronze cogwheels, tiny teal glass eyes in a narrow knight visor, one hand clutching a coiled winding key and the other hand holding a long clock hand as a staff. Majestic stubborn mechanical guardian, melancholy and charming, not horror. Long dusty indigo fabric coat with brass rivets, bronze and muted amber glints, storybook gouache watercolor and fine ink edges, clear readable mobile silhouette. Three-quarter view facing slightly left toward player. Whole helmet, feet, staff included. No ground, backdrop, ground shadow, text, clock numbers, letters, logos, watermark, interface. Genuine alpha transparency around character and between limbs. Designed for a dark teal and amber clocktower background.

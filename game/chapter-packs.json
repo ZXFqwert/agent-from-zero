@@ -29,6 +29,15 @@
         "forge-background",
         "paper-clerk"
       ]
+    },
+    {
+      "number": 3,
+      "chapterId": "chapter-03",
+      "title": "无尽钟楼",
+      "art": [
+        "clock-background",
+        "endless-warden"
+      ]
     }
   ]
 }
