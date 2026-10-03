@@ -4,6 +4,7 @@ import { reduceGame } from '../engine';
 import type { ContextRecord, FactMap, GameAction, GameState, ScenarioDefinition, SourceProvenance, TeamBlueprint, ToolCall, ToolName } from '../engine';
 import { factLabels } from '../content/scenarios';
 import { displayActionLabel, displayFact, displaySource } from '../content/presentation';
+import {journalPublicEvents} from './journalDisclosure';
 
 type WithoutId<T> = T extends { id: string } ? Omit<T, 'id'> : never;
 export type TeamInput = WithoutId<Extract<GameAction, { type: 'team' }>>;
@@ -13,10 +14,11 @@ const shortId = (id: string) => id.split(':').slice(-3).join(' · ');
 const sourceLabel = (source?: SourceProvenance) => !source ? '未标注来源' : `${source.trust === 'registry' ? '登记资料' : source.trust === 'executor' ? '实际法器回执' : '外部资料'} · ${source.realm === 'live' ? '城市现场' : '镜砂沙箱'} · ${source.observationId}`;
 const toggle = (values: string[], id: string) => values.includes(id) ? values.filter(value => value !== id) : [...values, id];
 
-export default function TeamDeck({ scenario, state, busy = false, onTeam }: {
+export default function TeamDeck({ scenario, state, busy = false, onTeam,hideUnobservedWorld=false }: {
   scenario: ScenarioDefinition;
   state: GameState;
   busy?: boolean;
+  hideUnobservedWorld?:boolean;
   onTeam: (input: TeamInput) => void | Promise<unknown>;
 }) {
   const [jobId, setJobId] = useState('');
@@ -42,6 +44,14 @@ export default function TeamDeck({ scenario, state, busy = false, onTeam }: {
   const definitions = scenario.team, team = state.team;
   const disabled = busy || state.status === 'won';
   const records = state.context?.records ?? [], activeIds = state.context?.activeIds ?? [];
+  const publicEvents=journalPublicEvents(state,hideUnobservedWorld);
+  const artifactRecords=[...records,...team.tasks.flatMap(task=>task.records),...team.board.flatMap(slot=>slot.record?[slot.record]:[])];
+  const artifactSnapshots=(id:string)=>publicEvents.flatMap(event=>{
+    const record=artifactRecords.find(record=>record.eventId===event.id&&record.artifactOrigin?.artifactId===id);
+    if(!record&&!(event.type==='team-change'&&event.teamPhase==='merged'&&event.slotId===id))return [];
+    const allowed=definitions.artifacts.find(artifact=>artifact.id===id)!.fields,facts=Object.fromEntries(Object.entries(event.facts??{}).filter(([fact])=>allowed.includes(fact)));
+    return Object.keys(facts).length?[{eventId:event.id,sequence:event.sequence,revision:record?.artifactOrigin?.revision??event.revision,facts}]:[];
+  });
   const job = definitions.jobs.find(item => item.id === jobId);
   const actor = definitions.actors.find(item => item.id === actorId);
   const dispatchContract = team.actors.find(item => item.id === actor?.id)?.blueprint;
@@ -160,7 +170,7 @@ export default function TeamDeck({ scenario, state, busy = false, onTeam }: {
       <details><summary>查看实际结果与来源 · {team.results.length} 份</summary>{[...team.results].reverse().map(result => <article className="team-deck-result" key={result.id}><strong>{jobName(result.jobId)} · {result.received ? '已接回' : '等待接回'}</strong><small>{actorName(result.actorId)} · 原任务 {shortId(result.taskId)} · 结果 {shortId(result.id)}</small>{factList(result.facts, result.fieldProvenance)}{Object.keys(result.facts).length === 0 && <small>没有允许导出的已知字段。完成通知不能制造新事实。</small>}<small>来源事件：{result.sourceEventIds.map(shortId).join('、') || '没有工具记录'}</small></article>)}</details>
     </article>}
 
-    {definitions.artifacts.length > 0 && <div className="team-deck-artifacts" aria-label="草稿与总图"><h4><GitMerge size={16} />草稿与总图</h4><p className="muted">草稿成功不是施工。合并要对上总图版本；合并之后还要真实施工与验收。</p>{team.artifacts.map(artifact => <article className="team-deck-artifact" key={artifact.id}><strong>{artifactName(artifact.id)} · 当前 v{artifact.revision}</strong>{factList(artifact.fields)}{Object.keys(artifact.fields).length === 0 && <small>尚未合并字段。</small>}{team.proposals.filter(proposal => proposal.artifactId === artifact.id).map(proposal => <div className={`team-deck-proposal ${!proposal.merged && proposal.baseRevision !== artifact.revision ? 'team-deck-conflict' : ''}`} key={proposal.id}><strong>{actorName(proposal.actorId)}的草稿 · {proposal.merged ? '已合并' : '未合并'}</strong><small>任务 {shortId(proposal.taskId)} · 草稿 {shortId(proposal.id)}</small><p>草稿基准 <b>v{proposal.baseRevision}</b> → 总图当前 <b>v{artifact.revision}</b></p>{factList(proposal.fields)}{!proposal.merged && proposal.baseRevision !== artifact.revision && <p className="team-deck-reason">总图已经更新。取得当前版本作为新任务输入，重新形成草稿；拒绝不会覆盖已有成果。</p>}<button className="button" disabled={disabled || proposal.merged} onClick={() => change({ type: 'team', operation: 'merge', proposalId: proposal.id, expectedRevision: artifact.revision })}>{proposal.merged ? '草稿已合并' : `合并草稿：${artifactName(artifact.id)}`}</button></div>)}</article>)}</div>}
+    {definitions.artifacts.length > 0 && <div className="team-deck-artifacts" aria-label="草稿与总图"><h4><GitMerge size={16} />草稿与总图</h4><p className="muted">草稿成功不是施工。合并要对上总图版本；合并之后还要真实施工与验收。</p>{team.artifacts.map(artifact => <article className="team-deck-artifact" key={artifact.id}><strong>{artifactName(artifact.id)} · 当前 v{artifact.revision}</strong>{hideUnobservedWorld?<><small>显示实际读到或合并时的快照；其他总图字段需要重新读取。</small>{artifactSnapshots(artifact.id).map(snapshot=><div key={snapshot.eventId}><small>已披露总图 v{snapshot.revision} · 行动 {snapshot.sequence}</small>{factList(snapshot.facts)}</div>)}{artifactSnapshots(artifact.id).length===0&&<small>尚未取得总图字段。先读取这份设计文档。</small>}</>:<>{factList(artifact.fields)}{Object.keys(artifact.fields).length===0&&<small>尚未合并字段。</small>}</>}{team.proposals.filter(proposal => proposal.artifactId === artifact.id).map(proposal => <div className={`team-deck-proposal ${!proposal.merged && proposal.baseRevision !== artifact.revision ? 'team-deck-conflict' : ''}`} key={proposal.id}><strong>{actorName(proposal.actorId)}的草稿 · {proposal.merged ? '已合并' : '未合并'}</strong><small>任务 {shortId(proposal.taskId)} · 草稿 {shortId(proposal.id)}</small><p>草稿基准 <b>v{proposal.baseRevision}</b> → 总图当前 <b>v{artifact.revision}</b></p>{factList(proposal.fields)}{!proposal.merged && proposal.baseRevision !== artifact.revision && <p className="team-deck-reason">总图已经更新。取得当前版本作为新任务输入，重新形成草稿；拒绝不会覆盖已有成果。</p>}<button className="button" disabled={disabled || proposal.merged} onClick={() => change({ type: 'team', operation: 'merge', proposalId: proposal.id, expectedRevision: artifact.revision })}>{proposal.merged ? '草稿已合并' : `合并草稿：${artifactName(artifact.id)}`}</button></div>)}</article>)}</div>}
 
     {definitions.board.length > 0 && <details className="team-deck-board" aria-label="有限共享板"><summary>共享板 · {team.board.filter(slot => slot.record).length} / {definitions.board.length} 个槽</summary><p className="muted">发布已读到的资料，明确选择字段。发布不让所有伙伴自动知道，新任务还须选取板上的版本。</p>{team.board.map(slot => <article className="team-deck-board-slot" key={slot.id}><strong>{definitions.board.find(item => item.id === slot.id)?.label ?? slot.id} · v{slot.revision}</strong>{slot.record ? <><small>{slot.record.label} · {displaySource(slot.record.source)}</small>{factList(visibleFacts(slot.record), slot.record.fieldProvenance, slot.record.provenance)}</> : <small>空槽</small>}</article>)}
       <label>发布位置<select aria-label="共享板发布位置" value={selectedSlot?.id ?? ''} disabled={disabled} onChange={event => { setSlotId(event.target.value); setFields([]); }} >{definitions.board.map(slot => <option key={slot.id} value={slot.id}>{slot.label}</option>)}</select></label>

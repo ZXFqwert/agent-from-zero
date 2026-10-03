@@ -45,7 +45,7 @@ test('all 84 actual authored completions survive JSON import, three checkpoints 
 });
 test('v0.9 containers cannot smuggle new bookends or blueprint records into old chapter numbers',()=>{
  const save=season();
- const old=structuredClone(save);old.contentVersion='season-0.9.0';
+ const old=structuredClone(save);delete old.postSeason;old.contentVersion='season-0.9.0';
  const legacyIds=contentBundle.scenarios.filter(s=>s.chapter<=8&&!prologueIds.includes(s.id)&&!finaleIds.includes(s.id)).map(s=>s.id);
  old.games=Object.fromEntries(Object.entries(old.games).filter(([id])=>legacyIds.includes(id)));old.actions=Object.fromEntries(Object.entries(old.actions).filter(([id])=>legacyIds.includes(id)));old.completedGames=Object.fromEntries(Object.entries(old.completedGames).filter(([id])=>legacyIds.includes(id)));old.completedScenarioIds=legacyIds;old.evidence=old.evidence.filter(e=>legacyIds.includes(e.scenarioId));old.choices=Object.fromEntries(Object.entries(old.choices).filter(([id])=>legacyIds.includes(id)));old.currentScenarioId='hollow-regent';old.checkpoints=[];
  assert.equal(validateSave(old).completedScenarioIds.length,64);

@@ -5,20 +5,52 @@ import { factLabels } from "../content/scenarios";
 import { uiStories } from "../content/stories";
 import { displayFact } from "../content/presentation";
 import {exportBlueprintPython,type PythonLearningStage} from '../exports/pythonBlueprint';
+import {journalFactDisclosures,journalPublicEvents,journalTechnicalProjection} from './journalDisclosure';
 import type {
   GameAction,
   GameState,
   ScenarioDefinition,
 } from "../engine/types";
+export interface JournalProps {
+  state:GameState;scenario:ScenarioDefinition;actions:GameAction[];
+  sourceScenarioId?:string;hideUnobservedWorld?:boolean;
+  recap?:{story:string;system:string;technical:string};
+}
+export function JournalSystemEvidence({replay,scenario,hideUnobservedWorld=false}:{replay:GameState;scenario:ScenarioDefinition;hideUnobservedWorld?:boolean}) {
+  const disclosures=hideUnobservedWorld?journalFactDisclosures(replay,scenario):[];
+  return <div className="evidence-grid">
+    <div>
+      <h4>{hideUnobservedWorld?"已披露的历史快照":replay.security?"城市现场实际状态":"世界实际状态"}</h4>
+      {hideUnobservedWorld?<>
+        <small>以下是各次披露时的快照；当前状态需重新观察或验收。</small>
+        {!disclosures.length&&<p>尚未取得现场资料。观察与行动回执会把信息留在这里。</p>}
+        {disclosures.map((d,index)=><p key={`${d.eventId}-${d.fact}-${index}`}><span>{factLabels[d.fact]??d.fact}</span><b>{displayFact(d.fact,d.value)}<small>行动 {d.sequence} · {d.caseId?`试验世界 ${scenario.evaluation?.cases.find(c=>c.id===d.caseId)?.label??d.caseId}`:d.realm==='sandbox'?'镜砂沙箱':'城市现场'} · {d.source}{d.actorId?` · ${scenario.team?.actors.find(a=>a.id===d.actorId)?.label??d.actorId}`:''}{d.provenance?` · ${d.provenance.trust==='registry'?'登记原件':d.provenance.trust==='executor'?'执行记录':'外部资料'}`:''}</small></b></p>)}
+      </>:<>
+        {Object.entries(replay.world).map(([k,v])=><p key={k}><span>{factLabels[k]??k}</span><b>{v===true?'已实现':v===false?'未实现':String(v)}</b></p>)}
+        {replay.security&&scenario.security?.sandbox&&<><h4>镜砂沙箱状态 · 不替代现场</h4>{Object.entries(replay.security.sandboxWorld).map(([k,v])=><p key={`sandbox-${k}`}><span>{factLabels[k]??k}</span><b>{displayFact(k,v)}</b></p>)}</>}
+      </>}
+    </div>
+    <div>
+      <h4>回声收到的信息</h4>
+      {!Object.keys(replay.observed).length&&<p>卷轴还是空的。世界事实不会自动进入上下文。</p>}
+      {Object.entries(replay.observed).map(([k,v])=>{
+        const event=replay.events.find(e=>e.id===v.eventId),realm=v.provenance?.realm??event?.realm;
+        return <p key={k}><span>{factLabels[k]??k}</span><b>{v.value===true?'已实现':v.value===false?'未实现':String(v.value)}<small>{realm&&`${realm==='sandbox'?'镜砂沙箱':'城市现场'} · `}{v.source==='receipt'?'行动回执':v.source==='verification'?'独立验收':v.source==='memory'?'记忆快照':'观测'}{hideUnobservedWorld&&event?` · 行动 ${event.sequence} 时收到`:''}{hideUnobservedWorld&&v.provenance?.trust==='external'?' · 外部资料，仍需核实':''}</small></b></p>;
+      })}
+    </div>
+  </div>;
+}
+export function JournalTechnicalEvidence({replay,hideUnobservedWorld=false}:{replay:GameState;hideUnobservedWorld?:boolean}) {
+  return <pre className="code-view">{JSON.stringify(journalTechnicalProjection(replay,hideUnobservedWorld),null,2)}</pre>;
+}
 export default function Journal({
   state,
   scenario,
   actions,
-}: {
-  state: GameState;
-  scenario: ScenarioDefinition;
-  actions: GameAction[];
-}) {
+  sourceScenarioId,
+  hideUnobservedWorld=false,
+  recap,
+}: JournalProps) {
   const [layer, setLayer] = useState<"story" | "system" | "code">("story"),
     [cursor, setCursor] = useState(actions.length);
   const [pythonStage,setPythonStage]=useState<PythonLearningStage>('messages');
@@ -63,6 +95,8 @@ export default function Journal({
     "policy-stop": "回路保险",
     "context-change": "卷轴装配",
   };
+  const summary=recap??uiStories[sourceScenarioId??scenario.id]?.recap;
+  const publicEvents=journalPublicEvents(replay,hideUnobservedWorld);
   return (
     <div>
       <div className="segmented">
@@ -80,7 +114,7 @@ export default function Journal({
           </button>
         ))}
       </div>
-      <div className="callout recap-note"><p>{layer === 'story' ? uiStories[scenario.id]?.recap.story : layer === 'system' ? uiStories[scenario.id]?.recap.system : uiStories[scenario.id]?.recap.technical}</p></div>
+      <div className="callout recap-note"><p>{layer === 'story' ? summary?.story : layer === 'system' ? summary?.system : summary?.technical}</p></div>
       <div className="replay-control">
         <label>
           回放行动{" "}
@@ -121,49 +155,7 @@ export default function Journal({
               验收
             </span>
           </div>
-          <div className="evidence-grid">
-            <div>
-              <h4>{replay.security ? "城市现场实际状态" : "世界实际状态"}</h4>
-              {Object.entries(replay.world).map(([k, v]) => (
-                <p key={k}>
-                  <span>{factLabels[k] ?? k}</span>
-                  <b>
-                    {v === true ? "已实现" : v === false ? "未实现" : String(v)}
-                  </b>
-                </p>
-              ))}
-              {replay.security && scenario.security?.sandbox && <>
-                <h4>镜砂沙箱状态 · 不替代现场</h4>
-                {Object.entries(replay.security.sandboxWorld).map(([k, v]) => <p key={`sandbox-${k}`}><span>{factLabels[k] ?? k}</span><b>{displayFact(k, v)}</b></p>)}
-              </>}
-            </div>
-            <div>
-              <h4>回声收到的信息</h4>
-              {!Object.keys(replay.observed).length && (
-                <p>卷轴还是空的。世界事实不会自动进入上下文。</p>
-              )}
-              {Object.entries(replay.observed).map(([k, v]) => (
-                <p key={k}>
-                  <span>{factLabels[k] ?? k}</span>
-                  <b>
-                    {v.value === true
-                      ? "已实现"
-                      : v.value === false
-                        ? "未实现"
-                        : String(v.value)}
-                    <small>
-                      {v.provenance && `${v.provenance.realm === 'sandbox' ? '镜砂沙箱' : '城市现场'} · `}
-                      {v.source === "receipt"
-                        ? "行动回执"
-                        : v.source === "verification"
-                          ? "独立验收"
-                          : "观测"}
-                    </small>
-                  </b>
-                </p>
-              ))}
-            </div>
-          </div>
+          <JournalSystemEvidence replay={replay} scenario={scenario} hideUnobservedWorld={hideUnobservedWorld}/>
         </>
       )}
       {layer === "code" ? (
@@ -180,24 +172,11 @@ export default function Journal({
             <button className="button" onClick={()=>{const result=exportBlueprintPython({scenario,blueprint:replay.blueprint,observed:replay.observed,stage:pythonStage});const url=URL.createObjectURL(new Blob([result.source],{type:'text/x-python;charset=utf-8'}));const link=document.createElement('a');link.href=url;link.download=result.filename;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}}>下载本步 Python 骨架</button>
             <small>使用 OpenAI SDK 的 Chat Completions；本次下载不连接模型。配置和真实工具由你在独立练习目录中填写。</small>
           </details>
-          <pre className="code-view">
-            {JSON.stringify(
-              {
-                blueprint: replay.blueprint,
-                context: replay.observed,
-                events: replay.events.slice(-8),
-                ...(replay.lab ? {host:replay.lab} : {}),
-                ...(replay.team ? {team:replay.team} : {}),
-                ...(replay.evaluation ? {evaluation:replay.evaluation} : {}),
-              },
-              null,
-              2,
-            )}
-          </pre>
+          <JournalTechnicalEvidence replay={replay} hideUnobservedWorld={hideUnobservedWorld}/>
         </>
       ) : (
         <ol className="event-list">
-          {replay.events
+          {publicEvents
             .filter((e) => layer === "system" || !["request","evaluation-request","lab-request"].includes(e.type))
             .map((e) => (
               <li key={e.id} className={`event-${e.type}`}>

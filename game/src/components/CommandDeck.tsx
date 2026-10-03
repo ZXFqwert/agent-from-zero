@@ -12,14 +12,16 @@ import ContextDeck, { type ContextInput } from './ContextDeck';
 import SecurityDeck, { type SecurityInput } from './SecurityDeck';
 import TeamDeck, { type TeamInput } from './TeamDeck';
 import ArchiveDeck, { type ArchiveInput } from './ArchiveDeck';
+import {journalPublicEvents} from './journalDisclosure';
 
 const abilities = [
   {id:'observe' as const, label:'观察', Icon:Eye},
   {id:'operate' as const, label:'行动', Icon:Wrench},
   {id:'verify' as const, label:'验收', Icon:ShieldCheck},
 ];
-export default function CommandDeck({state, scenario, busy, onCall, onStep, onWorkshop, onReceive, onContext, onArchive, onSecurity, onTeam, onEvaluation, onLab, onPause, onResume}: {
+export default function CommandDeck({state, scenario, busy, onCall, onStep, onWorkshop, onReceive, onContext, onArchive, onSecurity, onTeam, onEvaluation, onLab, onPause, onResume,hideUnobservedWorld=false}: {
   state:GameState; scenario:ScenarioDefinition; busy:boolean;
+  hideUnobservedWorld?:boolean;
   onLab:(action:BlueprintInput)=>Promise<unknown>;
   onPause:()=>Promise<unknown>; onResume:()=>Promise<unknown>;
   onEvaluation:(action:EvaluationInput)=>Promise<unknown>;
@@ -56,7 +58,7 @@ export default function CommandDeck({state, scenario, busy, onCall, onStep, onWo
   const failureCost=chosen?.call.tool === 'operate' ? scenario.operations.find(o=>o.id === (chosen.call as Extract<ToolCall,{tool:'operate'}>).operationId)?.failureCost : undefined;
   const mission=state.runtime?.missionRemaining ?? Infinity;
   const equipped=state.blueprint.tools.includes(ability);
-  const latest=state.events.filter(e=>['observation','result','verified','world-change','exhausted','blocked','policy-stop','security-change','lab-change','lab-observation','lab-result','lab-verified'].includes(e.type)).at(-1);
+  const latest=journalPublicEvents(state,hideUnobservedWorld).filter(e=>['observation','result','verified','world-change','exhausted','blocked','policy-stop','security-change','lab-change','lab-observation','lab-result','lab-verified'].includes(e.type)).at(-1);
   const notice=state.events.filter(event=>event.type==='untrusted-message').at(-1);
   return <div className="command-deck">
     {state.control&&<p className="notice">本次调用 {state.control.dispatchCalls}/{state.blueprint.loopPolicy?.maxCalls??8} · 故障重试上限 {state.blueprint.loopPolicy?.maxRetries??0}</p>}
@@ -106,7 +108,7 @@ export default function CommandDeck({state, scenario, busy, onCall, onStep, onWo
     {notice&&<div className="callout untrusted-note"><h4>外部纸条 · 未经核验</h4><p>{notice.text}</p><small>它是资料中的宣称，未替代现场事实，也未进入回声的已知信息。</small></div>}
     {state.lab&&<BlueprintDeck state={state} scenario={scenario} busy={busy} onLab={onLab} onPause={onPause} onResume={onResume} selectedCall={call}/>}
     {state.evaluation&&<EvaluationDeck state={state} scenario={scenario} busy={busy} onEvaluation={onEvaluation}/>}
-    {state.team&&<TeamDeck state={state} scenario={scenario} busy={busy} onTeam={onTeam}/>}
+    {state.team&&<TeamDeck state={state} scenario={scenario} busy={busy} onTeam={onTeam} hideUnobservedWorld={hideUnobservedWorld}/>}
     {state.security&&((scenario.engineVersion??1)<8||scenario.security?.principals.length||scenario.blueprintLab&&scenario.security?.sandbox||scenario.operations.some(o=>o.security)||scenario.observations.some(o=>o.directiveOperationId))&&<SecurityDeck state={state} scenario={scenario} busy={busy} onSecurity={onSecurity}/>}
     {state.memory&&((scenario.engineVersion??1)<8||scenario.memory?.slots.length||scenario.memory?.skills.length)&&<ArchiveDeck state={state} scenario={scenario} busy={busy} onChange={onArchive}/>}
     {state.context&&<ContextDeck state={state} scenario={scenario} busy={busy} onChange={onContext}/>}

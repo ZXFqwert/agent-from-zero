@@ -20,6 +20,18 @@ async function walk(directory) {
   return groups.flat();
 }
 
+// Rollback may replace presentation, but must not replace a player's simulator
+// or install a reader that cannot understand the active save format.
+const storageSource=await readFile(join(root,'src/storage.ts'),'utf8');
+const contentVersion=storageSource.match(/export const CONTENT_VERSION = '([^']+)';/)?.[1];
+const maxSaveBytes=Number(storageSource.match(/export const MAX_SAVE_BYTES = ([\d_]+);/)?.[1]?.replaceAll('_',''));
+const legacyBlock=storageSource.match(/export const LEGACY_CONTENT_VERSIONS[^=]*= \[([^\]]+)\];/)?.[1];
+if(!contentVersion || !Number.isSafeInteger(maxSaveBytes) || maxSaveBytes<1 || !legacyBlock)throw new Error('Save compatibility constants could not be read.');
+const simulatorFiles=[...(await walk(join(root,'src/engine'))),...(await walk(join(root,'src/content'))),...(await walk(join(root,'src/challenges'))),join(root,'src/postSeason.ts'),join(root,'src/storage.ts')].filter(file=>file.endsWith('.ts')).sort((a,b)=>{const left=relative(root,a).replaceAll('\\','/'),right=relative(root,b).replaceAll('\\','/');return left<right?-1:left>right?1:0;});
+const simulatorLines=await Promise.all(simulatorFiles.map(async file=>`${relative(root,file).replaceAll('\\','/')}\0${sha256(await readFile(file))}\n`));
+const compatibility={schema:1,domain:'agent.li33.art',contentVersion,saveVersion:1,kernelVersion:1,playerVersion:1,saveFeatures:['post-season-v1'],readableContentVersions:[...legacyBlock.matchAll(/'([^']+)'/g)].map(match=>match[1]).concat(contentVersion),readableSaveFeatures:['post-season-v1'],maxSaveBytes,simulatorDigest:sha256(simulatorLines.join(''))};
+await writeFile(join(dist,'release-compat.json'),JSON.stringify(compatibility,null,2)+'\n');
+
 const extensions = new Set(['.html', '.js', '.css', '.svg', '.png', '.webmanifest', '.webp', '.woff', '.woff2', '.json']);
 const files = (await walk(dist)).filter((file) => {
   const name = relative(dist, file).replaceAll('\\', '/');

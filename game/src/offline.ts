@@ -23,6 +23,7 @@ let registration: ServiceWorkerRegistration | undefined;
 let registering: Promise<OfflineStatus> | undefined;
 let downloading = false;
 const updateListeners = new Set<(available: boolean) => void>();
+const watchedRegistrations = new WeakSet<ServiceWorkerRegistration>();
 const supported = () => typeof window !== 'undefined' && 'serviceWorker' in navigator && window.isSecureContext;
 const empty = (): OfflineStatus => ({ supported: supported(), registered: false, chapterAvailable: false, version: null, bytes: 0, totalAssets: 0, updateAvailable: false, chapterStatuses:{} });
 
@@ -58,6 +59,21 @@ function notifyUpdate() {
   for (const listener of updateListeners) listener(available);
 }
 
+function watchRegistration(reg: ServiceWorkerRegistration) {
+  if (watchedRegistrations.has(reg)) return;
+  watchedRegistrations.add(reg);
+  reg.addEventListener('updatefound', () => {
+    const worker = reg.installing;
+    worker?.addEventListener('statechange', () => { if (worker.state === 'installed') notifyUpdate(); });
+  });
+}
+
+function checkForUpdate(reg: ServiceWorkerRegistration) {
+  // Reading an installed pack must not depend on fetching sw.js while offline.
+  // An online check only installs a waiting worker; activation still needs the safe-checkpoint action.
+  if (navigator.onLine) void reg.update().catch(() => {});
+}
+
 function waitForActive(reg: ServiceWorkerRegistration): Promise<void> {
   if (reg.active) return Promise.resolve();
   return new Promise((resolve, reject) => {
@@ -84,15 +100,20 @@ function waitForActive(reg: ServiceWorkerRegistration): Promise<void> {
 export async function registerOffline(onUpdate?: (available: boolean) => void): Promise<OfflineStatus> {
   if (onUpdate) updateListeners.add(onUpdate);
   if (!supported() || !import.meta.env.PROD) return empty();
-  if (registration) { notifyUpdate(); return getOfflineStatus(); }
+  if (registration) { checkForUpdate(registration); notifyUpdate(); return getOfflineStatus(); }
   if (registering) return registering;
   registering = (async () => {
     try {
+      const existing = await navigator.serviceWorker.getRegistration('/play/');
+      if (existing?.active && existing.scope.endsWith('/play/')) {
+        registration = existing;
+        watchRegistration(existing);
+        checkForUpdate(existing);
+        notifyUpdate();
+        return await getOfflineStatus();
+      }
       registration = await navigator.serviceWorker.register('/play/sw.js', { scope: '/play/', updateViaCache: 'none' });
-      registration.addEventListener('updatefound', () => {
-        const worker = registration?.installing;
-        worker?.addEventListener('statechange', () => { if (worker.state === 'installed') notifyUpdate(); });
-      });
+      watchRegistration(registration);
       await waitForActive(registration);
       notifyUpdate();
       return await getOfflineStatus();

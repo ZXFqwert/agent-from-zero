@@ -170,8 +170,8 @@ test('incompatible versions, unknown unlocked scenes and over-limit payloads are
   for(const key of ['saveVersion','kernelVersion','playerVersion','contentVersion'])assert.throws(()=>validateSave({...initial,[key]:'future'}),/版本/);
   assert.throws(()=>validateSave({...initial,currentScenarioId:scenarios[1].id}),/未解锁/);
   assert.throws(()=>parseSaveText('{broken'),/JSON/);
-  assert.throws(()=>parseSaveText(' '.repeat(MAX_SAVE_BYTES+1)),/8 MB/);
-  assert.throws(()=>validateSave({...initial,extra:'a'.repeat(MAX_SAVE_BYTES)}),/8 MB/);
+  assert.throws(()=>parseSaveText(' '.repeat(MAX_SAVE_BYTES+1)),/16 MB/);
+  assert.throws(()=>validateSave({...initial,extra:'a'.repeat(MAX_SAVE_BYTES)}),/16 MB/);
   for(const malformed of [null,[],42,'save'])assert.throws(()=>validateSave(malformed),/存档/);
 });
 
@@ -186,7 +186,7 @@ test('a real v0.1 browser export migrates its envelope without altering any hist
   const before=JSON.stringify(legacy);
   const migrated=validateSave(legacy);
   assert.equal(JSON.stringify(legacy),before,'migration never changes the backup file snapshot');
-  assert.equal(migrated.contentVersion,'season-0.10.0');
+  assert.equal(migrated.contentVersion,'season-0.11.0');
   for(const key of ['games','completedGames','actions','choices','evidence','checkpoints']) assert.deepEqual(migrated[key as keyof PlayerSave],legacy[key]);
   assert.equal(migrated.completedScenarioIds.length,3);
   assert.deepEqual(validateSave(migrated),migrated);

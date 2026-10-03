@@ -1,0 +1,23 @@
+.build-reuse {border:1px solid #b49a6266;border-radius:14px;background:#112d31;color:#f6ebce;overflow:hidden;margin:12px 0;}
+.build-reuse > summary {min-height:48px;cursor:pointer;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:650;}
+.build-reuse > summary span {font-size:.75rem;font-weight:400;color:#cfcca9;}
+.build-reuse-body {padding:0 14px 14px;display:grid;gap:10px;min-width:0;}
+.build-reuse-body p {margin:4px 0;font-size:.83rem;line-height:1.6;overflow-wrap:anywhere;}
+.build-reuse-select {display:grid;gap:6px;font-size:.86rem;}
+.build-reuse-select select {width:100%;max-width:100%;min-width:0;min-height:46px;border-radius:9px;border:1px solid #b59d68;background:#10282b;color:#fbefd5;padding:8px;font:inherit;}
+.build-reuse-preview {border-top:1px solid #b49a6244;padding-top:8px;display:grid;gap:9px;min-width:0;}
+.build-reuse-preview h4 {margin:0;font-size:.95rem;overflow-wrap:anywhere;}
+.build-reuse-knobs {display:grid;gap:5px;font-size:.81rem;color:#f3dfb2;}
+.build-reuse-sign {color:#ffd995;font-weight:650;}
+.build-reuse-body details {border:1px solid #b49a6233;border-radius:8px;padding:0 8px;min-width:0;}
+.build-reuse-body details > summary {cursor:pointer;min-height:44px;display:flex;align-items:center;font-size:.82rem;}
+.build-reuse-body details p:last-child {padding-bottom:8px;}
+.build-reuse-body code {font-size:.72rem;overflow-wrap:anywhere;white-space:normal;}
+.build-reuse-body ul {padding-left:20px;margin:4px 0 10px;font-size:.8rem;line-height:1.6;}
+.build-reuse-body li+li {margin-top:6px;}
+.build-reuse-errors {color:#ffd6aa;}
+.build-reuse-body button {min-height:46px;border-radius:10px;background:#edcd86;color:#163037;font:inherit;font-weight:650;border:0;padding:10px 12px;cursor:pointer;}
+.build-reuse-body button:disabled,.build-reuse-select select:disabled {opacity:.5;cursor:default;}
+.build-reuse-body small,.build-reuse-muted,.build-reuse-empty {font-size:.75rem;color:#c6c7ad;}
+.build-reuse :is(button,select,summary):focus-visible {outline:3px solid #e7c676;outline-offset:2px;}
+@media(max-width:360px) {.build-reuse > summary {align-items:flex-start;flex-direction:column;gap:3px;}.build-reuse-body {padding-left:10px;padding-right:10px;}}

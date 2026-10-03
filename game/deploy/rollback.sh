@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
-release_id="${1:?release id required}"
-[[ "$release_id" =~ ^[0-9]{8}-[0-9A-Za-z-]+$ ]] || exit 1
-base=/var/www/agent.li33.art
-release="$base/releases/$release_id"
-test -s "$release/index.html"
-# Prefer a game release so installed /play/ clients can see the older worker.
-# Returning to the pre-game release removes /play/ online; installed caches still exist.
-nginx -t
-ln -s "$release" "$base/current-rollback"
-mv -Tf "$base/current-rollback" "$base/current"
-echo "Rolled back to $release"
+umask 077
+# Only this site's current link is mutable. No caller-controlled deployment root.
+[[ $# == 1 && "$1" =~ ^[0-9]{8}-[0-9A-Za-z-]+$ ]] || { echo 'One valid release ID required' >&2; exit 1; }
+[[ "$(id -u)" == 0 ]] || { echo 'Run rollback with sudo' >&2; exit 1; }
+script_dir=$(cd -P -- "$(dirname -- "$0")" && pwd)
+for helper in rollback_release.py verify_release.py; do
+  [[ -f "$script_dir/$helper" && ! -L "$script_dir/$helper" ]] || { echo 'Missing trusted rollback helper' >&2; exit 1; }
+done
+exec python3 -I "$script_dir/rollback_release.py" "$1"

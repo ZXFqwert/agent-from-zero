@@ -257,6 +257,7 @@ export default function BlueprintDeck({ scenario, state, busy = false, onLab, se
 
     {definition.memorySnapshot && <details className="blueprint-block"><summary>记忆存储与会话启动块 <span>存储 v{lab.storeVersion} / 启动块 {snapshot ? `v${snapshot.storeVersion}` : '尚无'}</span></summary><div className="blueprint-body">
       <p>写入档案会更新存储，当前会话仍保留启动时的快照。新会话抓取新版；分支继承旧版；切回旧会话仍使用旧块。实际检索回响并放入上下文，才明确带入新信息。</p>
+      <small>这里供你检查快照来历。展开面板只显示记录，不执行检索或装卷；资料是否在回声当前上下文中，要看实际会话与卷轴。</small>
       <div className="blueprint-versions"><span>当前会话 <code>{state.sessions?.activeId}</code></span><span>存储 v{lab.storeVersion}</span><span>启动块 {snapshot ? `v${snapshot.storeVersion}` : '无'}</span></div>
       {snapshot && snapshot.storeVersion < lab.storeVersion && <p className="blueprint-warning">存储已有新版，当前启动块尚未更新。打开工坊档案或会话面板，决定检索新版还是开启新会话。</p>}
       {snapshot?.records.length ? snapshot.records.map(record => <details key={record.memoryId}><summary>{record.key} · 记忆修订 {record.revision}</summary><dl className="blueprint-facts">{Object.entries(record.facts).map(([fact, value]) => <div key={fact}><dt>{factLabels[fact] ?? fact}</dt><dd>{displayFact(fact, value)}</dd></div>)}</dl><small>来源信任：{record.provenance?.trust === 'external' ? '外部资料' : record.provenance?.trust === 'registry' ? '登记来源' : '执行 / 已存档来源'}</small></details>) : <p className="blueprint-note">此启动块没有记忆记录。</p>}

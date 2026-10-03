@@ -1128,6 +1128,18 @@ summary {
   color: var(--gold);
   background: #24454a;
 }
+.segmented.chapter-picker {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.chapter-picker > button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 4px;
+  font-size: 12px;
+  white-space: nowrap;
+}
 .replay-control {
   padding: 14px 16px;
   border: 1px solid var(--line);

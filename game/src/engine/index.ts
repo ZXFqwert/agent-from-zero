@@ -9,6 +9,7 @@ import * as secured from './v7';
 import * as collaborative from './v8';
 import * as evaluated from './v9';
 import * as blueprinted from './v10';
+import {memoizePositiveValidation} from './validationMemo';
 export type * from './types';
 export const defaultBlueprint=legacy.defaultBlueprint;
 const engine=(scenario:ScenarioDefinition)=>scenario.engineVersion===10?blueprinted:scenario.engineVersion===9?evaluated:scenario.engineVersion===8?collaborative:scenario.engineVersion===7?secured:scenario.engineVersion===6?memorable:scenario.engineVersion===5?contextual:scenario.engineVersion===4?bounded:scenario.engineVersion===3?protocol:scenario.engineVersion===2?current:legacy;
@@ -19,7 +20,8 @@ export const reduceGame=(scenario:ScenarioDefinition,state:GameState,action:Game
   return engine(scenario).reduceGame(scenario,state,action);
 };
 export const chooseNextCall=(scenario:ScenarioDefinition,state:GameState):ToolCall|null=>engine(scenario).chooseNextCall(scenario,state);
-export const validateGameState=(scenario:ScenarioDefinition,state:unknown):state is GameState=>engine(scenario).validateGameState(scenario,state);
+const validateState=memoizePositiveValidation((scenario:ScenarioDefinition,state:unknown)=>engine(scenario).validateGameState(scenario,state));
+export const validateGameState=(scenario:ScenarioDefinition,state:unknown):state is GameState=>validateState(scenario,state);
 export const getRemainingBudget=current.getRemainingBudget;
 export const getToolCost=(scenario:ScenarioDefinition,call:ToolCall):number=>scenario.engineVersion===10?blueprinted.getToolCost(scenario,call):scenario.engineVersion===9?evaluated.getToolCost(scenario,call):scenario.engineVersion===8?collaborative.getToolCost(scenario,call):scenario.engineVersion===7?secured.getToolCost(scenario,call):scenario.engineVersion===6?memorable.getToolCost(scenario,call):scenario.engineVersion===5?contextual.getToolCost(scenario,call):scenario.engineVersion===4?bounded.getToolCost(scenario,call):scenario.engineVersion===3?protocol.getToolCost(scenario,call):scenario.engineVersion===2?current.getToolCost(scenario,call):1;
 export function validateBlueprint(scenario:ScenarioDefinition,blueprint:AgentBlueprint):string[]{

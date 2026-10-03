@@ -4,6 +4,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -40,7 +41,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { createGame, reduceGame, validateBlueprint } from "./engine";
+import { createGame, reduceGame } from "./engine";
 import type { AgentBlueprint, GameAction, GameState, ScenarioDefinition } from "./engine";
 import {prologueIds,finaleIds} from './content/seasonBookends';
 import { chapters, factLabels, profiles, scenarios } from "./content/scenarios";
@@ -51,8 +52,15 @@ import { budgetExplanation, displayFact } from "./content/presentation";
 import { chapterComplete, isUnlocked, journeyOrder, nextMission } from "./content/progression";
 import CommandDeck from "./components/CommandDeck";
 import CityLedger from "./components/CityLedger";
+import ChallengeHall from "./components/ChallengeHall";
+import LearningAtlas from './components/LearningAtlas';
+import BuildReusePicker from './components/BuildReusePicker';
+import {challengeNarrative} from './content/challengeNarrative';
+import {challengeTemplates, deriveCapabilityGrowth, deriveUnlockedTemplateIds, generateExpedition, type ChallengeSpec, type ExpeditionAction, type ExpeditionSpec} from './challenges';
+import {emptyPostSeason, postSeasonScenario, reducePostSeason, validatePostSeason, type PostSeasonAction} from './postSeason';
 import {
   downloadSave,
+  MAX_SAVE_BYTES,
   emptySave,
   readSave,
   recordCompletion,
@@ -77,6 +85,8 @@ type Panel =
   | "victory"
   | "manual"
   | "lab"
+  | "hall"
+  | "atlas"
   | null;
 type InputAction = {
   [K in GameAction["type"]]: Omit<Extract<GameAction, { type: K }>, "id">;
@@ -89,6 +99,67 @@ const statusNames: Record<GameState["status"], string> = {
   exhausted: "预算耗尽",
   won: "契约已履行",
 };
+
+/** The selected record supplies both the real scene and its real action log. */
+function selectedGame(save: PlayerSave | null) {
+  const post = save?.postSeason;
+  const mode = post?.selectedMode ?? null;
+  const generated = post && mode ? postSeasonScenario(post) : null;
+  if (generated && post) {
+    const ordinary = post.currentChallenge;
+    const expedition = post.activeExpedition;
+    const spec = mode === 'challenge' ? ordinary!.spec : expedition!.definition.floors[expedition!.floor];
+    return {scenario: generated, state: mode === 'challenge' ? ordinary!.game : expedition!.game,
+      actions: mode === 'challenge' ? ordinary!.actions : expedition!.currentActions, mode,
+      templateId: spec.templateId, sourceId: challengeTemplates.find(template => template.id === spec.templateId)!.sourceScenarioId};
+  }
+  const scenario = scenarios.find(s => s.id === save?.currentScenarioId) ?? scenarios[0];
+  return {scenario, state: save?.games[scenario.id] ?? createGame(scenario),
+    actions: save?.actions[scenario.id] ?? [], mode: null, templateId: null, sourceId: scenario.id};
+}
+
+/** Dispatch changes the current attempt number, so only an actual reset changes this part of the key. */
+function executionContext(save: PlayerSave | null) {
+  const post = save?.postSeason;
+  if (post?.selectedMode === 'challenge' && post.currentChallenge) {
+    const p = post.currentChallenge;
+    return `challenge:${p.spec.templateId}:${p.spec.seed}:${[...p.actions].reverse().find(a => a.type === 'reset')?.id ?? 'start'}`;
+  }
+  if (post?.selectedMode === 'expedition' && post.activeExpedition) {
+    const e = post.activeExpedition;
+    return `expedition:${e.definition.id}:${e.floor}:${e.attempts.length}`;
+  }
+  const id = save?.currentScenarioId ?? scenarios[0].id;
+  return `main:${id}:${[...(save?.actions[id] ?? [])].reverse().find(a => a.type === 'reset')?.id ?? 'start'}`;
+}
+
+/** Cold starts, imports and navigation append actual pause actions, including hidden post attempts. */
+function pauseSavedGames(save: PlayerSave): PlayerSave {
+  for (const [id, game] of Object.entries(save.games)) {
+    if (game.status !== 'running') continue;
+    const action: GameAction = {id: crypto.randomUUID(), type: 'pause'};
+    const next = reduceGame(scenarios.find(s => s.id === id)!, game, action);
+    if (next === game) throw new Error('这份委托尚未安全暂停。');
+    save.games[id] = next;
+    save.actions[id] = [...(save.actions[id] ?? []), action];
+  }
+  if (save.postSeason) {
+    let post = save.postSeason;
+    const originalMode = post.selectedMode, proofs = Object.values(save.completedGames);
+    for (const mode of ['challenge', 'expedition'] as const) {
+      const game = mode === 'challenge' ? post.currentChallenge?.game : post.activeExpedition?.game;
+      if (game?.status !== 'running' || mode === 'expedition' && post.activeExpedition?.status !== 'active') continue;
+      if (post.selectedMode !== mode) post = reducePostSeason(post, {type: 'select-mode', mode}, proofs);
+      const action: GameAction = {id: crypto.randomUUID(), type: 'pause'};
+      const next = reducePostSeason(post, mode === 'challenge' ? {type: 'challenge', action} : {type: 'expedition', action: {type: 'game', action}}, proofs);
+      if (next === post) throw new Error('远行中的伙伴尚未安全暂停。');
+      post = next;
+    }
+    if (post.selectedMode !== originalMode) post = reducePostSeason(post, {type: 'select-mode', mode: originalMode}, proofs);
+    save.postSeason = validatePostSeason(post, proofs);
+  }
+  return save;
+}
 
 export default function App() {
   const [save, setSave] = useState<PlayerSave | null>(null),
@@ -103,16 +174,21 @@ export default function App() {
     [downloading, setDownloading] = useState(false),
     [offlineChapter,setOfflineChapter] = useState(1),
     [offlineChapters,setOfflineChapters] = useState<Record<string,boolean>>({}),
+    [offlineCheck,setOfflineCheck] = useState<'checking'|'ready'|'error'>(import.meta.env.PROD?'checking':'ready'),
+    [offlineCheckEpoch,setOfflineCheckEpoch] = useState(0),
     [updateReady, setUpdateReady] = useState(false),
     [readOnly, setReadOnly] = useState(false);
   const [suggestedBuild,setSuggestedBuild] = useState<AgentBlueprint | undefined>();
+  const [workshopDraftVersion,setWorkshopDraftVersion] = useState(0);
+  const [practiceFocus,setPracticeFocus] = useState<string | undefined>();
   const [dialogueIndex,setDialogueIndex] = useState(0);
   const saveRef = useRef<PlayerSave | null>(null),
     busyRef = useRef(false),
     inputFile = useRef<HTMLInputElement>(null),
     ownsLock = useRef(!navigator.locks),
     lockOwner = useRef<symbol | undefined>(undefined),
-    storageBlocked = useRef(false);
+    storageBlocked = useRef(false),
+    executionEpoch = useRef(0);
   const reducedMotion = useRef(
     matchMedia("(prefers-reduced-motion: reduce)").matches,
   ).current;
@@ -120,21 +196,7 @@ export default function App() {
     let cancelled = false;
     void readSave()
       .then(async (stored) => {
-        const next = stored ?? emptySave();
-        for (const [id, game] of Object.entries(next.games)) {
-          if (game.status === "running") {
-            const action: GameAction = {
-              id: crypto.randomUUID(),
-              type: "pause",
-            };
-            next.games[id] = reduceGame(
-              scenarios.find((s) => s.id === id)!,
-              game,
-              action,
-            );
-            next.actions[id] = [...(next.actions[id] ?? []), action];
-          }
-        }
+        const next = pauseSavedGames(stored ?? emptySave());
         if (!cancelled) {
           saveRef.current = next;
           setSave(next);
@@ -191,14 +253,20 @@ export default function App() {
   }, [toast]);
   useEffect(() => {
     if (!import.meta.env.PROD) return;
+    let cancelled = false;
+    setOfflineCheck('checking');
     void import("./offline")
       .then(async (m) => {
-        await m.registerOffline(setUpdateReady);
-        const status = await m.getOfflineStatus();
+        const status = await m.registerOffline(setUpdateReady);
+        if (cancelled) return;
+        if (status.error) {setOfflineCheck('error');setOffline(status.error);return;}
         setOfflineChapters(status.chapterStatuses);
+        setOffline('');
+        setOfflineCheck('ready');
       })
-      .catch(() => setOffline("离线组件暂未就绪，可稍后重试。"));
-  }, []);
+      .catch(() => {if(!cancelled){setOfflineCheck('error');setOffline("离线组件暂未就绪，可稍后重试。");}});
+    return () => {cancelled = true;};
+  }, [online,offlineCheckEpoch]);
 
   const commit = useCallback(
     async (update: (previous: PlayerSave) => PlayerSave, recovery = false) => {
@@ -234,13 +302,32 @@ export default function App() {
     },
     [readOnly],
   );
+  const actionContext = `${executionContext(save)}:${executionEpoch.current}`;
   const act = useCallback(
     async (input: InputAction) => {
       const action = { ...input, id: crypto.randomUUID() } as GameAction;
       let victory = false,
         accepted = false;
       const okay = await commit((previous) => {
+        // A queued callback belongs to the scene that created it, even after a mode switch.
+        if (`${executionContext(previous)}:${executionEpoch.current}` !== actionContext) return previous;
         previous.started = true;
+        const post = previous.postSeason ?? emptyPostSeason();
+        if (post.selectedMode) {
+          const current = selectedGame(previous).state;
+          const next = reducePostSeason(post, post.selectedMode === 'challenge'
+            ? {type: 'challenge', action} : {type: 'expedition', action: {type: 'game', action}}, Object.values(previous.completedGames));
+          if (next === post) return previous;
+          accepted = true;
+          // Only ordinary challenges have restorable checkpoints; expedition costs cannot be rolled back.
+          if (post.selectedMode === 'challenge' && current.status !== 'won' && (action.type === 'dispatch' || action.type === 'configure')) {
+            const checkpointed = reducePostSeason(post, {type: 'checkpoint'}, Object.values(previous.completedGames));
+            const withCheckpoint = checkpointed === post ? next : reducePostSeason(checkpointed, {type: 'challenge', action}, Object.values(previous.completedGames));
+            previous.postSeason = withCheckpoint === checkpointed ? next : withCheckpoint;
+          } else previous.postSeason = next;
+          victory = selectedGame(previous).state.status === 'won' && current.status !== 'won';
+          return previous;
+        }
         const scenario = scenarios.find(
           (s) => s.id === previous.currentScenarioId,
         )!;
@@ -281,51 +368,115 @@ export default function App() {
         setToast("这次动作未执行。请检查法器、目标权限和剩余预算。");
       return okay && accepted;
     },
-    [commit],
+    [commit, actionContext],
   );
-  const scenario =
-    scenarios.find((s) => s.id === save?.currentScenarioId) ?? scenarios[0];
-  const state = save?.games[scenario.id] ?? createGame(scenario);
+  const selection = useMemo(() => selectedGame(save), [save]);
+  const {scenario, state, actions: currentActions, mode: postMode, sourceId} = selection;
+  const post = save?.postSeason ?? emptyPostSeason();
+  const terminalExpedition = postMode === 'expedition' && post.activeExpedition!.status !== 'active';
+  const mainProofs = useMemo(() => Object.values(save?.completedGames ?? {}), [save?.completedGames]);
+  const unlockedTemplates = useMemo(() => deriveUnlockedTemplateIds(mainProofs), [mainProofs]);
+  const atlasGames = useMemo(() => save ? [...save.completedScenarioIds.map(id => save.completedGames[id]), ...scenarios.flatMap(source => save.games[source.id] && save.games[source.id].status !== 'won' ? [save.games[source.id]] : [])] : [], [save]);
+  const reusableBuildRecords = useMemo(() => ({mainGames: save ? [...save.completedScenarioIds.map(id => save.completedGames[id]), ...scenarios.flatMap(source => save.games[source.id] ? [save.games[source.id]] : [])] : [], postSeason: save?.postSeason}), [save]);
+  const growth = useMemo(() => deriveCapabilityGrowth([...post.wonProofs, ...(post.currentChallenge && post.currentChallenge.game.status !== 'won' ? [post.currentChallenge] : [])]), [save?.postSeason]);
+  const lockReasons = Object.fromEntries(challengeTemplates.filter(template => !unlockedTemplates.includes(template.id)).map(template => [template.id, `先实际完成「${scenarios.find(q => q.id === template.sourceScenarioId)!.title}」，再把这套机制带到新委托。`]));
+  const expeditionUnlocked = [1, 2, 3].every(tier => challengeTemplates.some(template => template.tier === tier && unlockedTemplates.includes(template.id)));
   const bookendIds=[...prologueIds,...finaleIds];
   const sameSection=(q:ScenarioDefinition)=>prologueIds.includes(scenario.id)?prologueIds.includes(q.id):finaleIds.includes(scenario.id)?finaleIds.includes(q.id):q.chapter===scenario.chapter&&!bookendIds.includes(q.id);
-  const sectionScenarios=[...scenarios].sort((a,b)=>journeyOrder.indexOf(a.id)-journeyOrder.indexOf(b.id)).filter(sameSection);
-  const gameIndex = sectionScenarios.findIndex(q=>q.id===scenario.id);
-  const sectionTitle=prologueIds.includes(scenario.id)?'序章 · 继承工坊':finaleIds.includes(scenario.id)?'终章 · 没有镜面的新城':chapters[scenario.chapter-1]?.[0];
-  const story = uiStories[scenario.id];
+  const sectionScenarios=postMode ? [scenario] : [...scenarios].sort((a,b)=>journeyOrder.indexOf(a.id)-journeyOrder.indexOf(b.id)).filter(sameSection);
+  const gameIndex = postMode === 'expedition' ? post.activeExpedition!.floor : sectionScenarios.findIndex(q=>q.id===scenario.id);
+  const sectionTitle=postMode === 'expedition' ? `三层远征 · 第 ${post.activeExpedition!.floor + 1} 层` : postMode === 'challenge' ? '远行大厅 · 长期委托' : prologueIds.includes(scenario.id)?'序章 · 继承工坊':finaleIds.includes(scenario.id)?'终章 · 没有镜面的新城':chapters[scenario.chapter-1]?.[0];
+  const currentTemplate = postMode ? challengeTemplates.find(template => template.id === selection.templateId) : undefined;
+  const postNarrative = currentTemplate ? challengeNarrative(currentTemplate.id, currentTemplate.decision) : undefined;
+  const sourceStory = uiStories[sourceId];
+  const story = postNarrative ? {...sourceStory, ...postNarrative, opening: postNarrative.brief} : sourceStory;
   const orderedScenarios = [...scenarios].sort((a,b)=>journeyOrder.indexOf(a.id)-journeyOrder.indexOf(b.id));
   const nextId = nextMission(scenario.id, save?.completedScenarioIds ?? [], scenarios.map(q=>q.id));
   const nextIndex = scenarios.findIndex(q=>q.id === nextId);
-  const mainComplete = !bookendIds.includes(scenario.id)&&chapterComplete(save?.completedScenarioIds ?? [],scenario.chapter);
-  const openingLines=getOpeningLines(scenario.id,save?.choices ?? {});
+  const mainComplete = !postMode && !bookendIds.includes(scenario.id)&&chapterComplete(save?.completedScenarioIds ?? [],scenario.chapter);
+  const openingLines=postMode ? [{speaker: 'echo', text: scenario.brief}] : getOpeningLines(scenario.id,save?.choices ?? {});
   const openingLine=openingLines[Math.min(dialogueIndex,openingLines.length-1)];
   useEffect(()=>setDialogueIndex(0),[scenario.id]);
   useEffect(() => {
-    if (!auto || panel || busy || state.status !== "running" || document.hidden)
+    if (!auto || panel || busy || terminalExpedition || state.status !== "running" || document.hidden)
       return;
     const timeout = setTimeout(() => void act({ type: "step", source: "scheduler" }), 1350);
     return () => clearTimeout(timeout);
-  }, [auto, panel, busy, state, act]);
+  }, [auto, panel, busy, terminalExpedition, state, act]);
   useEffect(() => {
     const pause = () => {
       if (document.hidden) {
         setAuto(false);
-        if (
-          saveRef.current?.games[saveRef.current.currentScenarioId]?.status ===
-          "running"
-        )
+        if (saveRef.current && selectedGame(saveRef.current).state.status === 'running')
           void act({ type: "pause" });
       }
     };
     document.addEventListener("visibilitychange", pause);
     return () => document.removeEventListener("visibilitychange", pause);
   }, [act]);
+  useEffect(() => {
+    // A storage write may be in flight when the tab becomes hidden. Pause its committed result too.
+    if (document.hidden && !busy && !readOnly && !terminalExpedition && state.status === 'running') {
+      setAuto(false);
+      void act({type: 'pause'});
+    }
+  }, [busy, readOnly, terminalExpedition, state.status, act]);
   async function open(next: Panel) {
     setAuto(false);
-    if (state.status === "running" && !(await act({ type: "pause" }))) return;
+    if (!terminalExpedition && state.status === "running" && !(await act({ type: "pause" }))) return;
+    if (next === 'hall') setPracticeFocus(undefined);
     setPanel(next);
   }
+  async function changePost(action: PostSeasonAction, destination: Panel = null) {
+    setAuto(false);
+    let accepted = false;
+    const okay = await commit(previous => {
+      if (`${executionContext(previous)}:${executionEpoch.current}` !== actionContext) return previous;
+      pauseSavedGames(previous);
+      let current = previous.postSeason ?? emptyPostSeason();
+      const proofs = Object.values(previous.completedGames);
+      if (action.type === 'expedition' && current.selectedMode !== 'expedition') current = reducePostSeason(current, {type: 'select-mode', mode: 'expedition'}, proofs);
+      const next = reducePostSeason(current, action, proofs);
+      if (next === current && !(action.type === 'select-mode' && current.selectedMode === action.mode))
+        throw new Error('这次远行操作未执行。请保留当前尝试，检查解锁条件、剩余晶石与远征状态。');
+      previous.postSeason = validatePostSeason(next, proofs);
+      if (action.type === 'restore-checkpoint') pauseSavedGames(previous);
+      if (action.type === 'start-challenge' || action.type === 'start-expedition') previous.started = true;
+      accepted = true;
+      executionEpoch.current++;
+      return previous;
+    });
+    if (!okay || !accepted) throw new Error('这次操作尚未保存，请检查存档提示后重试。');
+    setSuggestedBuild(undefined);
+    setPanel(destination);
+    window.scrollTo({top: 0, behavior: reducedMotion ? 'instant' : 'smooth'});
+  }
+  async function startChallenge(spec: ChallengeSpec) {
+    const template = challengeTemplates.find(t => t.id === spec.templateId);
+    if (!template || !unlockedTemplates.includes(template.id)) throw new Error(lockReasons[spec.templateId] ?? '先取得这类机制的主线实操记录。');
+    if (!online && offlineCheck!=='ready') throw new Error(offlineCheck==='checking'?'正在检查已下载章节，请稍候。':'暂时无法读取离线状态，请在行囊中重新读取。');
+    if (!online && !offlineChapters[`chapter-0${scenarios.find(q => q.id === template.sourceScenarioId)!.chapter}`])
+      throw new Error('这类委托的场景还未下载。先联网下载对应章节离线包。');
+    await changePost({type: 'start-challenge', spec}, 'workshop');
+    setToast('新委托已保存。装配你自己的伙伴，再探索这次现场。');
+  }
+  async function startExpedition(spec: ExpeditionSpec) {
+    const definition = generateExpedition(spec);
+    const locked = definition.floors.map(floor => challengeTemplates.find(template => template.id === floor.templateId)!).filter(template => !unlockedTemplates.includes(template.id));
+    if (locked.length) throw new Error(`这个编号需要尚未掌握的机制：${locked.map(template => `「${scenarios.find(q => q.id === template.sourceScenarioId)!.title}」`).join('、')}。先完成对应主线，或换一个远征编号。`);
+    if (!online && offlineCheck!=='ready') throw new Error(offlineCheck==='checking'?'正在检查已下载章节，请稍候。':'暂时无法读取离线状态，请在行囊中重新读取。');
+    if (!online && definition.floors.some(floor => !offlineChapters[`chapter-0${scenarios.find(q => q.id === challengeTemplates.find(t => t.id === floor.templateId)!.sourceScenarioId)!.chapter}`]))
+      throw new Error('这次远征涉及尚未下载的章节。先联网准备离线包。');
+    await changePost({type: 'start-expedition', spec}, 'workshop');
+    setToast('三层共用一袋晶石。每层都要重新看现场、签契约。');
+  }
+  async function controlExpedition(action: Exclude<ExpeditionAction, {type: 'game'}>) {
+    // Selection and charged controls are persisted together, including from the main journey.
+    await changePost({type: 'expedition', action}, 'hall');
+    setPanel(action.type === 'retry-floor' || action.type === 'advance' && saveRef.current?.postSeason?.activeExpedition?.status === 'active' ? 'workshop' : 'hall');
+  }
   async function launch(automatic = true) {
-    if (state.status === "won") return false;
+    if (terminalExpedition || state.status === "won") return false;
     const okay = await act({
       type: state.status === "paused" ? "resume" : "dispatch",
       mode: automatic ? "automatic" : "manual",
@@ -354,42 +505,33 @@ export default function App() {
       !isUnlocked(target.id, save?.completedScenarioIds ?? [])
     )
       return;
+    if(!online&&offlineCheck!=='ready'){setToast(offlineCheck==='checking'?'正在检查已下载章节，请稍候。':'暂时无法读取离线状态，请在行囊中重新读取。');return;}
     if(!online&&!offlineChapters[`chapter-0${target.chapter}`]){setToast('这一章尚未下载场景，请联网后下载离线包。');return;}
-    let draft: AgentBlueprint | undefined;
+    let fresh = false, selected = false;
     const changed = await commit((previous) => {
-      const prior=previous.games[previous.currentScenarioId]?.blueprint;
+      if (`${executionContext(previous)}:${executionEpoch.current}` !== actionContext) return previous;
+      pauseSavedGames(previous);
+      if (previous.postSeason?.selectedMode) previous.postSeason = reducePostSeason(previous.postSeason, {type: 'select-mode', mode: null}, Object.values(previous.completedGames));
       if(!previous.games[target.id]) {
         previous.games[target.id]=createGame(target);
-        if(prior) {
-          const inherited={...structuredClone(prior),budget:Math.min(prior.budget,target.limits?.maxBudget ?? 20)};
-          const targetIds=new Set([...target.observations,...target.operations].map(o=>o.target));
-          inherited.permissions=inherited.permissions.filter(id=>id==='*'||targetIds.has(id));
-          if(inherited.toolPermissions)for(const key of ['observe','operate','verify'] as const){const values=inherited.toolPermissions[key];if(values)inherited.toolPermissions[key]=values.filter(id=>id==='*'||targetIds.has(id));}
-          delete inherited.goalOrder;
-          delete inherited.toolArguments;
-          if((target.engineVersion??1)<3)delete inherited.stableRequestKeys;
-          if((target.engineVersion??1)<4)delete inherited.loopPolicy;
-          if((target.engineVersion??1)<7)delete inherited.instructionPolicy;
-          if(validateBlueprint(target,inherited).length === 0) {
-            const action:GameAction={id:crypto.randomUUID(),type:'configure',blueprint:inherited};
-            previous.games[target.id]=reduceGame(target,previous.games[target.id],action);
-            previous.actions[target.id]=[action];
-          } else draft=inherited;
-        }
+        fresh = true;
       }
       previous.currentScenarioId = target.id;
       previous.games[target.id] ??= createGame(target);
       previous.started = true;
+      selected = true;
+      executionEpoch.current++;
       return previous;
     });
-    if (!changed) return;
-    setSuggestedBuild(draft);
-    setPanel(draft ? 'workshop' : null);
-    if(draft) setToast('上份契约已经带来。新的现场约束需要你调整装配。');
+    if (!changed || !selected) return;
+    setSuggestedBuild(undefined);
+    setPanel(fresh ? 'workshop' : null);
+    if(fresh) setToast('新的现场已保存。可以从已交付构筑起草，再为这份委托签契约。');
     setAuto(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
   async function configure(build: AgentBlueprint) {
+    if (terminalExpedition) {setPanel('hall');setToast('这次远征已经收队。可以回看记录，或在大厅开始新的远征。');return;}
     if (state.status === "won") {
       setPanel("settings");
       setToast("这份契约已经完成。可在恢复与重试中开始一次新尝试。");
@@ -402,12 +544,25 @@ export default function App() {
     }
   }
   async function retry() {
-    if (!(await commit(resetCurrentScenario))) return;
+    if (postMode === 'expedition') {
+      try { await controlExpedition({type: 'retry-floor'}); } catch (e) { setToast((e as Error).message); }
+      return;
+    }
+    if (postMode === 'challenge') {
+      if (!(await act({type: 'reset'}))) return;
+    } else {
+      let accepted = false;
+      if (!(await commit(previous => {
+        if (`${executionContext(previous)}:${executionEpoch.current}` !== actionContext) return previous;
+        accepted = true; executionEpoch.current++; return resetCurrentScenario(previous);
+      })) || !accepted) return;
+    }
+    setSuggestedBuild(undefined);
     setAuto(false);
     setPanel(null);
   }
   async function hint() {
-    await act({ type: "hint" });
+    if (!(await act({ type: "hint" }))) return;
     setToast(
       story?.hint ?? (scenario.kind === "guided"
         ? guidance()
@@ -415,6 +570,7 @@ export default function App() {
     );
   }
   function guidance() {
+    if (postMode) return postNarrative?.hint ?? '查看这次实际取得的卷轴与失败回执，再调整工具、参数和验收。';
     if ((scenario.engineVersion ?? 1) >= 2) return story?.hint ?? "看卷轴中已有的证据，再决定下一步。";
     if (!state.blueprint.tools.includes("operate"))
       return "一句“完成了”不会让灯塔亮。去工坊装备观测之镜和塑形之手，再派遣回声。";
@@ -439,6 +595,7 @@ export default function App() {
         `chapter-0${offlineChapter}`
       );
       setOfflineChapters(status.chapterStatuses);
+      setOfflineCheck('ready');
       setOffline(`${chapters[offlineChapter-1][0]}已可离线游玩。`);
     } catch (e) {
       setOffline((e as Error).message);
@@ -492,7 +649,7 @@ export default function App() {
         </div>
         <div className="aside-bottom">
           <span>单人剧情 × 伙伴构筑 × Agent 学习</span>
-          <span>失序之城 · v0.10</span>
+          <span>失序之城 · v0.11</span>
           <a href="/archive/v1/" target="_blank" rel="noreferrer">
             旧学习档案 ↗
           </a>
@@ -537,7 +694,7 @@ export default function App() {
         {!online && (
           <div className="network-banner">
             <WifiOff size={14} />
-            {offlineChapters[`chapter-0${scenario.chapter}`]
+            {offlineCheck==='checking'?'网络已断开 · 正在检查离线章节':offlineCheck==='error'?'网络已断开 · 离线状态暂不可用':offlineChapters[`chapter-0${scenario.chapter}`]
               ? "离线冒险 · 本章已下载"
               : "网络已断开 · 已加载的主线仍可继续"}
           </div>
@@ -603,17 +760,17 @@ export default function App() {
                 <h1>
                   {scenario.title}
                   <span
-                    className={`status-dot ${state.status === "running" ? "pulsing" : ""}`}
+                    className={`status-dot ${state.status === "running" && !terminalExpedition ? "pulsing" : ""}`}
                   />
                 </h1>
               </div>
               <button
                 className="quest-number"
-                aria-label="查看章节地图"
-                onClick={() => void open("map")}
+                aria-label={postMode ? '查看远行大厅' : '查看章节地图'}
+                onClick={() => void open(postMode ? 'hall' : 'map')}
               >
                 <span>{String(gameIndex + 1).padStart(2, "0")}</span>
-                <small>/ {String(sectionScenarios.length).padStart(2,"0")}</small>
+                <small>/ {String(postMode === 'expedition' ? 3 : sectionScenarios.length).padStart(2,"0")}</small>
               </button>
             </section>
             <section
@@ -631,7 +788,7 @@ export default function App() {
                   state={state}
                   scenario={scenario}
                   reducedMotion={reducedMotion}
-                /> : <div className="scene-fallback"><WifiOff/><span>本章场景尚未下载。联网下载，或从地图选择已下载的章节。</span></div>}
+                /> : <div className="scene-fallback"><WifiOff/><span>{offlineCheck==='checking'?'正在检查已下载场景…':offlineCheck==='error'?'暂时无法核验离线场景。请在行囊中重新读取离线状态。':'本章场景尚未下载。联网下载，或从地图选择已下载的章节。'}</span></div>}
               </Suspense>
               <div className="scene-shade" />
               <div className="scene-topline">
@@ -677,7 +834,7 @@ export default function App() {
               )}
               <div className="companion-tag">
                 <span>✦ 回声</span>
-                <small>{state.status === 'exhausted' && state.runtime ? state.runtime.missionRemaining === 0 ? '委托能量用完' : '派遣已停止' : statusNames[state.status]}</small>
+                <small>{terminalExpedition ? post.activeExpedition!.status === 'cleared' ? '远征已完成' : '远征已收队' : state.status === 'exhausted' && state.runtime ? state.runtime.missionRemaining === 0 ? '委托能量用完' : '派遣已停止' : statusNames[state.status]}</small>
               </div>
               <div className="dialogue-box" aria-live="polite">
                 <span className="speaker">
@@ -749,7 +906,7 @@ export default function App() {
                   className="button primary full"
                   onClick={() => setPanel("victory")}
                 >
-                  收起这段回响，继续旅程 <ArrowRight size={17} />
+                  {postMode ? '查看这场委托的真实复盘' : '收起这段回响，继续旅程'} <ArrowRight size={17} />
                 </button>
               ) : scenario.id===prologueIds[0] ? (
                 <div className="callout">
@@ -763,7 +920,7 @@ export default function App() {
                 <div className="action-row">
                   <button
                     className="button workshop-button"
-                    disabled={busy || readOnly}
+                    disabled={busy || readOnly || terminalExpedition}
                     onClick={() => void open("workshop")}
                   >
                     <Wrench size={18} />
@@ -775,7 +932,7 @@ export default function App() {
                   {state.status === "running" ? (
                     <button
                       className="button primary"
-                      disabled={busy}
+                      disabled={busy || readOnly || terminalExpedition}
                       onClick={() => {
                         setAuto(false);
                         void act({ type: "pause" });
@@ -787,7 +944,7 @@ export default function App() {
                   ) : (
                     <button
                       className="button primary"
-                      disabled={busy || readOnly}
+                      disabled={busy || readOnly || terminalExpedition}
                       onClick={() => void launch()}
                     >
                       <Play size={17} fill="currentColor" />
@@ -803,7 +960,7 @@ export default function App() {
               <div className="secondary-actions">
                 <button
                   onClick={() => void open("manual")}
-                  disabled={busy || state.status === "won"}
+                  disabled={busy || readOnly || terminalExpedition || state.status === "won"}
                 >
                   <SkipForward size={14} />
                   逐步指挥
@@ -814,13 +971,13 @@ export default function App() {
                 </button>
                 <button
                   onClick={() => void hint()}
-                  disabled={busy || state.status === "won"}
+                  disabled={busy || readOnly || terminalExpedition || state.status === "won"}
                 >
                   <HelpCircle size={14} />
                   灵感
                 </button>
               </div>
-              {state.status === 'exhausted' && <div className="retry-callout"><p>{budgetExplanation(state)}</p><button className="button" disabled={busy} onClick={()=>void retry()}><RotateCcw size={16}/>从委托起点重试</button></div>}
+              {state.status === 'exhausted' && <div className="retry-callout"><p>{budgetExplanation(state)}</p>{postMode === 'expedition' && <p>三层共享资源；重试本层也保留已经花掉的晶石。</p>}<button className="button" disabled={busy || readOnly || postMode === 'expedition' && post.activeExpedition!.remaining <= 0} onClick={()=>void retry()}><RotateCcw size={16}/>{postMode === 'expedition' ? '用剩余晶石重试本层' : '从委托起点重试'}</button>{postMode === 'expedition' && <button className="button" onClick={()=>void open('hall')}>返回远行大厅<Compass size={16}/></button>}</div>}
               {scenario.kind === "guided" &&
                 ["stalled", "exhausted"].includes(state.status) && (
                   <div className="guide-note">
@@ -832,6 +989,7 @@ export default function App() {
                 <i />
                 教学策略模拟 · 每一步都能复盘
               </div>
+              {terminalExpedition && <div className="callout"><p>这次远征已经结束，保留的是最后的实际现场与行动记录。下一次出发请到大厅领取新委托。</p><button className="button full" onClick={()=>void open('hall')}><Compass size={16}/>回到远行大厅</button></div>}
             </section>
           </>
         )}
@@ -895,6 +1053,7 @@ export default function App() {
           <FlaskConical size={16} />
           真实 AI 实验台 <ArrowRight size={14} />
         </button>
+        <button className="button full" onClick={() => void open('hall')}><Compass size={18}/>远行大厅 · 24 类委托</button>
       </aside>
       {toast && (
         <div className="toast" role="status">
@@ -908,8 +1067,14 @@ export default function App() {
           kicker="装配，改变伙伴的行动方式"
           onClose={() => setPanel(null)}
         >
+          <BuildReusePicker records={reusableBuildRecords} scenario={scenario} busy={busy || readOnly || terminalExpedition || state.status === 'won'} onDraft={(draft,source)=>{
+            if (!saveRef.current || `${executionContext(saveRef.current)}:${executionEpoch.current}` !== actionContext || busyRef.current || readOnly || terminalExpedition || state.status === 'won') return;
+            setSuggestedBuild(draft);
+            setWorkshopDraftVersion(version=>version+1);
+            setToast(`已从「${source.title}」起草。权限仍为空白，请调整后亲自签订。`);
+          }}/>
           <Workshop
-            key={`${scenario.id}-${state.events.length}`}
+            key={`${scenario.id}-${state.events.length}-${workshopDraftVersion}`}
             state={state}
             scenario={scenario}
             onApply={(build) => void configure(build)}
@@ -925,9 +1090,13 @@ export default function App() {
           wide
         >
           <Journal
+            key={scenario.id}
             state={state}
             scenario={scenario}
-            actions={save.actions[scenario.id] ?? []}
+            actions={currentActions}
+            sourceScenarioId={sourceId}
+            hideUnobservedWorld={Boolean(postMode)}
+            recap={postNarrative?.recap}
           />
         </Dialog>
       )}
@@ -940,7 +1109,9 @@ export default function App() {
           <p className="muted">
             八章、序终章与七组现实蓝图，共八十四场作者设计冒险。支线与试炼可以回来尝试；已修好的设施与旅途记录会保留。
           </p>
+          <div className="callout"><h3>城市之外，还有新的委托</h3><p>{unlockedTemplates.length} / 24 类已经可以接取。用自己的构筑继续探索，或带一袋晶石走完三层远征。</p><button className="button primary full" disabled={busy} onClick={()=>void open('hall')}><Compass size={18}/>进入远行大厅<ArrowRight size={17}/></button>{postMode && <button className="button full" disabled={busy || readOnly} onClick={()=>void changePost({type:'select-mode',mode:null},null).catch(e=>setToast((e as Error).message))}>返回当前主线委托<ArrowLeft size={16}/></button>}</div>
           <details className="city-fold"><summary>城区变化与旅途收藏</summary><CityLedger save={save}/></details>
+          <button className="button full" onClick={()=>setPanel('atlas')}><BookOpen size={17}/>能力地图 · 下一次练什么<ArrowRight size={16}/></button>
           <div className="chapter-map">
             <div className="chapter-node available"><span className="chapter-index"><Sparkles size={20}/></span><div><small>PROLOGUE</small><h3>序章 · 继承工坊</h3><p>从一个能看见的动作，开始第一份契约。</p><div className="map-missions">{prologueIds.map(id=>{const q=scenarios.find(q=>q.id===id)!;return <button key={id} disabled={!isUnlocked(id,save.completedScenarioIds)} onClick={()=>void selectScenario(scenarios.indexOf(q))}>{save.completedScenarioIds.includes(id)?<CheckCircle2 size={15}/>:<Play size={14}/>}<span>{q.title}</span><ChevronRight size={14}/></button>;})}</div></div></div>
             {chapters.map(([name, description, tag], i) => (
@@ -1046,7 +1217,7 @@ export default function App() {
           )}
         </Dialog>
       )}
-      {panel === "victory" && (
+      {panel === "victory" && !postMode && (
         <Dialog title={mainComplete ? `第 ${scenario.chapter} 章，契约完成` : "一份契约，真正履行"} kicker={scenario.kind==='boss'?'首领击破 · 真实胜过宣称':'新的回响已收录'} onClose={()=>setPanel(null)}>
           <div className="victory-seal"><Sparkles size={42}/><span>{mainComplete?'下一段旅程正在展开':'世界回应了你的行动'}</span></div>
           <p>{story?.success ?? '回声收起法器，等待你的下一封委托。'}</p>
@@ -1059,8 +1230,15 @@ export default function App() {
           {mainComplete&&<div className="callout"><h4>工坊里多了一张远行地图。</h4><p>这一章的主线已完成。你还可以完成支线、试用另一条修复路线，或回放失败时回声收到的消息。</p></div>}
         </Dialog>
       )}
+      {panel === 'victory' && postMode && <Dialog title={postMode === 'expedition' ? `第 ${post.activeExpedition!.floor + 1} 层，实际验收通过` : '这张委托，实际验收通过'} kicker="真实操作记录 · 保留胜利证明" onClose={()=>setPanel(null)}>
+        <div className="victory-seal"><Sparkles size={42}/><span>观察、行动与验收留下了可查证的回响。</span></div>
+        <p>{postMode === 'expedition' ? `这层结束后，共同资源还剩 ${post.activeExpedition!.remaining} 晶石。继续下一层与重试都不会补回已花的费用。` : `这份变体来自你的实际构筑与执行。同一种决策变体保留一份胜利证明；重复编号不会变成陌生迁移证据。`}</p>
+        <div className="callout"><h4>把魔法翻译成系统</h4><p>{story?.recap.system ?? '工具、资料、权限、反馈与真实验收共同决定结果。'}</p><small>这里只记录实操练习，后续陌生任务才能检验独立迁移。</small></div>
+        <div className="button-row"><button className="button" onClick={()=>setPanel('journal')}><ScrollText size={16}/>查看三层复盘</button><button className="button primary" onClick={()=>setPanel('hall')}><Compass size={17}/>回到远行大厅</button></div>
+        {postMode === 'expedition' && post.activeExpedition!.status === 'active' && <button className="button primary full" disabled={busy || readOnly || post.activeExpedition!.floor < 2 && post.activeExpedition!.remaining <= 0} onClick={()=>void controlExpedition({type:'advance'}).catch(e=>setToast((e as Error).message))}>{post.activeExpedition!.floor === 2 ? '完成三层远征并收队' : '带剩余晶石进入下一层'}<ArrowRight size={17}/></button>}
+      </Dialog>}
       {panel === "manual" && <Dialog title="探索与指挥" kicker="能力 → 目标 → 成本 → 执行" onClose={()=>setPanel(null)}>
-        <CommandDeck onLab={async data=>{if(data.operation==='tick'&&state.status==='paused'&&!(await launch(false)))return;await act(data);}} onPause={()=>act({type:'pause'})} onResume={()=>launch(false)} onEvaluation={async data=>{if(data.operation==='tick'&&state.status==='paused'&&!(await launch(false)))return;await act(data);}} onTeam={async data=>{if(data.operation==='tick'&&state.status==='paused'&&!(await launch(false)))return;await act(data);}} onSecurity={data=>act(data)} onArchive={async data=>{if(data.type==='skill'&&data.operation==='run'&&state.status!=='running'&&!(await launch(false)))return;await act(data);}} onContext={data=>act(data)} onReceive={(callId,receiptId)=>act({type:'receive',callId,receiptId})} state={state} scenario={scenario} busy={busy} onWorkshop={()=>void open('workshop')}
+        <CommandDeck hideUnobservedWorld={Boolean(postMode)} onLab={async data=>{if(data.operation==='tick'&&state.status==='paused'&&!(await launch(false)))return;await act(data);}} onPause={()=>act({type:'pause'})} onResume={()=>launch(false)} onEvaluation={async data=>{if(data.operation==='tick'&&state.status==='paused'&&!(await launch(false)))return;await act(data);}} onTeam={async data=>{if(data.operation==='tick'&&state.status==='paused'&&!(await launch(false)))return;await act(data);}} onSecurity={data=>act(data)} onArchive={async data=>{if(data.type==='skill'&&data.operation==='run'&&state.status!=='running'&&!(await launch(false)))return;await act(data);}} onContext={data=>act(data)} onReceive={(callId,receiptId)=>act({type:'receive',callId,receiptId})} state={state} scenario={scenario} busy={busy || readOnly || terminalExpedition} onWorkshop={()=>void open('workshop')}
           onStep={async()=>{if(state.status!=='running'&&!(await launch(false)))return;await act({type:'step',source:'player'});}}
           onCall={async(call)=>{if(state.status!=='running'&&!(await launch(false)))return;await act({type:'tool',call});}}/>
       </Dialog>}
@@ -1098,32 +1276,18 @@ export default function App() {
                 const file = e.target.files?.[0];
                 if (!file) return;
                 try {
-                  if (file.size > 8_000_000)
-                    throw new Error("存档不能超过 8 MB。");
+                  if (file.size > MAX_SAVE_BYTES)
+                    throw new Error(`存档不能超过 ${MAX_SAVE_BYTES / 1_000_000} MB。`);
                   const imported = validateSave(JSON.parse(await file.text()));
                   if (
                     confirm(
                       "导入将替换当前进度。建议先导出当前存档。确认导入？",
                     )
                   ) {
-                    for (const [id, game] of Object.entries(imported.games)) {
-                      if (game.status === "running") {
-                        const action: GameAction = {
-                          id: crypto.randomUUID(),
-                          type: "pause",
-                        };
-                        imported.games[id] = reduceGame(
-                          scenarios.find((s) => s.id === id)!,
-                          game,
-                          action,
-                        );
-                        imported.actions[id] = [
-                          ...(imported.actions[id] ?? []),
-                          action,
-                        ];
-                      }
-                    }
-                    if (await commit(() => imported, true)) {
+                    pauseSavedGames(imported);
+                    setAuto(false);
+                    if (await commit(() => { executionEpoch.current++; return imported; }, true)) {
+                      setSuggestedBuild(undefined);
                       setPanel(null);
                       setToast("存档已导入。");
                     }
@@ -1139,21 +1303,21 @@ export default function App() {
             存档只在当前浏览器内。清理浏览器数据可能丢失进度，换设备请使用导出文件。
           </p>
           <div className="section-label">章节离线包</div>
-          <div className="segmented">{[...new Set(scenarios.map(scenario=>scenario.chapter))].map(chapter=><button key={chapter} className={offlineChapter===chapter?'active':''} disabled={downloading} onClick={()=>{setOfflineChapter(chapter);setOffline('');}}>第 {chapter} 章 {offlineChapters[`chapter-0${chapter}`]?'✓':''}</button>)}</div>
+          <div className="segmented chapter-picker">{[...new Set(scenarios.map(scenario=>scenario.chapter))].map(chapter=><button key={chapter} className={offlineChapter===chapter?'active':''} disabled={downloading} onClick={()=>{setOfflineChapter(chapter);setOffline('');}}>第 {chapter} 章 {offlineChapters[`chapter-0${chapter}`]?'✓':''}</button>)}</div>
           <div className="offline-box">
             <WifiOff />
             <div>
               <strong>
-                {`${chapters[offlineChapter-1][0]} · ${offlineReady?"已可离线":"等待下载"}`}
+                {`${chapters[offlineChapter-1][0]} · ${offlineCheck==='checking'?"正在检查":offlineCheck==='error'?"暂无法核验":offlineReady?"已可离线":"等待下载"}`}
               </strong>
               <p>
-                {offline || "下载场景、角色与游戏程序后，可以断网继续冒险。"}
+                {offlineCheck==='checking'?"正在读取已下载章节，尚未判定是否需要下载。":offline || "下载场景、角色与游戏程序后，可以断网继续冒险。"}
               </p>
             </div>
           </div>
           <button
             className="button full"
-            disabled={downloading || !online || !import.meta.env.PROD}
+            disabled={downloading || offlineCheck==='checking' || !online || !import.meta.env.PROD}
             onClick={() => void downloadChapter()}
           >
             <Download size={17} />
@@ -1163,22 +1327,32 @@ export default function App() {
                 ? "重新核验离线包"
                 : "下载本章离线包"}
           </button>
+          {offlineCheck==='error' && <button className="button full" disabled={downloading} onClick={()=>setOfflineCheckEpoch(value=>value+1)}>重新读取离线状态</button>}
           {!import.meta.env.PROD && (
             <p className="fine-print">离线安装在正式构建中启用。</p>
           )}
           {updateReady && (
             <button
               className="button full"
+              disabled={busy || readOnly}
               onClick={async () => {
-                const m = await import("./offline");
-                await m.activateUpdate();
-                location.reload();
+                setAuto(false);
+                if (!(await commit(previous => pauseSavedGames(previous)))) return;
+                busyRef.current = true; setBusy(true);
+                try {
+                  const m = await import("./offline");
+                  await m.activateUpdate();
+                  location.reload();
+                } catch (e) { setError(`当前进度已经保存，更新尚未完成：${(e as Error).message}`); }
+                finally {busyRef.current = false;setBusy(false);}
               }}
             >
               在当前安全检查点更新游戏
             </button>
           )}
           <div className="section-label">学习证据</div>
+          <button className="button full" onClick={()=>setPanel('atlas')}><BookOpen size={17}/>查看能力地图与实操证据<ArrowRight size={16}/></button>
+          <details className="settings-details"><summary>{save.evidence.length} 份主线概念记录 · 展开原始清单</summary>
           {save.evidence.length ? (
             <div className="learning-evidence">
               {save.evidence.map((e, i) => (
@@ -1202,6 +1376,7 @@ export default function App() {
           ) : (
             <p className="muted">第一份契约完成后，行动证据会留在这里。</p>
           )}
+          </details>
           <label className="notes-label">
             给未来自己的便笺
             <textarea
@@ -1216,18 +1391,24 @@ export default function App() {
             />
           </label>
           <details className="settings-details">
-            <summary>恢复检查点与重试</summary>
-            <p>最近三个派遣 / 构筑前的检查点保留在本机。</p>
+            <summary>主线恢复检查点</summary>
+            <p>主线最近三个派遣 / 构筑前的检查点。恢复会回到对应主线，远行尝试继续保留。</p>
             {save.checkpoints.map((checkpoint, i) => (
               <button
                 className="button full"
                 key={i}
+                disabled={busy || readOnly}
                 onClick={() => {
                   if (!confirm("恢复这个检查点？当前关卡将回到当时状态。"))
                     return;
+                  let restored = false;
                   void commit((p) => {
+                    if (`${executionContext(p)}:${executionEpoch.current}` !== actionContext) return p;
+                    pauseSavedGames(p);
+                    if (p.postSeason?.selectedMode) p.postSeason = reducePostSeason(p.postSeason, {type:'select-mode',mode:null},Object.values(p.completedGames));
+                    restored = true; executionEpoch.current++;
                     return restoreCheckpoint(p, i);
-                  }).then(() => setPanel(null));
+                  }).then(okay => {if (okay && restored) {setAuto(false);setSuggestedBuild(undefined);setPanel(null);}});
                 }}
               >
                 <RotateCcw size={14} />
@@ -1236,11 +1417,14 @@ export default function App() {
                 } · {checkpoint.state.events.length} 条事件
               </button>
             ))}
-            <button className="button full" onClick={() => void retry()}>
-              <RotateCcw size={16} />
-              重新尝试当前委托
-            </button>
           </details>
+          <details className="settings-details"><summary>普通远行委托 · 三个独立检查点</summary><p>恢复会保留已经使用的提示与已见案例。远征没有此类资源回退入口。</p>
+            {postMode === 'challenge' && state.status !== 'won' && <button className="button full" disabled={busy || readOnly} onClick={()=>void changePost({type:'checkpoint'},'settings').then(()=>setToast('普通委托检查点已保存。')).catch(e=>setToast((e as Error).message))}><CheckCircle2 size={16}/>保留当前普通委托检查点</button>}
+            {post.checkpoints.map((checkpoint,index)=><button className="button full" key={`${checkpoint.spec.templateId}-${index}`} disabled={busy || readOnly} onClick={()=>{if(confirm('恢复这份普通远行检查点？已使用的提示与已见案例继续保留。'))void changePost({type:'restore-checkpoint',index},null).catch(e=>setToast((e as Error).message));}}><RotateCcw size={14}/>{challengeTemplates.find(template=>template.id===checkpoint.spec.templateId)?.label} · {checkpoint.game.events.length} 条事件</button>)}
+            {!post.checkpoints.length && <p className="muted">装配和派遣前会保留普通委托检查点，也可以主动刻写。</p>}
+          </details>
+          <button className="button full" disabled={busy || readOnly || postMode === 'expedition' && (post.activeExpedition!.status !== 'active' || state.status === 'won' || post.activeExpedition!.remaining <= 0)} onClick={()=>void retry()}><RotateCcw size={16}/>{postMode === 'expedition' ? '用剩余晶石重试本层 · 已花费用不退回' : '重新尝试当前委托'}</button>
+          {postMode === 'expedition' && <p className="fine-print">本层重试后以当前剩余晶石开局。要收队或继续下一层，请进入远行大厅。</p>}
           <a
             className="archive-link"
             href="/archive/v1/"
@@ -1250,7 +1434,7 @@ export default function App() {
             打开旧学习档案 ↗
           </a>
           <p className="fine-print">
-            旧站笔记保留在档案中。八章、序终章与七匠试炼共八十四场冒险；长期委托和真实实验继续制作。
+            旧站笔记保留在档案中。八十四场作者设计冒险、二十四类变体委托和三层远征保留各自的行动证据；真实实验需要服务器连接与邀请码。
           </p>
         </Dialog>
       )}
@@ -1264,6 +1448,11 @@ export default function App() {
           <Lab />
         </Dialog>
       )}
+      {panel === 'hall' && <Dialog title="回声的远行手册" kicker="24 类机制委托 · 三层共同资源远征" onClose={()=>setPanel(null)} wide>
+        <div className="button-row"><button className="button" disabled={busy || readOnly} onClick={()=>void changePost({type:'select-mode',mode:null},null).catch(e=>setToast((e as Error).message))}><ArrowLeft size={16}/>返回主线现场</button><button className="button" onClick={()=>setPanel('map')}><Map size={16}/>查看城市地图</button></div>
+        <ChallengeHall growth={growth} unlockedTemplateIds={unlockedTemplates} lockReasons={lockReasons} expeditionUnlocked={expeditionUnlocked} expeditionLockReason="先分别实际完成一类执行、一类信息、一类协作委托的主线来源。抽到的三类机制仍须各自已经解锁。" activeChallenge={post.currentChallenge} activeExpedition={post.activeExpedition} busy={busy || readOnly} initialTemplateId={practiceFocus} onStartChallenge={startChallenge} onStartExpedition={startExpedition} onContinue={kind=>changePost({type:'select-mode',mode:kind},null)} onExpeditionAction={controlExpedition}/>
+      </Dialog>}
+      {panel === 'atlas' && <Dialog title="回声的能力地图" kicker="真实主线记录 · 看懂下一步" onClose={()=>setPanel(null)} wide><LearningAtlas games={atlasGames} busy={busy || readOnly} onPractice={async templateId=>{if(!unlockedTemplates.includes(templateId))return;await open('hall');setPracticeFocus(templateId);setToast(`查看「${challengeTemplates.find(template=>template.id===templateId)?.label}」。接取与构筑由你决定。`);}}/></Dialog>}
     </div>
   );
 }

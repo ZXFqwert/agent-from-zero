@@ -420,6 +420,7 @@ export const profiles = historicalProfiles.map(profile=>{
 });
 
 export const factLabels: Record<string, string> = {
+  challengeWeather:'屋顶天气',mainBellSalvageable:'主钟梁状态',keyway:'当前钥匙槽',batchSeal:'本批封印',
   ...seasonBookendFactLabels,...blueprintTrialFactLabels,
   ...chapterOneFactLabels,
   ...chapterTwoFactLabels,

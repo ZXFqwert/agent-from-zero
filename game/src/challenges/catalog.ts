@@ -1,0 +1,28 @@
+import type {ChallengeTemplate} from './types';
+/** Distinct primary decisions. Random variations never count as new mechanisms. */
+export const challengeTemplates:readonly ChallengeTemplate[]=[
+ {id:'feedback-chain',label:'远山的回铃',mechanism:'complete-loop',sourceScenarioId:'fog-bell',tier:1,decision:'选可执行工具、补前置并取得真实最终验收。'},
+ {id:'physical-order',label:'动身前的绑带',mechanism:'physical-dependencies',sourceScenarioId:'last-ferry',tier:1,decision:'先完成不可在离岸后补做的依赖，失败能真实返航。'},
+ {id:'proof-expiry',label:'再来一次的潮水',mechanism:'proof-invalidation',sourceScenarioId:'after-tide',tier:1,decision:'现场变化后重新观察、改施工并重新验收。'},
+ {id:'typed-schema',label:'刻度上的一个字',mechanism:'schema-types',sourceScenarioId:'etched-door',tier:1,decision:'合法字段和值类型决定工具能否实际执行。'},
+ {id:'silent-retry',label:'沉默的升降梯',mechanism:'idempotency',sourceScenarioId:'missing-crate',tier:1,decision:'回执丢失时复用业务键，避免库存重复副作用。'},
+ {id:'paired-receipt',label:'两道不同的回音',mechanism:'request-result-matching',sourceScenarioId:'paired-valves',tier:1,decision:'将各请求的真实回执按编号接回，不能混成一句完成。'},
+ {id:'cooling-window',label:'只等有限几轮',mechanism:'bounded-retry',sourceScenarioId:'cooling-pulse',tier:1,decision:'根据收到的暂时故障使用有限重试并检查实际就绪。'},
+ {id:'shared-crystals',label:'最后一袋晶石',mechanism:'mission-budget',sourceScenarioId:'one-crystal-left',tier:1,decision:'派遣补预算不能补委托消耗，须保留完成链成本。'},
+ {id:'small-satchel',label:'放不下的卷轴',mechanism:'context-capacity',sourceScenarioId:'narrow-satchel',tier:2,decision:'读进档案和装进有限上下文是两个动作。'},
+ {id:'missing-margin',label:'删掉了哪个条件',mechanism:'semantic-compression',sourceScenarioId:'absent-margin',tier:2,decision:'摘要必须保留实际工具所需字段，压缩少字不等于可用。'},
+ {id:'night-index',label:'能检索到的夜班',mechanism:'retrieval-selection',sourceScenarioId:'indexed-door',tier:2,decision:'按任务输入检索对的资料，资料存在不会自动成为已知。'},
+ {id:'durable-note',label:'隔夜留在柜中的纸',mechanism:'persistent-memory',sourceScenarioId:'night-handoff',tier:2,decision:'保存、检索、装卷各有时点，记忆不执行施工也不训练权重。'},
+ {id:'startup-block',label:'昨天启动的手册',mechanism:'memory-snapshot-version',sourceScenarioId:'bp-hermes-stale',tier:2,decision:'新存储版本不原地刷新旧启动块，明确新会话或新版检索。'},
+ {id:'branch-handoff',label:'两封信走两条路',mechanism:'session-branching',sourceScenarioId:'forked-courier',tier:2,decision:'分支改变消息快照，世界与消耗保持共同现实。'},
+ {id:'saved-method',label:'方法不是完成',mechanism:'skill-applicability',sourceScenarioId:'saved-procedure',tier:2,decision:'保存实际执行过的方法并检查适用输入，每一步仍收费与授权。'},
+ {id:'footer-command',label:'资料页脚的冒牌令',mechanism:'prompt-injection',sourceScenarioId:'footer-order',tier:2,decision:'资料正文不升级为宿主指令，执行器继续检查信任边界。'},
+ {id:'original-seal',label:'像印章的东西',mechanism:'original-identity',sourceScenarioId:'borrowed-seal',tier:2,decision:'资料自称与可信登记原件分开，转述不能成为身份原件。'},
+ {id:'wall-and-writ',label:'许可也过不了围墙',mechanism:'workspace-and-exact-approval',sourceScenarioId:'bp-codex-approval',tier:3,decision:'工作区、身份、精确一次请求审批分别满足，沙箱证据不替现场。'},
+ {id:'host-gear',label:'围墙外的齿轮',mechanism:'extension-execution-realm',sourceScenarioId:'bp-pi-extension',tier:3,decision:'加载信任与自身realm/mounts分开，主工具沙箱不罩住宿主扩展。'},
+ {id:'wet-dag',label:'还没干的底漆',mechanism:'team-dependency-dag',sourceScenarioId:'wet-foundation',tier:3,decision:'真正完成并接回前置，等待没有副作用也不偷偷共享私有知识。'},
+ {id:'stale-draft',label:'同一张总图的两稿',mechanism:'whole-slot-cas',sourceScenarioId:'chorus-bridgewright',tier:3,decision:'旧基准草稿不能混入新版总图，重新读当前版本后重做再施工。'},
+ {id:'late-correction',label:'箱子装车后的改口',mechanism:'source-bound-queue-interrupt',sourceScenarioId:'bp-openclaw-queue',tier:3,decision:'同原始来源更改未执行队尾，已经发生的装车与费用不回滚。'},
+ {id:'sunny-tests',label:'只在晴天亮的绿灯',mechanism:'evaluation-coverage',sourceScenarioId:'sunny-day-ledger',tier:3,decision:'实际隔离案例执行与硬验收决定证书，未测群体不进分母假装成功。'},
+ {id:'log-after-restart',label:'换过架子的旧回声',mechanism:'durable-module-lifecycle',sourceScenarioId:'bp-dsh-lifecycle',tier:3,decision:'版本、依赖、提交日志与UI信号分开，恢复不重复已经实际发出的请求。'},
+];

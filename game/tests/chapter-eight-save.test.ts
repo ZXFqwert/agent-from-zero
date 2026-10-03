@@ -309,10 +309,10 @@ test('64-task imports count UTF-8 bytes, accept exact text limits and reject ext
   const bytes = new TextEncoder().encode(text).byteLength;
   assert.ok(bytes < MAX_SAVE_BYTES);
   assert.deepEqual(parseSaveText(text + ' '.repeat(MAX_SAVE_BYTES - bytes)), save);
-  assert.throws(() => parseSaveText(text + ' '.repeat(MAX_SAVE_BYTES - bytes + 1)), /8 MB/);
-  assert.throws(() => parseSaveText(text + '字'.repeat(Math.ceil((MAX_SAVE_BYTES - bytes + 1) / 3))), /8 MB/);
+  assert.throws(() => parseSaveText(text + ' '.repeat(MAX_SAVE_BYTES - bytes + 1)), /16 MB/);
+  assert.throws(() => parseSaveText(text + '字'.repeat(Math.ceil((MAX_SAVE_BYTES - bytes + 1) / 3))), /16 MB/);
   const excessive = structuredClone(save); excessive.notes = '字'.repeat(MAX_SAVE_BYTES / 3);
-  assert.throws(() => validateSave(excessive), /8 MB/);
+  assert.throws(() => validateSave(excessive), /16 MB/);
   const tooManyCheckpoints = structuredClone(save); tooManyCheckpoints.checkpoints = Array.from({length: 4}, () => checkpoint(save.games[save.currentScenarioId]));
   assert.throws(() => validateSave(tooManyCheckpoints), /结构/);
   const longTrace = structuredClone(save); longTrace.actions[save.currentScenarioId] = Array.from({length: 10001}, () => save.actions[save.currentScenarioId][0]);

@@ -4,6 +4,8 @@
 
 **代码从不读取任何 `.env` 文件。** 仅读取本服务进程环境。不要将根目录 Python 学习项目的 `.env` 或会话用于此服务，也不要将服务端密钥打包到前端。未配置完整的 `MODEL_BASE_URL`、`MODEL_NAME`、`MODEL_API_KEY` 时，服务仍可启动；状态返回 `enabled:false`，创建实验返回 503，不扣额度。
 
+2026-10-03：独立 VPS 服务已部署，主模型 `deepseek-flash` 的 Chat Completions 连接已启用。首轮服务端 QA 四场计入22轮模型请求，另一次公开网页两组反馈对照8轮，合计五场30轮，包括一轮运行中取消。单伙伴取得真实工具验收；公开网页两组各四轮用尽预算且未验收，仍记incomplete，未将其写成通关或品牌排名。第二模型尚未配置，其对照仍不可用。公开构建已启用实验界面，本地默认开关关闭。详情见 [真实模型验收记录](deploy/REAL_MODEL_QA.md)；没有把邀请码、令牌、密钥或原始模型记录放入仓库。
+
 ## 本地运行和测试
 
 Python 3.10+。在本目录运行（Windows PowerShell）：
@@ -17,7 +19,7 @@ python -m venv .venv
 
 测试只使用临时 SQLite、假 Provider 或 HTTPX MockTransport，不读取真实配置，不消耗模型额度。测试环境只安装在本目录 `.venv/`。`--basetemp` 专用于测试临时文件，pytest 会清理该目录，不要指定已有重要目录。
 
-本次在既有独立虚拟环境 Python 3.13 上运行 40 项测试通过，全部只用假 Provider 或 HTTPX MockTransport；源代码通过 Python 3.10 语法检查，固定运行与测试依赖的 `Requires-Python` 均允许 3.10。没有使用 TaskGroup、StrEnum、asyncio.timeout 等 3.11 API。Linux 的 Python 3.10.12 尚待部署者在独立 venv 安装并实际检查，不能将语法检查写成该 runtime 已验收。只更新本服务代码，不动系统或根目录教学环境。
+独立本机 Python 3.13 与 VPS Linux Python 3.10.12 均实际运行 40 项测试通过，全部只用假 Provider 或 HTTPX MockTransport；VPS 验证在单独临时测试 venv 中完成，固定生产依赖也只装在独立服务 venv。没有使用 TaskGroup、StrEnum、asyncio.timeout 等 3.11 API，没有改系统或根目录教学环境。真实模型验收另行记录，不能用假 Provider 测试代替。
 
 ## API 契约
 
@@ -129,13 +131,13 @@ SQLite 的 `BEGIN IMMEDIATE` 将额度检查、并发占位、步骤计数和幂
 
 邀请码是 256 位随机数、单次兑换；Bearer 是 384 位随机数，默认有效 30 天。数据库只保存 SHA-256 摘要，原始邀请码仅由 CLI 输出一次，原始令牌仅兑换时返回。不要将邀请码或令牌写入 Git、公共日志、URL 或长期分析事件。
 
-## VPS 部署模板（尚未执行）
+## VPS 部署模板
 
 生产推荐布局：只读代码 `/opt/agent-game-lab/releases/<version>`，`/opt/agent-game-lab/current` 指向当前版本；独立 venv `/opt/agent-game-lab/venv`；数据库 `/var/lib/agent-game-lab/lab.sqlite3`；服务配置 `/etc/agent-game-lab.env`，由 root 保存且模式为 0600。
 
 版本实际运行环境位于 `/opt/agent-game-lab/venvs/<version>`，稳定 `venv` 为它的链接。这样新版本安装依赖不会改动正在运行的旧环境。现有 unit 的稳定路径适配该布局；不向系统 Python 或根学习项目安装包。
 
-部署脚本分成明确两步，均须在审核完成后由部署者运行，本轮没有执行：
+部署脚本分成明确两步，均须在审核完成后由部署者运行。当前已部署制品与实际检查见 [部署验收记录](deploy/DEPLOYMENT_QA.md)；以下是操作说明，不表示执行命令会自动获授权：
 
 ```powershell
 # 在本机：仅白名单运行文件，输出目录已被忽略；不含 .env、SQLite、缓存或测试。
@@ -151,7 +153,7 @@ sudo bash /tmp/<deployment-script-directory>/prepare.sh <version> /tmp/agent-gam
 sudo bash /opt/agent-game-lab/releases/<version>/deploy/activate-disabled.sh <version>
 ```
 
-`verify.py` 在写目标目录前核对完整白名单、每项大小/SHA-256、包类型与版本；拒绝绝对路径、`..`、符号/硬链接、重复文件、未知文件、过大压缩/解压内容和已有目标。`prepare.sh` 验证 Python 最低版本并只在版本 venv 安装固定依赖，清除模型环境后做导入；不创建服务账户或状态数据库。`activate-disabled.sh` 才创建无登录专用账户、状态目录、空 0600 配置文件和稳定链接，安装 unit 并仅启动关闭模型的服务；已有非空模型配置会被明确拒绝，不能用于开启真实模型。Nginx 的两个 API location 与 http 层 rate zone 仍由部署者审阅后添加到本域名的正确位置。
+`verify.py` 在写目标目录前核对完整白名单、每项大小/SHA-256、包类型与版本；拒绝绝对路径、`..`、符号/硬链接、重复文件、未知文件、过大压缩/解压内容和已有目标。`prepare.sh` 验证 Python 最低版本并只在版本 venv 安装固定依赖，清除模型环境后做导入；不创建服务账户或状态数据库。`activate-disabled.sh` 才创建无登录专用账户、状态目录、空 0600 配置文件和稳定链接，安装 unit 并仅启动关闭模型的服务；已有非空模型配置会被明确拒绝，不能用于更新当前已开启模型的服务。当前本域名的两个 Nginx API location 与独立 rate zone 已经审阅并安装；不要将样例重复粘贴到现有配置。
 
 临时测试包必须额外使用 `--test-bundle`，名字为 `agent-game-lab-test-<version>.tar.gz`，含测试和开发依赖但仍不含环境、数据或缓存。正式 `prepare.sh` 拒绝它。临时测试只放随机 `/tmp/agent-lab-check-*` 并用其中的 Python venv，不安装到正式 release。验证与尚未执行事项记录见源码中的 `deploy/DEPLOYMENT_QA.md`；这份审查记录不进入运行包。
 

@@ -3,6 +3,8 @@ import { scenarios } from './content/scenarios';
 import { isUnlocked } from './content/progression';
 import { createGame, reduceGame, validateGameState } from './engine';
 import type { GameAction, GameState, SaveEnvelope, ScenarioDefinition } from './engine/types';
+import {emptyPostSeason,validatePostSeason,type PostSeasonState} from './postSeason';
+import {memoizePositiveValidation} from './engine/validationMemo';
 
 export interface PlayerSave extends SaveEnvelope {
   playerVersion: 1;
@@ -14,10 +16,12 @@ export interface PlayerSave extends SaveEnvelope {
   /** Historical proofs survive retries without turning an unfinished retry into a win. */
   completedGames: Record<string, GameState>;
   checkpoints: Array<{ scenarioId: string; state: GameState; actions: GameAction[] }>;
+  postSeason?:PostSeasonState;
 }
-export const CONTENT_VERSION = 'season-0.10.0';
-export const MAX_SAVE_BYTES = 8_000_000;
-export const emptySave = (): PlayerSave => ({saveVersion:1,kernelVersion:1,contentVersion:CONTENT_VERSION,savedAt:new Date().toISOString(),currentScenarioId:prologueIds[0],games:{},completedScenarioIds:[],evidence:[],checkpoints:[],playerVersion:1,started:false,choices:{},actions:{},notes:'',sound:false,completedGames:{}});
+export const CONTENT_VERSION = 'season-0.11.0';
+export const LEGACY_CONTENT_VERSIONS: readonly string[] = ['harbor-0.1.0','harbor-0.2.0','season-0.3.0','season-0.4.0','season-0.5.0','season-0.6.0','season-0.7.0','season-0.8.0','season-0.9.0','season-0.10.0'];
+export const MAX_SAVE_BYTES = 16_000_000;
+export const emptySave = (): PlayerSave => ({saveVersion:1,kernelVersion:1,contentVersion:CONTENT_VERSION,savedAt:new Date().toISOString(),currentScenarioId:prologueIds[0],games:{},completedScenarioIds:[],evidence:[],checkpoints:[],playerVersion:1,started:false,choices:{},actions:{},notes:'',sound:false,completedGames:{},postSeason:emptyPostSeason()});
 
 /** A guided repeat cannot erase a previous independent transfer and its real proof. */
 export function recordCompletion(save:PlayerSave,state:GameState):void {
@@ -72,13 +76,14 @@ export function validateSave(input:unknown):PlayerSave {
   if(!record(input)) throw new Error('这不是回声工坊存档。');
   let size: number;
   try { size = new TextEncoder().encode(JSON.stringify(input)).byteLength; } catch { throw new Error('存档包含无法读取的循环引用。'); }
-  if(size > MAX_SAVE_BYTES) throw new Error('存档不能超过 8 MB。');
+  if(size > MAX_SAVE_BYTES) throw new Error('存档不能超过 16 MB。');
   const save=structuredClone(input) as unknown as PlayerSave;
-  const legacy = ['harbor-0.1.0','harbor-0.2.0','season-0.3.0','season-0.4.0','season-0.5.0','season-0.6.0','season-0.7.0','season-0.8.0','season-0.9.0'].includes(save.contentVersion);
+  const legacy = LEGACY_CONTENT_VERSIONS.includes(save.contentVersion);
   if(save.saveVersion!==1||save.kernelVersion!==1||save.playerVersion!==1||(!legacy&&save.contentVersion!==CONTENT_VERSION)) throw new Error('存档版本不兼容。请保留原文件，在对应版本中打开。');
   // Migration changes the content envelope only. Legacy action logs still replay in the frozen v1 kernel.
   if(legacy) {
-    const oldIds=save.contentVersion === 'harbor-0.1.0' ? ['harbor-light','warehouse-gate','hollow-regent'] : scenarios.filter(scenario=>!prologueIds.includes(scenario.id)&&!finaleIds.includes(scenario.id)&&!scenario.id.startsWith('bp-')&&scenario.chapter<=(save.contentVersion==='season-0.9.0'?8:save.contentVersion==='season-0.8.0'?7:save.contentVersion==='season-0.7.0'?6:save.contentVersion==='season-0.6.0'?5:save.contentVersion==='season-0.5.0'?4:save.contentVersion==='season-0.4.0'?3:save.contentVersion==='season-0.3.0'?2:1)).map(scenario=>scenario.id);
+    if(save.postSeason!==undefined)throw new Error('旧存档包含当时不存在的长期挑战，迁移已停止。');
+    const oldIds=save.contentVersion === 'season-0.10.0' ? scenarios.map(s=>s.id) : save.contentVersion === 'harbor-0.1.0' ? ['harbor-light','warehouse-gate','hollow-regent'] : scenarios.filter(scenario=>!prologueIds.includes(scenario.id)&&!finaleIds.includes(scenario.id)&&!scenario.id.startsWith('bp-')&&scenario.chapter<=(save.contentVersion==='season-0.9.0'?8:save.contentVersion==='season-0.8.0'?7:save.contentVersion==='season-0.7.0'?6:save.contentVersion==='season-0.6.0'?5:save.contentVersion==='season-0.5.0'?4:save.contentVersion==='season-0.4.0'?3:save.contentVersion==='season-0.3.0'?2:1)).map(scenario=>scenario.id);
     if(!oldIds.includes(save.currentScenarioId)||!record(save.games)||!record(save.completedGames)||!Array.isArray(save.completedScenarioIds)||save.completedScenarioIds.some(id=>!oldIds.includes(id))||Object.keys(save.games).some(id=>!oldIds.includes(id))) throw new Error('旧存档包含未知关卡，迁移已停止。');
     if(!record(save.actions)||!record(save.choices)||!Array.isArray(save.checkpoints)||!Array.isArray(save.evidence)||Object.keys(save.completedGames).some(id=>!oldIds.includes(id))||Object.keys(save.actions).some(id=>!oldIds.includes(id))||Object.keys(save.choices).some(id=>!oldIds.includes(id))||save.checkpoints.some(checkpoint=>!oldIds.includes(checkpoint?.scenarioId))||save.evidence.some(evidence=>!oldIds.includes(evidence?.scenarioId)))throw new Error('旧存档包含当时不存在的内容，迁移已停止。');
     save.contentVersion=CONTENT_VERSION;
@@ -112,6 +117,10 @@ export function validateSave(input:unknown):PlayerSave {
     if(!isUnlocked(scenario.id,save.completedScenarioIds)) throw new Error('恢复检查点引用了尚未解锁的委托。');
     validateTrace(scenario,checkpoint.state,checkpoint.actions);
   }
+  if(save.postSeason!==undefined){
+    save.postSeason=validatePostSeason(save.postSeason,Object.values(save.completedGames));
+    if(!save.started&&(save.postSeason.currentChallenge||save.postSeason.activeExpedition||save.postSeason.wonProofs.length||save.postSeason.checkpoints.length||save.postSeason.latestClearedExpedition))throw new Error('长期挑战与旅途开始标记不一致。');
+  }
   return structuredClone(save);
 }
 
@@ -125,7 +134,7 @@ function stableJSON(value: unknown): string {
   return JSON.stringify(value);
 }
 
-function validateTrace(scenario:ScenarioDefinition,state:GameState,input:unknown):void {
+function replayValidateTrace(scenario:ScenarioDefinition,state:GameState,input:unknown):void {
   if(!Array.isArray(input)||input.length>10000) throw new Error('行动记录格式不正确。');
   let replay=createGame(scenario,state.seed);
   for(const action of input as GameAction[]) {
@@ -139,9 +148,11 @@ function validateTrace(scenario:ScenarioDefinition,state:GameState,input:unknown
   }
   if(stableJSON(replay)!==stableJSON(state)) throw new Error('行动回放与保存状态不一致。');
 }
+const traceMatches=memoizePositiveValidation((scenario:ScenarioDefinition,state:GameState,input:unknown)=>{replayValidateTrace(scenario,state,input);return true;});
+function validateTrace(scenario:ScenarioDefinition,state:GameState,input:unknown):void {traceMatches(scenario,state,input);}
 
 export function parseSaveText(text:string):PlayerSave {
-  if(new TextEncoder().encode(text).byteLength>MAX_SAVE_BYTES) throw new Error('存档不能超过 8 MB。');
+  if(new TextEncoder().encode(text).byteLength>MAX_SAVE_BYTES) throw new Error('存档不能超过 16 MB。');
   let parsed:unknown;
   try { parsed=JSON.parse(text); } catch { throw new Error('存档不是有效的 JSON 文件。'); }
   return validateSave(parsed);
@@ -208,8 +219,14 @@ export function restoreCheckpoint(input:PlayerSave,index:number):PlayerSave {
   return save;
 }
 
+/** Export and import use the same byte ceiling, including formatting overhead. */
+export function serializeSave(save:PlayerSave):string {
+  const snapshot=validateSave(save),pretty=JSON.stringify(snapshot,null,2);
+  return new TextEncoder().encode(pretty).byteLength<=MAX_SAVE_BYTES?pretty:JSON.stringify(snapshot);
+}
+
 export function downloadSave(save:PlayerSave) {
-  const blob=new Blob([JSON.stringify(save,null,2)],{type:'application/json'});
+  const blob=new Blob([serializeSave(save)],{type:'application/json'});
   const url=URL.createObjectURL(blob),link=document.createElement('a');
   link.href=url;link.download=`回声工坊-${new Date().toISOString().slice(0,10)}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
