@@ -52,6 +52,16 @@ test('catalog distinguishes missing B, equal models and old server without allow
   assert.throws(() => ui.checkedStatus(malformed), /无法识别/);
 });
 
+test('shared access and quota scope are accepted only as server facts, with old token status compatibility',()=>{
+  const current={...status(),access_enabled:true,quota_scope:'shared'};
+  assert.equal(ui.checkedStatus(current).access_enabled,true);
+  assert.equal(ui.checkedStatus(current).quota_scope,'shared');
+  assert.equal(ui.checkedStatus(status()).quota_scope,undefined);
+  assert.equal(ui.checkedStatus({...current,quota_scope:'session'}).quota_scope,'session');
+  assert.throws(()=>ui.checkedStatus({...current,access_enabled:'true'}),/无法识别/);
+  assert.throws(()=>ui.checkedStatus({...current,quota_scope:'unlimited'}),/无法识别/);
+});
+
 test('public receipt whitelist discards credentials, private histories and unknown world fields before cache or render', () => {
   const value: any = receipt();
   const forbidden = 'DO_NOT_RENDER_PRIVATE_PROVIDER';

@@ -16,7 +16,7 @@ ALLOWED = {
     "deploy/agent-game-lab.service", "deploy/nginx-api.conf.example",
     "deploy/prepare.sh", "deploy/verify.py", "deploy/activate-disabled.sh",
 }
-TEST_ALLOWED = {"requirements-dev.txt", "tests/test_lab.py", "tests/test_provider.py", "tests/test_experiments.py"}
+TEST_ALLOWED = {"requirements-dev.txt", "tests/test_lab.py", "tests/test_provider.py", "tests/test_experiments.py", "tests/test_access.py"}
 
 
 def verify(archive_path, release_id, destination=None, test_bundle=False):

@@ -138,6 +138,11 @@ def forward(base, release_id, archive_path, tools, runner=None):
     verify.require(digest == verify.sha256(verify.read_bytes(archive_path, 80_000_000)), "Archive changed during preparation")
     for path in [target_path, *target_path.rglob("*")]:
         path.chmod(0o755 if path.is_dir() else 0o644)
+    incoming_metadata = verify.validate_metadata(verify.parse_json(verify.read_bytes(play / "release-compat.json", 32_000).decode("utf-8")))
+    if incoming_metadata.get("accessMode") == "shared-passphrase-v1":
+        # The archive remains intact. Gate canonicalizes authenticated visitors to /play/.
+        shutil.copy2(play / "index.html", target_path / "index.html")
+        (target_path / "index.html").chmod(0o644)
     target = verify.verify_release(base, release_id)
     if "metadata" in current:
         verify.compatible(current["metadata"], target["metadata"])

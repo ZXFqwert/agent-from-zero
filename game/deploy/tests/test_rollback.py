@@ -81,6 +81,25 @@ SYMLINKS = supports_symlinks()
 
 
 class ReleaseValidationTests(unittest.TestCase):
+    def test_shared_access_cannot_downgrade_back_to_invitation_entry(self):
+        shared = metadata() | {"accessMode": "shared-passphrase-v1"}
+        verify.compatible(metadata(), shared)
+        verify.compatible(shared, shared)
+        with self.assertRaisesRegex(ValueError, "shared-passphrase"):
+            verify.compatible(shared, metadata())
+        with self.assertRaisesRegex(ValueError, "access mode"):
+            verify.validate_metadata(metadata() | {"accessMode": "unreviewed"})
+
+    def test_shared_entry_must_match_actual_app_not_just_claim_a_mode(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory).resolve()
+            release = make_release(base, "20261010-100001", metadata() | {"accessMode": "shared-passphrase-v1"})
+            with self.assertRaisesRegex(ValueError, "Root game entry"):
+                verify.verify_release(base, release.name)
+            (release / "index.html").write_bytes((release / "play/index.html").read_bytes())
+            report = verify.verify_release(base, release.name)
+            self.assertEqual(report["checks"]["/"], report["checks"]["/play/"])
+
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)

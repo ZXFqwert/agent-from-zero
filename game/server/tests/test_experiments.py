@@ -256,6 +256,6 @@ def test_existing_database_additive_migration_preserves_legacy_runs(settings):
         with sqlite3.connect(settings.database) as db:
             old = db.execute("SELECT final_text,experiment FROM runs WHERE id='old'").fetchone()
             assert old == ("old-result", "")
-            assert db.execute("PRAGMA user_version").fetchone()[0] == 2
+            assert db.execute("PRAGMA user_version").fetchone()[0] == 3
         headers = login(client)
         assert start(client, headers, "solo-team")["experiment"]["version"] == 1

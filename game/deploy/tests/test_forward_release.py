@@ -139,6 +139,30 @@ class ForwardTransactionTests(unittest.TestCase):
         self.assertEqual(TOOLS.verify.current_target(self.base).name, self.target_id)
         self.assertFalse((self.previous / "play/release-compat.json").exists(), "Never fabricate legacy metadata")
 
+    def test_shared_access_promotes_only_root_and_keeps_archive_and_old_client_assets(self):
+        meta = fixture.metadata() | {"accessMode": "shared-passphrase-v1"}
+        fixture.write_json(self.incoming / "play/release-compat.json", meta)
+        fixture.write_manifest(self.incoming, fixture.manifest_for(self.incoming))
+        archive_before = (self.previous / "archive/v1/index.html").read_bytes()
+        self.pack(); self.publish()
+        target = TOOLS.verify.current_target(self.base)
+        self.assertEqual((target / "index.html").read_bytes(), (target / "play/index.html").read_bytes())
+        self.assertEqual((target / "archive/v1/index.html").read_bytes(), archive_before)
+        self.assertEqual(TOOLS.verify.verify_release(self.base, target.name)["metadata"], meta)
+
+    def test_failed_shared_root_health_restores_exact_previous_root(self):
+        fixture.write_json(self.incoming / "play/release-compat.json", fixture.metadata() | {"accessMode": "shared-passphrase-v1"})
+        fixture.write_manifest(self.incoming, fixture.manifest_for(self.incoming))
+        original = (self.previous / "index.html").read_bytes()
+        def fail_root(arguments):
+            if urlsplit(arguments[-1]).path == "/" and TOOLS.verify.current_target(self.base).name == self.target_id:
+                raise RuntimeError("Root health failed")
+        self.failure = fail_root; self.pack()
+        with self.assertRaisesRegex(RuntimeError, "exact previous release restored and reverified"):
+            self.publish()
+        self.assert_previous()
+        self.assertEqual((TOOLS.verify.current_target(self.base) / "index.html").read_bytes(), original)
+
     def test_unknown_legacy_or_wrong_new_reader_is_refused_before_switch(self):
         self.make_legacy("20261003-200004"); self.pack()
         with self.assertRaisesRegex(ValueError, "Unknown legacy"):

@@ -1,6 +1,7 @@
 from contextlib import closing, contextmanager
 from datetime import datetime, timezone
 import hashlib
+import hmac
 import json
 import secrets
 import sqlite3
@@ -10,6 +11,12 @@ import uuid
 from .config import Settings
 from . import experiments
 from .world import execute_tool, initial_messages, initial_world
+
+
+# This is a shared low-friction gate, not a personal account. Each login has a
+# separate record owner, but every shared login uses this stable quota bucket.
+# Changing the phrase, issuing tokens, or restarting must not reset that bucket.
+SHARED_ACCESS_QUOTA = "shared-access-v1"
 
 
 class Problem(Exception):
@@ -42,7 +49,7 @@ class Store:
             conn.executescript("""
                 CREATE TABLE IF NOT EXISTS invites (
                     id TEXT PRIMARY KEY, code_hash TEXT UNIQUE NOT NULL,
-                    expires REAL NOT NULL, redeemed REAL
+                    expires REAL NOT NULL, redeemed REAL, quota_id TEXT
                 );
                 CREATE TABLE IF NOT EXISTS tokens (
                     token_hash TEXT PRIMARY KEY, invite_id TEXT NOT NULL REFERENCES invites(id),
@@ -70,7 +77,11 @@ class Store:
             columns = {row[1] for row in conn.execute("PRAGMA table_info(runs)")}
             if "experiment" not in columns:
                 conn.execute("ALTER TABLE runs ADD COLUMN experiment TEXT NOT NULL DEFAULT ''")
-            conn.execute("PRAGMA user_version=2")
+            invite_columns = {row[1] for row in conn.execute("PRAGMA table_info(invites)")}
+            if "quota_id" not in invite_columns:
+                conn.execute("ALTER TABLE invites ADD COLUMN quota_id TEXT")
+            conn.execute("CREATE INDEX IF NOT EXISTS invites_quota ON invites(quota_id)")
+            conn.execute("PRAGMA user_version=3")
             conn.commit()
 
     @contextmanager
@@ -114,6 +125,35 @@ class Store:
                 raise Problem(401, "invalid_token")
             return row["invite_id"]
 
+    def access(self, passphrase: str) -> dict:
+        if not self.settings.access_enabled:
+            raise Problem(503, "access_unavailable")
+        # Fixed-size UTF-8 digests support non-ASCII phrases without revealing
+        # prefix matches. Neither the phrase nor its digest is stored in SQLite.
+        if not hmac.compare_digest(digest(passphrase), digest(self.settings.access_passphrase)):
+            raise Problem(403, "invalid_access")
+        now = self.clock()
+        expires = now + self.settings.token_days * 86400
+        token = secrets.token_urlsafe(48)
+        owner = str(uuid.uuid4())
+        with self.transaction() as conn:
+            # An already-redeemed internal owner row preserves old foreign keys;
+            # there is no invite to issue, send, or consume for this path.
+            conn.execute("INSERT INTO invites(id,code_hash,expires,redeemed,quota_id) VALUES(?,?,?,?,?)", (owner, digest(secrets.token_urlsafe(32)), expires, now, SHARED_ACCESS_QUOTA))
+            conn.execute("INSERT INTO tokens(token_hash,invite_id,expires) VALUES(?,?,?)", (digest(token), owner, expires))
+        return {"access_token": token, "token_type": "bearer", "expires_at": iso(expires)}
+
+    @staticmethod
+    def quota_identity(conn, invite_id: str) -> str:
+        row = conn.execute("SELECT id,quota_id FROM invites WHERE id=?", (invite_id,)).fetchone()
+        if not row:
+            raise Problem(401, "invalid_token")
+        return row["quota_id"] or row["id"]
+
+    @staticmethod
+    def quota_used(conn, quota_id: str, day: str) -> int:
+        return conn.execute("SELECT COUNT(*) FROM runs r JOIN invites i ON r.invite_id=i.id WHERE COALESCE(i.quota_id,i.id)=? AND r.day=?", (quota_id, day)).fetchone()[0]
+
     def cleanup(self, conn):
         expired = conn.execute("SELECT * FROM runs WHERE expires<=? AND (status='active' OR inflight=1)", (self.clock(),)).fetchall()
         for row in expired:
@@ -149,12 +189,13 @@ class Store:
     def status(self, invite_id: str | None = None):
         with self.transaction() as conn:
             self.cleanup(conn)
-            result = {"enabled": self.settings.enabled, "scenario_ids": ["signal-rescue"], "limits": {"daily_runs": self.settings.daily_runs, "max_steps": self.settings.max_steps, "run_seconds": self.settings.run_seconds, "max_output_tokens": self.settings.max_output_tokens, "global_concurrency": 1, "quota_timezone": "UTC"}, "busy": bool(conn.execute("SELECT 1 FROM runs WHERE status='active' OR inflight=1 LIMIT 1").fetchone())}
+            result = {"enabled": self.settings.enabled, "access_enabled": self.settings.access_enabled, "scenario_ids": ["signal-rescue"], "limits": {"daily_runs": self.settings.daily_runs, "max_steps": self.settings.max_steps, "run_seconds": self.settings.run_seconds, "max_output_tokens": self.settings.max_output_tokens, "global_concurrency": 1, "quota_timezone": "UTC"}, "busy": bool(conn.execute("SELECT 1 FROM runs WHERE status='active' OR inflight=1 LIMIT 1").fetchone())}
             result["experiments"] = experiments.catalog(self.settings)
             if invite_id:
-                count = conn.execute("SELECT COUNT(*) FROM runs WHERE invite_id=? AND day=?", (invite_id, iso(self.clock())[:10])).fetchone()[0]
+                quota_id = self.quota_identity(conn, invite_id)
+                count = self.quota_used(conn, quota_id, iso(self.clock())[:10])
                 active = conn.execute("SELECT * FROM runs WHERE invite_id=? AND status='active' ORDER BY created DESC LIMIT 1", (invite_id,)).fetchone()
-                result.update({"remaining_runs": max(0, self.settings.daily_runs - count), "active_run": self.view(active) if active else None})
+                result.update({"remaining_runs": max(0, self.settings.daily_runs - count), "active_run": self.view(active) if active else None, "quota_scope": "shared" if quota_id == SHARED_ACCESS_QUOTA else "session"})
             return result
 
     def get_run(self, invite_id: str, run_id: str):
@@ -179,7 +220,7 @@ class Store:
             if experiment_type is not None and not experiments.available(self.settings, experiment_type):
                 raise Problem(503, "experiment_unavailable")
             day = iso(now)[:10]
-            used = conn.execute("SELECT COUNT(*) FROM runs WHERE invite_id=? AND day=?", (invite_id, day)).fetchone()[0]
+            used = self.quota_used(conn, self.quota_identity(conn, invite_id), day)
             if used >= self.settings.daily_runs:
                 raise Problem(429, "daily_quota_exhausted")
             if conn.execute("SELECT 1 FROM runs WHERE status='active' OR inflight=1 LIMIT 1").fetchone():

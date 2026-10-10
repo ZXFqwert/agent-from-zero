@@ -53,7 +53,9 @@ def string_list(value):
 
 
 def validate_metadata(value):
-    require(isinstance(value, dict) and set(value) == META_KEYS, "Missing or unknown save compatibility metadata")
+    require(isinstance(value, dict) and set(value) in (META_KEYS, META_KEYS | {"accessMode"}), "Missing or unknown save compatibility metadata")
+    if "accessMode" in value:
+        require(value["accessMode"] == "shared-passphrase-v1", "Invalid game access mode")
     require(value["schema"] == 1 and type(value["schema"]) is int and value["domain"] == DOMAIN, "Wrong release compatibility scope")
     require(isinstance(value["contentVersion"], str) and re.fullmatch(r"[a-zA-Z0-9_.-]{1,100}", value["contentVersion"]), "Invalid content version")
     for key in ("saveVersion", "kernelVersion", "playerVersion", "maxSaveBytes"):
@@ -73,6 +75,8 @@ def compatible(current, target):
     require(set(current["saveFeatures"]) <= set(target["readableSaveFeatures"]), "Target cannot read current save features")
     require(target["maxSaveBytes"] >= current["maxSaveBytes"], "Target reader has a smaller save byte ceiling")
     require(target["simulatorDigest"] == current["simulatorDigest"], "Simulator digest changed; strict replay compatibility is not proven")
+    if "accessMode" in current:
+        require(target.get("accessMode") == current["accessMode"], "Target removes the shared-passphrase game entry")
 
 
 def deployment_root(base):
@@ -173,6 +177,8 @@ def verify_release(base, release_id):
     embedded, end = decoder.raw_decode(sw[matches[0].end():])
     require(sw[matches[0].end()+end:].lstrip().startswith(";") and json.dumps(embedded, sort_keys=True) == json.dumps(manifest, sort_keys=True), "Service Worker and offline manifest are different releases")
     metadata = validate_metadata(parse_json(read_bytes(release / "play/release-compat.json", 32_000).decode("utf-8")))
+    if metadata.get("accessMode") == "shared-passphrase-v1":
+        require(read_bytes(release / "index.html") == read_bytes(release / "play/index.html"), "Root game entry differs from its verified app")
     install = parse_json(read_bytes(release / "play/manifest.webmanifest", 32_000).decode("utf-8"))
     require(isinstance(install, dict) and install.get("start_url") == "/play/" and install.get("scope") == "/play/" and isinstance(install.get("icons"), list) and install["icons"], "Install manifest has the wrong game scope")
     for icon in install["icons"]:

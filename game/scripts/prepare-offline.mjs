@@ -30,6 +30,8 @@ if(!contentVersion || !Number.isSafeInteger(maxSaveBytes) || maxSaveBytes<1 || !
 const simulatorFiles=[...(await walk(join(root,'src/engine'))),...(await walk(join(root,'src/content'))),...(await walk(join(root,'src/challenges'))),join(root,'src/postSeason.ts'),join(root,'src/storage.ts')].filter(file=>file.endsWith('.ts')).sort((a,b)=>{const left=relative(root,a).replaceAll('\\','/'),right=relative(root,b).replaceAll('\\','/');return left<right?-1:left>right?1:0;});
 const simulatorLines=await Promise.all(simulatorFiles.map(async file=>`${relative(root,file).replaceAll('\\','/')}\0${sha256(await readFile(file))}\n`));
 const compatibility={schema:1,domain:'agent.li33.art',contentVersion,saveVersion:1,kernelVersion:1,playerVersion:1,saveFeatures:['post-season-v1'],readableContentVersions:[...legacyBlock.matchAll(/'([^']+)'/g)].map(match=>match[1]).concat(contentVersion),readableSaveFeatures:['post-season-v1'],maxSaveBytes,simulatorDigest:sha256(simulatorLines.join(''))};
+// Shared-entry releases must not silently fall back to an invitation-only UI.
+if(process.env.VITE_ACCESS_ENABLED==='true')compatibility.accessMode='shared-passphrase-v1';
 await writeFile(join(dist,'release-compat.json'),JSON.stringify(compatibility,null,2)+'\n');
 
 const extensions = new Set(['.html', '.js', '.css', '.svg', '.png', '.webmanifest', '.webp', '.woff', '.woff2', '.json']);

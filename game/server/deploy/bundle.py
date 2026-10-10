@@ -18,6 +18,7 @@ RUNTIME_FILES = (
 TEST_FILES = (
     "requirements-dev.txt", "tests/test_lab.py", "tests/test_provider.py",
     "tests/test_experiments.py",
+    "tests/test_access.py",
 )
 
 

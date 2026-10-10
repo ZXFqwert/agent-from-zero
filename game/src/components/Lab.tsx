@@ -1,6 +1,8 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {FlaskConical,Play,Square,KeyRound,RefreshCw,WifiOff} from 'lucide-react';
 import './lab.css';
+import {readActiveSession,verifyAccess,saveWorkshopAccess,type AccessSession as Session,type Pending} from '../access';
+export type {Pending} from '../access';
 
 export type ExperimentType='same-model-blueprints'|'same-blueprint-models'|'solo-team';
 type RunStatus='active'|'completed'|'incomplete'|'budget_exhausted'|'timed_out'|'cancelled'|'failed';
@@ -8,15 +10,13 @@ interface Actor {id:string;label:string;tools:string[];known_targets:string[];}
 interface Arm {id:'left'|'right';label:string;model_id:'primary'|'secondary';blueprint_id:'feedback-open'|'feedback-hidden'|'solo'|'team';status:RunStatus|'pending';steps_used:number;world:Record<string,unknown>;events:Array<Record<string,unknown>>;actors:Actor[];current_actor?:string;tool_calls:number;denied_calls:number;handoffs:number;}
 export interface Run {id:string;status:RunStatus;steps_used:number;max_steps:number;world:Record<string,unknown>;events:Array<Record<string,unknown>>;final_text:string;expires_at:string;step_in_progress:boolean;experiment?:{version:1;type:ExperimentType;current_arm:number;arm_budget:number;arms:Arm[]};}
 interface Experiment {id:ExperimentType;label:string;enabled:boolean;reason:string|null;arms:string[];arm_budget:number;}
-export interface Status {enabled:boolean;busy:boolean;scenario_ids:string[];limits:{daily_runs:number;max_steps:number;run_seconds:number;max_output_tokens:number;global_concurrency:number;quota_timezone:string};experiments?:Experiment[];remaining_runs?:number;active_run?:Run|null;}
-export interface Pending {kind:'create'|'step'|'cancel';requestId:string;runId?:string;experimentType?:ExperimentType;}
-interface Session {token:string;expiresAt?:string;lastRunId?:string;pending?:Pending;cancel?:Pending;}
+export interface Status {enabled:boolean;busy:boolean;access_enabled?:boolean;quota_scope?:'shared'|'session';scenario_ids:string[];limits:{daily_runs:number;max_steps:number;run_seconds:number;max_output_tokens:number;global_concurrency:number;quota_timezone:string};experiments?:Experiment[];remaining_runs?:number;active_run?:Run|null;}
 const STORAGE_KEY='echo-lab-session-v1';
 const RECORD_KEY='echo-lab-last-record-v1',MAX_RECORD_BYTES=1024*1024;
 const LAB_ENABLED=import.meta.env.VITE_LAB_ENABLED==='true';
 const CLOSED_STATUS:Status={enabled:false,busy:false,scenario_ids:['signal-rescue'],limits:{daily_runs:10,max_steps:8,run_seconds:120,max_output_tokens:512,global_concurrency:1,quota_timezone:'UTC'}};
 const names:Record<RunStatus,string>={active:'实验进行中',completed:'独立验收通过',incomplete:'已停止，尚未验收',budget_exhausted:'请求预算用完',timed_out:'实验时间已到',cancelled:'已停止实验',failed:'模型连接未完成'};
-const errors:Record<string,string>={authentication_required:'请先兑换实验通行证。',invalid_token:'通行证已失效，请向维护者领取新的邀请码。',invalid_invite:'邀请码无效、已过期或已被兑换。已兑换的通行证通常保存在原浏览器中。',run_not_found:'没有找到这次实验，请重新检查实验状态。',lab_busy:'另一场实验正在进行，稍后可以再试。本次没有扣除次数。',step_in_progress:'这一轮仍在处理中。你可以查询结果或停止实验。',run_not_active:'这次实验已经停止，请查询最新结果。',step_budget_exhausted:'本次模型请求预算已经用完。',daily_quota_exhausted:'今天的实验次数已用完，UTC 零点后恢复。',lab_unavailable:'实验台尚未配置模型连接，主线仍可继续游玩。',storage_unavailable:'实验记录暂时无法读取，请稍后查询或重试同一请求。',idempotency_conflict:'请求记录发生冲突，请查询最新状态后重试。',invalid_request:'请求格式未通过检查，请刷新页面后重试。',request_too_large:'请求内容超出实验限制。',provider_error:'模型连接未完成，本次实验已经停止。',request_interrupted:'模型请求已中断。',run_timeout:'本次实验的时间已经用完。',verification_missing:'模型已经结束回答，但虚拟世界尚未通过验收。',user_cancelled:'你已停止本次实验。',unknown_tool:'拒绝了实验区之外的工具。',invalid_arguments:'工具参数不符合规则，世界没有因此改变。',connection_not_permitted:'这两个节点之间不允许建立连接。',observe_endpoints_first:'必须先观察连接的两端。',observe_target_first:'必须先观察目标。',upstream_not_ready:'上游尚未连接或激活。'};
+const errors:Record<string,string>={authentication_required:'请先输入工坊口令。',invalid_token:'进入凭证已失效，请重新输入工坊口令。',run_not_found:'没有找到这次实验，请重新检查实验状态。',lab_busy:'另一场实验正在进行，稍后可以再试。本次没有扣除次数。',step_in_progress:'这一轮仍在处理中。你可以查询结果或停止实验。',run_not_active:'这次实验已经停止，请查询最新结果。',step_budget_exhausted:'本次模型请求预算已经用完。',daily_quota_exhausted:'今天的实验次数已用完，UTC 零点后恢复。',lab_unavailable:'实验台尚未配置模型连接，主线仍可继续游玩。',storage_unavailable:'实验记录暂时无法读取，请稍后查询或重试同一请求。',idempotency_conflict:'请求记录发生冲突，请查询最新状态后重试。',invalid_request:'请求格式未通过检查，请刷新页面后重试。',request_too_large:'请求内容超出实验限制。',provider_error:'模型连接未完成，本次实验已经停止。',request_interrupted:'模型请求已中断。',run_timeout:'本次实验的时间已经用完。',verification_missing:'模型已经结束回答，但虚拟世界尚未通过验收。',user_cancelled:'你已停止本次实验。',unknown_tool:'拒绝了实验区之外的工具。',invalid_arguments:'工具参数不符合规则，世界没有因此改变。',connection_not_permitted:'这两个节点之间不允许建立连接。',observe_endpoints_first:'必须先观察连接的两端。',observe_target_first:'必须先观察目标。',upstream_not_ready:'上游尚未连接或激活。'};
 const toolNames:Record<string,string>={observe:'观察',connect:'连接',activate:'激活',verify:'验收'};
 const nodeNames:Record<string,string>={source:'能源核心',relay:'中继器',beacon:'信号台'};
 const experimentTypes:ExperimentType[]=['same-model-blueprints','same-blueprint-models','solo-team'];
@@ -27,24 +27,6 @@ Object.assign(errors,{experiment_unavailable:'所选对照暂不可用，没有�
 const blueprintNames:Record<Arm['blueprint_id'],string>={'feedback-open':'完整工具反馈','feedback-hidden':'隐藏工具反馈',solo:'单伙伴四法器',team:'调查 → 施工 → 验收，显式交接'};
 
 class LabError extends Error {constructor(message:string,readonly code='',readonly uncertain=false){super(message);}}
-function readPending(value:unknown,cancelOnly=false):Pending|undefined{
-  if(!value||typeof value!=='object'||Array.isArray(value))return;
-  const saved=value as Partial<Pending>;
-  if(!['create','step','cancel'].includes(saved.kind??'')||cancelOnly&&saved.kind!=='cancel'||typeof saved.requestId!=='string'||!/^[a-zA-Z0-9_-]{8,64}$/.test(saved.requestId)||saved.kind!=='create'&&(typeof saved.runId!=='string'||!saved.runId||saved.runId.length>100)||saved.experimentType!==undefined&&!experimentTypes.includes(saved.experimentType))return;
-  return {kind:saved.kind!,requestId:saved.requestId,...(saved.runId?{runId:saved.runId}:{}),...(saved.experimentType?{experimentType:saved.experimentType}:{})};
-}
-function readSession():Session|null {
-  try {
-    const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)??'null') as Session|null;
-    if(saved&&typeof saved.token==='string'&&saved.token.length>=16&&saved.token.length<=256){
-      if(saved.expiresAt&&(!isDate(saved.expiresAt)||Date.parse(saved.expiresAt)<=Date.now()))return null;
-      return {token:saved.token,...(saved.expiresAt?{expiresAt:saved.expiresAt}:{}),...(typeof saved.lastRunId==='string'&&saved.lastRunId.length<=100?{lastRunId:saved.lastRunId}:{}),pending:readPending(saved.pending),cancel:readPending(saved.cancel,true)};
-    }
-    const previous=sessionStorage.getItem('echo-lab-token');
-    if(previous&&previous.length>=16&&previous.length<=256)return {token:previous};
-  } catch { /* Storage may be unavailable; this visit can still use a token. */ }
-  return null;
-}
 const isObject=(value:unknown):value is Record<string,unknown>=>Boolean(value)&&typeof value==='object'&&!Array.isArray(value);
 const isText=(value:unknown,max=16000):value is string=>typeof value==='string'&&value.length<=max;
 const isCount=(value:unknown,max=10000):value is number=>Number.isInteger(value)&&Number(value)>=0&&Number(value)<=max;
@@ -102,6 +84,8 @@ export function checkedStatus(value:unknown):Status{
   if(!isObject(value)||typeof value.enabled!=='boolean'||typeof value.busy!=='boolean'||!isList(value.scenario_ids)||!isObject(value.limits))return badResponse();
   const limits=value.limits;if(!isCount(limits.daily_runs)||!isCount(limits.max_steps,64)||!isCount(limits.run_seconds,3600)||!isCount(limits.max_output_tokens,100000)||!isCount(limits.global_concurrency,100)||!isText(limits.quota_timezone,100))return badResponse();
   const status:Status={enabled:value.enabled,busy:value.busy,scenario_ids:[...value.scenario_ids],limits:{daily_runs:limits.daily_runs,max_steps:limits.max_steps,run_seconds:limits.run_seconds,max_output_tokens:limits.max_output_tokens,global_concurrency:limits.global_concurrency,quota_timezone:limits.quota_timezone}};
+  if(value.access_enabled!==undefined){if(typeof value.access_enabled!=='boolean')return badResponse();status.access_enabled=value.access_enabled;}
+  if(value.quota_scope!==undefined){if(value.quota_scope!=='shared'&&value.quota_scope!=='session')return badResponse();status.quota_scope=value.quota_scope;}
   if(value.experiments!==undefined){if(!Array.isArray(value.experiments)||value.experiments.length>3)return badResponse();status.experiments=value.experiments.map(item=>{if(!isObject(item)||!experimentTypes.includes(item.id as ExperimentType)||!isText(item.label,200)||typeof item.enabled!=='boolean'||item.reason!==null&&!isText(item.reason,100)||!isList(item.arms,2)||item.arms.length!==2||!isCount(item.arm_budget,64))return badResponse();return {id:item.id as ExperimentType,label:item.label,enabled:item.enabled,reason:item.reason as string|null,arms:[...item.arms],arm_budget:item.arm_budget};});if(new Set(status.experiments.map(item=>item.id)).size!==status.experiments.length)return badResponse();}
   if(value.remaining_runs!==undefined){if(!isCount(value.remaining_runs))return badResponse();status.remaining_runs=value.remaining_runs;}
   if(value.active_run!==undefined)status.active_run=value.active_run===null?null:checkedRun(value.active_run);
@@ -131,10 +115,10 @@ export function RunReport({run}:{run:Run}){
 }
 
 export default function Lab(){
-  const [session,setSession]=useState<Session|null>(readSession),[invite,setInvite]=useState(''),[status,setStatus]=useState<Status|null>(LAB_ENABLED?null:CLOSED_STATUS),[record,setRecord]=useState(readRecord),[run,setRun]=useState<Run|null>(record?.run??null);
+  const [session,setSession]=useState<Session|null>(()=>readActiveSession()),[passphrase,setPassphrase]=useState(''),[status,setStatus]=useState<Status|null>(LAB_ENABLED?null:CLOSED_STATUS),[record,setRecord]=useState(readRecord),[run,setRun]=useState<Run|null>(record?.run??null);
   const [experimentType,setExperimentType]=useState<ExperimentType>(session?.pending?.experimentType??'same-model-blueprints');
   const [online,setOnline]=useState(()=>typeof navigator==='undefined'||navigator.onLine),[confirmed,setConfirmed]=useState(false),[cancelNotice,setCancelNotice]=useState('');
-  const [busy,setBusy]=useState<Pending['kind']|'redeem'|null>(null),[cancelling,setCancelling]=useState(false),[checking,setChecking]=useState(false),[error,setError]=useState(''),[storageWarning,setStorageWarning]=useState('');
+  const [busy,setBusy]=useState<Pending['kind']|'access'|null>(null),[cancelling,setCancelling]=useState(false),[checking,setChecking]=useState(false),[error,setError]=useState(''),[storageWarning,setStorageWarning]=useState('');
   const sessionRef=useRef(session),runRef=useRef<Run|null>(run),confirmedRef=useRef(false),onlineRef=useRef(online),alive=useRef(false),controllers=useRef(new Set<AbortController>()),operationController=useRef<AbortController|null>(null),working=useRef(false),cancelWorking=useRef(false),refreshing=useRef(false),refreshVersion=useRef(0);
   const token=session?.token??'';
 
@@ -145,7 +129,7 @@ export default function Lab(){
     try {
       if(next)localStorage.setItem(STORAGE_KEY,JSON.stringify(next));else localStorage.removeItem(STORAGE_KEY);
       sessionStorage.removeItem('echo-lab-token');
-    } catch {if(alive.current)setStorageWarning('浏览器不允许保存通行证。本次关闭页面后可能需要领取新的邀请码。');}
+    } catch {if(alive.current)setStorageWarning('浏览器不允许保存进入凭证。本次关闭页面后可能需要重新输入工坊口令。');}
   },[]);
 
   const acceptRun=useCallback((candidate:Run)=>{
@@ -265,30 +249,34 @@ export default function Lab(){
     }
   }
 
-  async function redeem(){
-    if(!LAB_ENABLED||!onlineRef.current||working.current)return;
-    working.current=true;setBusy('redeem');setError('');
+  async function enter(){
+    if(!LAB_ENABLED||!onlineRef.current||working.current||sessionRef.current||status?.access_enabled===false)return;
+    working.current=true;setBusy('access');setError('');
+    const controller=new AbortController();controllers.current.add(controller);
+    const timer=window.setTimeout(()=>controller.abort(),12000);
     try {
-      const result=await request<{access_token:string;expires_at:string}>('redeem',{invite_code:invite.trim()},'');
-      if(typeof result.access_token!=='string'||result.access_token.length<16||result.access_token.length>256||!isDate(result.expires_at)||Date.parse(result.expires_at)<=Date.now())throw new LabError('兑换回执不完整，请联系维护者。');
-      remember({token:result.access_token,expiresAt:result.expires_at});
-      setInvite('');
+      const result=await verifyAccess(passphrase,controller.signal);
+      if(!alive.current)return;
+      remember(result);saveWorkshopAccess();
+      confirmedRef.current=false;setConfirmed(false);
+      setStatus(previous=>previous?{...previous,active_run:null,remaining_runs:undefined}:previous);
+      setPassphrase('');
       await refresh();
-    } catch(e){if(alive.current)setError(e instanceof LabError&&e.uncertain?'兑换回执未能确认，邀请码可能已经被使用。请联系维护者确认或领取新邀请码；不要在其他设备重复兑换。':(e as Error).message);}
-    finally {working.current=false;if(alive.current)setBusy(null);}
+    } catch(e){if(alive.current)setError((e as Error).message);}
+    finally {window.clearTimeout(timer);controllers.current.delete(controller);working.current=false;if(alive.current)setBusy(null);}
   }
 
   const pending=session?.pending,pendingCancel=session?.cancel,limits=status?.limits,owned=confirmed||session?.lastRunId===run?.id,active=owned&&run?.status==='active',inProgress=owned&&run?.step_in_progress,selected=status?.experiments?.find(item=>item.id===experimentType);
   return <div className="lab lab-comparison">
     <div className="lab-intro"><FlaskConical size={34}/><h3>让真实模型面对同一个问题。</h3><p>两份独立的信号台，同样的起点。改变反馈、模型或分工，看实际工具回执如何改变下一步。实验仅使用观察、连接、激活和验收四种虚拟法器。</p></div>
-    <div className="notice">独立实验 · 不影响主线存档 · 每天 {limits?.daily_runs??10} 次 · 两组共一次额度 · 总计最多 {limits?.max_steps??8} 轮 / {limits?.run_seconds??120} 秒</div>
+    <div className="notice">主线不限次数 · 真实实验{status?.quota_scope==='shared'?'全站共用':status?.quota_scope==='session'?'本会话':''}每日 {limits?.daily_runs??10} 场 · 两组共一次额度 · 总计最多 {limits?.max_steps??8} 轮 / {limits?.run_seconds??120} 秒</div>
     {!online&&<div className="lab-offline" role="status"><WifiOff size={19}/><div><strong>当前离线，只读已取得记录</strong><p>创建与推进已停用。断网不暂停服务端计时；停止意图须在重连后提交才能确认。</p></div></div>}
     <fieldset className="lab-experiment-picker" disabled={Boolean(busy)||cancelling||Boolean(pending)||Boolean(pendingCancel)||Boolean(active||inProgress)}><legend>选择要观察的取舍</legend>{experimentTypes.map(id=>{const item=status?.experiments?.find(entry=>entry.id===id);return <label key={id} className={experimentType===id?'is-selected':''}><input type="radio" name="real-lab-experiment" checked={experimentType===id} onChange={()=>setExperimentType(id)}/><span><strong>{item?.label??experimentNames[id]}</strong><p>{experimentDescriptions[id]}</p><small>{item?.arms.length===2?`A：${item.arms[0]}；B：${item.arms[1]}。每组最多 ${item.arm_budget} 轮。`:'A / B 由服务端固定配置，浏览器不能任意指定模型、地址或提示。'}</small>{item&&!item.enabled&&<em>{reasonNames[item.reason??'']??'此实验暂不可用。'}</em>}{!item&&status?.enabled&&<em>{reasonNames.catalog_unavailable}</em>}</span></label>;})}</fieldset>
     {status===null?<div className="empty"><KeyRound/><h3>{checking?'正在检查实验台…':'暂时连接不到实验台'}</h3><p>真实实验需要网络连接，已取得记录仍在下面。</p><button className="button" disabled={checking||!online} onClick={()=>void refresh()}><RefreshCw size={16}/>重新检查</button></div>
-    :!status.enabled?<div className="empty"><KeyRound/><h3>{LAB_ENABLED?'实验台尚未启用':'本阶段尚未启用'}</h3><p>{LAB_ENABLED?'服务端模型连接准备好后，这里会开放邀请码入口。':'真实模型服务尚未完成上线验收，当前可以继续主线与现实蓝图试炼。'}已取得记录可只读查看。</p>{LAB_ENABLED&&<button className="button" disabled={checking||!online} onClick={()=>void refresh()}><RefreshCw size={16}/>检查开放状态</button>}</div>
-    :!token?<form onSubmit={e=>{e.preventDefault();void redeem();}}><label>实验邀请码<input type="password" autoComplete="off" autoCapitalize="none" spellCheck={false} value={invite} onChange={e=>setInvite(e.target.value)} placeholder="输入私有邀请码" maxLength={128} required disabled={!online}/></label><button disabled={Boolean(busy)||!invite.trim()||!online} className="button primary full">{busy==='redeem'?'正在兑换…':'兑换实验通行证'}</button><p className="fine-print">邀请码仅可兑换一次。通行证保存在当前浏览器，不包含模型密钥；请在自己的设备上兑换。</p></form>
+    :!status.enabled?<div className="empty"><KeyRound/><h3>{LAB_ENABLED?'实验台尚未启用':'本阶段尚未启用'}</h3><p>{LAB_ENABLED?'服务端模型连接准备好后，这里可以用工坊口令进入。':'真实模型服务尚未完成上线验收，当前可以继续主线与现实蓝图试炼。'}已取得记录可只读查看。</p>{LAB_ENABLED&&<button className="button" disabled={checking||!online} onClick={()=>void refresh()}><RefreshCw size={16}/>检查开放状态</button>}</div>
+    :!token?<form className="lab-access-form" onSubmit={e=>{e.preventDefault();void enter();}}><label>工坊口令<input type="password" autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={passphrase} onChange={e=>setPassphrase(e.target.value)} placeholder="输入工坊口令" maxLength={128} required disabled={!online||Boolean(busy)||status.access_enabled===false}/></label><button disabled={Boolean(busy)||!passphrase.trim()||!online||status.access_enabled===false} className="button primary full">{busy==='access'?'正在验证…':'进入真实实验'}</button><p className="fine-print">与工坊入口使用同一口令。凭证保存在当前浏览器，口令与模型密钥不会保存到本机。旧实验副本可继续只读查看。</p>{status.access_enabled===false&&<p className="notice">工坊口令验证暂未开放，请稍后查询状态。</p>}</form>
     :<>
-      <p>今日剩余 {status.remaining_runs??'—'} 次 · 按 {limits?.quota_timezone??'UTC'} 日期重置</p>
+      <p>{status.quota_scope==='shared'?'全站今日':'本会话今日'}剩余 {status.remaining_runs??'—'} 场 · 按 {limits?.quota_timezone??'UTC'} 日期重置</p>
       <p className="fine-print">两组共用一次额度与服务端计时。失败、停止或超时仍计一次；查询与重试同一请求不额外扣次。</p>
       <div className="button-row">
         <button className="button primary" disabled={!online||Boolean(busy)||cancelling||Boolean(pendingCancel)||Boolean(pending&&pending.kind!=='create')||(!pending&&(!selected?.enabled||Boolean(active||inProgress||status.busy||status.remaining_runs===0)))} onClick={()=>void mutate('create')}><FlaskConical size={16}/>{pending?.kind==='create'?'确认上次创建结果':'创建两组对照'}</button>
@@ -299,11 +287,11 @@ export default function Lab(){
       {status.busy&&!active&&!run?.step_in_progress&&!pending&&<p className="fine-print">实验台正在处理另一场实验，请稍后查询。</p>}
       {(pending||pendingCancel)&&!busy&&!cancelling&&<p className="notice">上次请求还没有确定回执。请使用上方的确认 / 重试按钮；它会沿用原请求编号。</p>}
       {pending?.kind==='create'&&<p className="lab-note">待确认的是{pending.experimentType?experimentNames[pending.experimentType]:'旧版单组实验'}；重试保留当时的类型和编号，不会另开一场。</p>}
-      <p className="fine-print">通行证保存在本浏览器{session?.expiresAt?`，有效至 ${new Date(session.expiresAt).toLocaleDateString('zh-CN')}`:''}，不包含模型密钥。</p>
+      <p className="fine-print">进入凭证保存在本浏览器{session?.expiresAt?`，有效至 ${new Date(session.expiresAt).toLocaleDateString('zh-CN')}`:''}，不包含模型密钥。已有实验会优先查询与恢复，不会因进入本页另开实验。</p>
     </>}
     {run&&<><p className="lab-record-time">已取得记录 · {record?.receivedAt?new Date(record.receivedAt).toLocaleString('zh-CN'):'本次页面'}{!online?' · 离线副本，当前服务端状态未知':!confirmed?' · 本机只读副本，尚未查询确认':''}</p>{run.status==='active'&&<p className="fine-print">服务端期限：{new Date(run.expires_at).toLocaleTimeString('zh-CN')}。关闭或断网不会暂停计时。</p>}<RunReport run={run}/></>}
     {!online&&LAB_ENABLED&&token&&status?.enabled!==true&&(active||inProgress||pendingCancel)&&<button className="button" onClick={()=>void mutate('cancel')}><Square size={14}/>记录停止意图，重连后确认</button>}
-    {(busy||cancelling)&&<p role="status">{cancelling?'正在终止实验…':busy==='step'?'模型正在尝试行动，你随时可以停止实验。':busy==='create'?'正在创建实验…':'正在兑换通行证…'}</p>}
+    {(busy||cancelling)&&<p role="status">{cancelling?'正在终止实验…':busy==='step'?'模型正在尝试行动，你随时可以停止实验。':busy==='create'?'正在创建实验…':'正在验证工坊口令…'}</p>}
     {storageWarning&&<p className="notice" role="status">{storageWarning}</p>}
     {cancelNotice&&<p className="notice" role="status">{cancelNotice}</p>}
     {error&&<p role="alert" className="error-message">{error}</p>}

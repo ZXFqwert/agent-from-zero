@@ -6,6 +6,10 @@
 .lab-comparison summary{min-height:44px;padding:11px 0;cursor:pointer;color:#e1cda9;font-size:13px;line-height:1.6;overflow-wrap:anywhere}
 .lab-comparison :focus-visible{outline:3px solid #afdce4;outline-offset:3px}
 .lab-comparison .button{min-height:44px;white-space:normal;line-height:1.6;max-width:100%;overflow-wrap:anywhere}
+.lab-access-form{display:grid;gap:12px;min-width:0;margin:18px 0}
+.lab-access-form label{display:grid;gap:8px;font-size:13px;color:#e5d2a8}
+.lab-access-form input{box-sizing:border-box;width:100%;min-width:0;min-height:48px;padding:12px 14px;border:1px solid #72836c;border-radius:10px;color:#f0dfbd;background:#112629;font:inherit;font-size:16px}
+.lab-access-form input::placeholder{color:#8fa592;font-size:14px}
 .lab-offline{display:flex;align-items:flex-start;gap:10px;padding:12px;background:#34352c;border:1px solid #999168;border-radius:10px;margin:12px 0;font-size:13px}
 .lab-offline>svg{flex-shrink:0;margin-top:3px}
 .lab-offline p{font-size:12px;margin:5px 0 0}

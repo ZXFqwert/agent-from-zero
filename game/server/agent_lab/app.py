@@ -22,6 +22,10 @@ class Redeem(StrictBody):
     invite_code: str = Field(min_length=16, max_length=128)
 
 
+class Access(StrictBody):
+    passphrase: str = Field(min_length=1, max_length=128)
+
+
 class Operation(StrictBody):
     request_id: str = Field(min_length=8, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$")
 
@@ -117,6 +121,10 @@ def create_app(settings: Settings | None = None, provider=None, clock=time.time)
     @app.post("/api/lab/redeem")
     async def redeem(body: Redeem):
         return store.redeem(body.invite_code.strip())
+
+    @app.post("/api/lab/access")
+    async def access(body: Access):
+        return store.access(body.passphrase)
 
     @app.post("/api/lab/runs")
     async def new_run(body: NewRun, invite: str = Depends(identity)):
