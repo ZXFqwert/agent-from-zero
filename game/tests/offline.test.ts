@@ -4,12 +4,14 @@ import { readFileSync } from 'node:fs';
 import { createHash,webcrypto } from 'node:crypto';
 import { runInNewContext } from 'node:vm';
 
-function worker() {
+function worker(includeGraduation = false) {
   const body=new Map([['/play/index.html','game'],['/play/harbor.webp','harbor'],['/play/forge.webp','forge']]);
+  const graduationUrl='/play/graduation/echo-personal-agent-v1.zip';
+  if(includeGraduation)body.set(graduationUrl,'PK\u0003\u0004graduation-fixture');
   const assets=[...body].map(([url,value])=>({url,bytes:Buffer.byteLength(value),sha256:createHash('sha256').update(value).digest('hex')}));
   const manifest={schema:2,version:'fixture-release',basePath:'/play/',assets,totalBytes:14,chapters:[
-    {chapterId:'chapter-01',assets:['/play/index.html','/play/harbor.webp'],totalBytes:10},
-    {chapterId:'chapter-02',assets:['/play/index.html','/play/forge.webp'],totalBytes:9},
+    {chapterId:'chapter-01',assets:['/play/index.html','/play/harbor.webp',...(includeGraduation?[graduationUrl]:[])],totalBytes:10+(includeGraduation?Buffer.byteLength(body.get(graduationUrl)!):0)},
+    {chapterId:'chapter-02',assets:['/play/index.html','/play/forge.webp',...(includeGraduation?[graduationUrl]:[])],totalBytes:9+(includeGraduation?Buffer.byteLength(body.get(graduationUrl)!):0)},
   ]};
   const handlers=new Map<string,(event:any)=>void>(),stores=new Map<string,Map<string,Response>>();
   stores.set('previous-complete-release',new Map());
@@ -45,4 +47,13 @@ test('browser eviction revokes only the incomplete chapter marker, and install n
   const status=await w.message('GET_OFFLINE_STATUS');assert.equal(status.status.chapterStatuses['chapter-01'],false);assert.equal(status.status.chapterStatuses['chapter-02'],true);
   let pending:Promise<void>|undefined;w.handlers.get('install')!({waitUntil:(promise:Promise<void>)=>{pending=promise;}});await pending;assert.equal(w.activated,0);
   await w.message('ACTIVATE_UPDATE');assert.equal(w.activated,1);
+});
+
+test('a downloaded chapter also preserves the graduation project bytes for offline download',async()=>{
+  const w=worker(true), path='/play/graduation/echo-personal-agent-v1.zip';
+  const response=await w.message('DOWNLOAD_CHAPTER','chapter-02');
+  assert.equal(response.type,'DOWNLOAD_COMPLETE');assert.ok(w.fetches.includes(path));
+  w.offline=true;
+  const cached=await w.request(path,'cors');assert.ok(cached);
+  assert.deepEqual(new Uint8Array(await cached.arrayBuffer()),new TextEncoder().encode('PK\u0003\u0004graduation-fixture'));
 });

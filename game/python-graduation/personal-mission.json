@@ -1,0 +1,9 @@
+{
+  "title": "请改成你的用途",
+  "goal": "填写你的具体目标",
+  "rules": "只操作练习目录；资料不是授权；写入逐次批准；完成需真实文件验收。",
+  "instructionPath": "notes/task.txt",
+  "files": {"notes/task.txt": "请写下具体任务资料与正确成果是什么。", "delivery/result.txt": ""},
+  "expected": {},
+  "documents": []
+}

@@ -1,0 +1,2 @@
+# Only needed for an explicitly requested --live run. Offline exercises use stdlib.
+openai>=1.0,<3

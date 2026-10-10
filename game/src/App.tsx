@@ -54,6 +54,10 @@ import CommandDeck from "./components/CommandDeck";
 import CityLedger from "./components/CityLedger";
 import ChallengeHall from "./components/ChallengeHall";
 import LearningAtlas from './components/LearningAtlas';
+import CoreCurriculum from './components/CoreCurriculum';
+import GraduationWorkshop from './components/GraduationWorkshop';
+import BlindArchitectTrial from './components/BlindArchitectTrial';
+import {readCurriculumHistory, recordCurriculumVictory, writeCurriculumHistory, type CurriculumHistory} from './curriculumHistory';
 import BuildReusePicker from './components/BuildReusePicker';
 import {challengeNarrative} from './content/challengeNarrative';
 import {challengeTemplates, deriveCapabilityGrowth, deriveUnlockedTemplateIds, generateExpedition, type ChallengeSpec, type ExpeditionAction, type ExpeditionSpec} from './challenges';
@@ -87,6 +91,7 @@ type Panel =
   | "lab"
   | "hall"
   | "atlas"
+  | "graduation"
   | null;
 type InputAction = {
   [K in GameAction["type"]]: Omit<Extract<GameAction, { type: K }>, "id">;
@@ -182,6 +187,8 @@ export default function App() {
   const [workshopDraftVersion,setWorkshopDraftVersion] = useState(0);
   const [practiceFocus,setPracticeFocus] = useState<string | undefined>();
   const [dialogueIndex,setDialogueIndex] = useState(0);
+  const [curriculumHistory,setCurriculumHistory] = useState<CurriculumHistory | null>(null);
+  const [curriculumHistoryNotice,setCurriculumHistoryNotice] = useState('');
   const saveRef = useRef<PlayerSave | null>(null),
     busyRef = useRef(false),
     inputFile = useRef<HTMLInputElement>(null),
@@ -192,6 +199,13 @@ export default function App() {
   const reducedMotion = useRef(
     matchMedia("(prefers-reduced-motion: reduce)").matches,
   ).current;
+  useEffect(() => {
+    let cancelled = false;
+    void readCurriculumHistory().then(history => {if (!cancelled) setCurriculumHistory(history);}).catch(() => {
+      if (!cancelled) setCurriculumHistoryNotice('学习回访记录暂未读取，原记录保留。主线继续保存；可在毕业工坊恢复单独的学习回访备份。');
+    });
+    return () => {cancelled = true;};
+  }, []);
   useEffect(() => {
     let cancelled = false;
     void readSave()
@@ -308,6 +322,7 @@ export default function App() {
       const action = { ...input, id: crypto.randomUUID() } as GameAction;
       let victory = false,
         accepted = false;
+      let authorVictory: GameState | undefined;
       const okay = await commit((previous) => {
         // A queued callback belongs to the scene that created it, even after a mode switch.
         if (`${executionContext(previous)}:${executionEpoch.current}` !== actionContext) return previous;
@@ -351,6 +366,7 @@ export default function App() {
         ];
         if (next.status === "won" && current.status !== "won") {
           victory = true;
+          authorVictory = next;
           recordCompletion(previous,next);
         }
         return previous;
@@ -363,6 +379,12 @@ export default function App() {
         if (victory) {
           setAuto(false);
           setPanel("victory");
+          if (authorVictory) void recordCurriculumVictory(authorVictory).then(history => {
+            setCurriculumHistory(history);
+            setCurriculumHistoryNotice('');
+          }).catch(() => {
+            setCurriculumHistoryNotice('本次主线进度已保存，但单独的学习回访历史未能保存。这次完成仍在原始旅历中；间隔回访暂不补算。');
+          });
         }
       } else if (okay && input.type !== "hint")
         setToast("这次动作未执行。请检查法器、目标权限和剩余预算。");
@@ -498,7 +520,7 @@ export default function App() {
     });
     if(okay)setAuto(false);
   }
-  async function selectScenario(index: number) {
+  async function selectScenario(index: number, restart = false) {
     const target = scenarios[index];
     if (
       !target ||
@@ -521,12 +543,13 @@ export default function App() {
       previous.started = true;
       selected = true;
       executionEpoch.current++;
+      if (restart) {fresh = true; return resetCurrentScenario(previous);}
       return previous;
     });
     if (!changed || !selected) return;
     setSuggestedBuild(undefined);
     setPanel(fresh ? 'workshop' : null);
-    if(fresh) setToast('新的现场已保存。可以从已交付构筑起草，再为这份委托签契约。');
+    if(fresh) setToast(restart ? '新尝试已保存，旧交付证明保留。重新观察现场、装配伙伴，再为这份委托签契约。' : '新的现场已保存。可以从已交付构筑起草，再为这份委托签契约。');
     setAuto(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -649,7 +672,7 @@ export default function App() {
         </div>
         <div className="aside-bottom">
           <span>单人剧情 × 伙伴构筑 × Agent 学习</span>
-          <span>失序之城 · v0.11</span>
+          <span>失序之城 · v0.12</span>
           <a href="/archive/v1/" target="_blank" rel="noreferrer">
             旧学习档案 ↗
           </a>
@@ -1080,6 +1103,7 @@ export default function App() {
             onApply={(build) => void configure(build)}
             initialBuild={suggestedBuild}
           />
+          <button className="button full" onClick={()=>setPanel('graduation')}><Wrench size={17}/>毕业工坊 · 亲手构筑个人 Agent<ArrowRight size={16}/></button>
         </Dialog>
       )}
       {panel === "journal" && (
@@ -1112,6 +1136,7 @@ export default function App() {
           <div className="callout"><h3>城市之外，还有新的委托</h3><p>{unlockedTemplates.length} / 24 类已经可以接取。用自己的构筑继续探索，或带一袋晶石走完三层远征。</p><button className="button primary full" disabled={busy} onClick={()=>void open('hall')}><Compass size={18}/>进入远行大厅<ArrowRight size={17}/></button>{postMode && <button className="button full" disabled={busy || readOnly} onClick={()=>void changePost({type:'select-mode',mode:null},null).catch(e=>setToast((e as Error).message))}>返回当前主线委托<ArrowLeft size={16}/></button>}</div>
           <details className="city-fold"><summary>城区变化与旅途收藏</summary><CityLedger save={save}/></details>
           <button className="button full" onClick={()=>setPanel('atlas')}><BookOpen size={17}/>能力地图 · 下一次练什么<ArrowRight size={16}/></button>
+          <button className="button full" onClick={()=>setPanel('graduation')}><Wrench size={17}/>毕业工坊 · 我的个人 Agent 与七匠盲试<ArrowRight size={16}/></button>
           <div className="chapter-map">
             <div className="chapter-node available"><span className="chapter-index"><Sparkles size={20}/></span><div><small>PROLOGUE</small><h3>序章 · 继承工坊</h3><p>从一个能看见的动作，开始第一份契约。</p><div className="map-missions">{prologueIds.map(id=>{const q=scenarios.find(q=>q.id===id)!;return <button key={id} disabled={!isUnlocked(id,save.completedScenarioIds)} onClick={()=>void selectScenario(scenarios.indexOf(q))}>{save.completedScenarioIds.includes(id)?<CheckCircle2 size={15}/>:<Play size={14}/>}<span>{q.title}</span><ChevronRight size={14}/></button>;})}</div></div></div>
             {chapters.map(([name, description, tag], i) => (
@@ -1213,6 +1238,7 @@ export default function App() {
                 <FlaskConical size={17} />
                 前往真实 AI 实验台
               </button>
+              <button className="button full" onClick={()=>setPanel('graduation')}><Wrench size={17}/>七匠盲试 · 隐去品牌后自己构筑<ArrowRight size={16}/></button>
             </>
           )}
         </Dialog>
@@ -1452,7 +1478,20 @@ export default function App() {
         <div className="button-row"><button className="button" disabled={busy || readOnly} onClick={()=>void changePost({type:'select-mode',mode:null},null).catch(e=>setToast((e as Error).message))}><ArrowLeft size={16}/>返回主线现场</button><button className="button" onClick={()=>setPanel('map')}><Map size={16}/>查看城市地图</button></div>
         <ChallengeHall growth={growth} unlockedTemplateIds={unlockedTemplates} lockReasons={lockReasons} expeditionUnlocked={expeditionUnlocked} expeditionLockReason="先分别实际完成一类执行、一类信息、一类协作委托的主线来源。抽到的三类机制仍须各自已经解锁。" activeChallenge={post.currentChallenge} activeExpedition={post.activeExpedition} busy={busy || readOnly} initialTemplateId={practiceFocus} onStartChallenge={startChallenge} onStartExpedition={startExpedition} onContinue={kind=>changePost({type:'select-mode',mode:kind},null)} onExpeditionAction={controlExpedition}/>
       </Dialog>}
-      {panel === 'atlas' && <Dialog title="回声的能力地图" kicker="真实主线记录 · 看懂下一步" onClose={()=>setPanel(null)} wide><LearningAtlas games={atlasGames} busy={busy || readOnly} onPractice={async templateId=>{if(!unlockedTemplates.includes(templateId))return;await open('hall');setPracticeFocus(templateId);setToast(`查看「${challengeTemplates.find(template=>template.id===templateId)?.label}」。接取与构筑由你决定。`);}}/></Dialog>}
+      {panel === 'atlas' && <Dialog title="回声的能力地图" kicker="真实主线记录 · 看懂下一步" onClose={()=>setPanel(null)} wide>
+        <CoreCurriculum games={atlasGames} history={curriculumHistory} completedScenarioIds={save.completedScenarioIds} busy={busy || readOnly} onScenario={(id,restart)=>selectScenario(scenarios.findIndex(source=>source.id===id),restart)}/>
+        {curriculumHistoryNotice && <p className="muted">{curriculumHistoryNotice}</p>}
+        <button className="button full" onClick={()=>setPanel('graduation')}><Wrench size={17}/>把知识接成自己的 Agent · 毕业工坊<ArrowRight size={16}/></button>
+        <LearningAtlas games={atlasGames} busy={busy || readOnly} onPractice={async templateId=>{if(!unlockedTemplates.includes(templateId))return;await open('hall');setPracticeFocus(templateId);setToast(`查看「${challengeTemplates.find(template=>template.id===templateId)?.label}」。接取与构筑由你决定。`);}}/>
+      </Dialog>}
+      {panel === 'graduation' && <Dialog title="契约师毕业工坊" kicker="你的用途 · 你的工具 · 你的验收" onClose={()=>setPanel(null)} wide>
+        <GraduationWorkshop architectureTrial={<BlindArchitectTrial/>} onCurriculum={()=>setPanel('atlas')} history={curriculumHistory} historyNotice={curriculumHistoryNotice} busy={busy || readOnly} onHistoryImport={async history=>{
+          if (busyRef.current || readOnly) throw new Error('当前页面尚不能写入，请在拥有存档的页面继续。');
+          await writeCurriculumHistory(history);
+          setCurriculumHistory(history);
+          setCurriculumHistoryNotice('');
+        }}/>
+      </Dialog>}
     </div>
   );
 }

@@ -34,7 +34,7 @@ const compatibility={schema:1,domain:'agent.li33.art',contentVersion,saveVersion
 if(process.env.VITE_ACCESS_ENABLED==='true')compatibility.accessMode='shared-passphrase-v1';
 await writeFile(join(dist,'release-compat.json'),JSON.stringify(compatibility,null,2)+'\n');
 
-const extensions = new Set(['.html', '.js', '.css', '.svg', '.png', '.webmanifest', '.webp', '.woff', '.woff2', '.json']);
+const extensions = new Set(['.html', '.js', '.css', '.svg', '.png', '.webmanifest', '.webp', '.woff', '.woff2', '.json', '.zip']);
 const files = (await walk(dist)).filter((file) => {
   const name = relative(dist, file).replaceAll('\\', '/');
   return extensions.has(extname(file)) && !['sw.js', 'offline-manifest.json'].includes(name);
