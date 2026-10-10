@@ -3,10 +3,11 @@ import type {GameEvent, GameState, ScenarioDefinition} from '../engine/types';
 import {scenarios} from '../content/scenarios';
 import {mainScenarioIds} from '../content/progression';
 import {CORE_CONCEPTS, type CoreCheckpoint, type CoreConceptDefinition, type CoreStageId} from './catalog';
+import {courierLearningProofs} from '../courierProgress';
 export {CORE_CONCEPTS} from './catalog';
 export type {CoreCheckpoint, CoreConceptDefinition, CoreStageId} from './catalog';
 
-export interface CoreProof {scenarioId: string; title: string; eventIds: string[]; hintUsed: boolean;}
+export interface CoreProof {scenarioId: string; title: string; eventIds: string[]; hintUsed: boolean; sourceKind?: 'courier-module';}
 export interface CoreStage {
   id: CoreStageId; label: string; status: 'pending' | 'evidenced'; scenarioIds: string[];
   proofs: CoreProof[]; explanation: string; gap?: string;
@@ -20,6 +21,8 @@ export interface CoreCurriculum {
 export interface CoreCurriculumOptions {
   /** Earlier entries can support operation stages, but have no attested chronological order. */
   revisitStartIndex?: number;
+  /** A separate authored encounter is replayed internally, never accepted as a caller badge. */
+  courierProgress?: unknown;
 }
 interface RecordEntry {source: ScenarioDefinition; game: GameState; index: number; fingerprint: string;}
 const sourceById = new Map(scenarios.map(source => [source.id, source]));
@@ -124,11 +127,13 @@ export function deriveCoreCurriculum(games: readonly GameState[], options: CoreC
     } catch {ignoredRecordCount++;}
   }
   records.sort((left, right) => left.index - right.index);
+  const courierProofs = courierLearningProofs(options.courierProgress).map(proof => ({scenarioId: proof.scenarioId, title: proof.title, eventIds: [...proof.eventIds], hintUsed: false, sourceKind: 'courier-module' as const}));
   const concepts = CORE_CONCEPTS.map(concept => {
     const stages = STAGES.map(id => {
       const proofs = distinctProofs(records, concept, id, revisitStartIndex);
+      if (concept.id === 'idempotent-effects' && id === 'transfer') proofs.push(...courierProofs);
       return {id, label: labels[id], status: proofs.length ? 'evidenced' : 'pending', scenarioIds: [...concept.routes[id]], proofs, explanation: explanations[id],
-        ...(id === 'transfer' && concept.transferGap ? {gap: concept.transferGap} : {}),
+        ...(id === 'transfer' && concept.transferGap && !proofs.length ? {gap: concept.transferGap} : {}),
       } satisfies CoreStage;
     });
     const nextScenarioId = stages.find(stage => stage.status === 'pending' && stage.scenarioIds.length)?.scenarioIds[0];

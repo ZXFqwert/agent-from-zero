@@ -57,6 +57,9 @@ import LearningAtlas from './components/LearningAtlas';
 import CoreCurriculum from './components/CoreCurriculum';
 import GraduationWorkshop from './components/GraduationWorkshop';
 import BlindArchitectTrial from './components/BlindArchitectTrial';
+import CourierTransfer from './components/CourierTransfer';
+import type {CourierAction} from './transfer/courier';
+import {applyCourierAction, beginCourierAttempt, commitCourierProgress, MAX_COURIER_BACKUP_BYTES, mergeCourierBackup, readCourierProgress, restoreCourierCheckpoint, validateCourierProgress, type CourierProgress, type CourierSourceId} from './courierProgress';
 import {readCurriculumHistory, recordCurriculumVictory, writeCurriculumHistory, type CurriculumHistory} from './curriculumHistory';
 import BuildReusePicker from './components/BuildReusePicker';
 import {challengeNarrative} from './content/challengeNarrative';
@@ -92,6 +95,7 @@ type Panel =
   | "hall"
   | "atlas"
   | "graduation"
+  | "courier"
   | null;
 type InputAction = {
   [K in GameAction["type"]]: Omit<Extract<GameAction, { type: K }>, "id">;
@@ -189,6 +193,10 @@ export default function App() {
   const [dialogueIndex,setDialogueIndex] = useState(0);
   const [curriculumHistory,setCurriculumHistory] = useState<CurriculumHistory | null>(null);
   const [curriculumHistoryNotice,setCurriculumHistoryNotice] = useState('');
+  const [courierProgress,setCourierProgress] = useState<CourierProgress | null>(null);
+  const [courierBusy,setCourierBusy] = useState(false), [courierNotice,setCourierNotice] = useState('');
+  const [pendingCourierBackup,setPendingCourierBackup] = useState<CourierProgress | null>(null);
+  const courierBusyRef = useRef(false), courierBackupInput = useRef<HTMLInputElement>(null);
   const saveRef = useRef<PlayerSave | null>(null),
     busyRef = useRef(false),
     inputFile = useRef<HTMLInputElement>(null),
@@ -199,6 +207,13 @@ export default function App() {
   const reducedMotion = useRef(
     matchMedia("(prefers-reduced-motion: reduce)").matches,
   ).current;
+  useEffect(() => {
+    let cancelled = false;
+    void readCourierProgress().then(progress => {if (!cancelled) setCourierProgress(progress);}).catch(error => {
+      if (!cancelled) setCourierNotice(`签收站记录尚未读取：${(error as Error).message} 原数据保留，主线继续使用自己的存档。`);
+    });
+    return () => {cancelled = true;};
+  }, []);
   useEffect(() => {
     let cancelled = false;
     void readCurriculumHistory().then(history => {if (!cancelled) setCurriculumHistory(history);}).catch(() => {
@@ -449,6 +464,26 @@ export default function App() {
     if (next === 'hall') setPracticeFocus(undefined);
     setPanel(next);
   }
+  async function openCourier() {
+    if (!save?.completedScenarioIds.includes('missing-crate')) {setToast('先完成第二章「无声的货梯」，再接陌生签收站委托。'); return;}
+    await open('courier');
+  }
+  async function changeCourier(change: (progress: CourierProgress) => CourierProgress) {
+    if (!courierProgress || courierBusyRef.current || busyRef.current || readOnly || !ownsLock.current) throw new Error('请在拥有存档的页面继续；这次签收行动没有执行。');
+    courierBusyRef.current = true; setCourierBusy(true); setCourierNotice('');
+    try {const next = await commitCourierProgress(courierProgress.revision, change); setCourierProgress(next);}
+    catch (error) {
+      setCourierNotice((error as Error).message);
+      if ((error as Error).message.includes('另一处页面')) {try {setCourierProgress(await readCourierProgress());} catch { /* Preserve the last known state until a successful read. */ }}
+      throw error;
+    } finally {courierBusyRef.current = false; setCourierBusy(false);}
+  }
+  function exportCourier() {
+    if (!courierProgress) return;
+    const url = URL.createObjectURL(new Blob([JSON.stringify(courierProgress)], {type:'application/json;charset=utf-8'}));
+    const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'echo-courier-progress-v1.json'; anchor.click();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
   async function changePost(action: PostSeasonAction, destination: Panel = null) {
     setAuto(false);
     let accepted = false;
@@ -672,7 +707,7 @@ export default function App() {
         </div>
         <div className="aside-bottom">
           <span>单人剧情 × 伙伴构筑 × Agent 学习</span>
-          <span>失序之城 · v0.12</span>
+          <span>失序之城 · v0.13</span>
           <a href="/archive/v1/" target="_blank" rel="noreferrer">
             旧学习档案 ↗
           </a>
@@ -1479,18 +1514,27 @@ export default function App() {
         <ChallengeHall growth={growth} unlockedTemplateIds={unlockedTemplates} lockReasons={lockReasons} expeditionUnlocked={expeditionUnlocked} expeditionLockReason="先分别实际完成一类执行、一类信息、一类协作委托的主线来源。抽到的三类机制仍须各自已经解锁。" activeChallenge={post.currentChallenge} activeExpedition={post.activeExpedition} busy={busy || readOnly} initialTemplateId={practiceFocus} onStartChallenge={startChallenge} onStartExpedition={startExpedition} onContinue={kind=>changePost({type:'select-mode',mode:kind},null)} onExpeditionAction={controlExpedition}/>
       </Dialog>}
       {panel === 'atlas' && <Dialog title="回声的能力地图" kicker="真实主线记录 · 看懂下一步" onClose={()=>setPanel(null)} wide>
-        <CoreCurriculum games={atlasGames} history={curriculumHistory} completedScenarioIds={save.completedScenarioIds} busy={busy || readOnly} onScenario={(id,restart)=>selectScenario(scenarios.findIndex(source=>source.id===id),restart)}/>
+        <CoreCurriculum games={atlasGames} history={curriculumHistory} courierProgress={courierProgress} courierUnlocked={save.completedScenarioIds.includes('missing-crate')} onCourier={()=>void openCourier()} completedScenarioIds={save.completedScenarioIds} busy={busy || readOnly} onScenario={(id,restart)=>selectScenario(scenarios.findIndex(source=>source.id===id),restart)}/>
         {curriculumHistoryNotice && <p className="muted">{curriculumHistoryNotice}</p>}
         <button className="button full" onClick={()=>setPanel('graduation')}><Wrench size={17}/>把知识接成自己的 Agent · 毕业工坊<ArrowRight size={16}/></button>
         <LearningAtlas games={atlasGames} busy={busy || readOnly} onPractice={async templateId=>{if(!unlockedTemplates.includes(templateId))return;await open('hall');setPracticeFocus(templateId);setToast(`查看「${challengeTemplates.find(template=>template.id===templateId)?.label}」。接取与构筑由你决定。`);}}/>
       </Dialog>}
       {panel === 'graduation' && <Dialog title="契约师毕业工坊" kicker="你的用途 · 你的工具 · 你的验收" onClose={()=>setPanel(null)} wide>
+        <article className="workshop-next"><span className="workshop-kicker"><ScrollText size={16}/>一张回执，真的等于一份货物？</span><h3>陌生签收站 · 独立接管发货</h3><p>暴雨医院与断电夜市，两个目标不同的委托。亲手操作、读取现场、恢复账本，检查重试究竟改变了什么。</p><button className="workshop-button" disabled={busy || readOnly || !save.completedScenarioIds.includes('missing-crate')} onClick={()=>void openCourier()}>接取签收站委托<ArrowRight size={16}/></button>{!save.completedScenarioIds.includes('missing-crate') && <small>先完成第二章「无声的货梯」后开放。</small>}</article>
         <GraduationWorkshop architectureTrial={<BlindArchitectTrial/>} onCurriculum={()=>setPanel('atlas')} history={curriculumHistory} historyNotice={curriculumHistoryNotice} busy={busy || readOnly} onHistoryImport={async history=>{
           if (busyRef.current || readOnly) throw new Error('当前页面尚不能写入，请在拥有存档的页面继续。');
           await writeCurriculumHistory(history);
           setCurriculumHistory(history);
           setCurriculumHistoryNotice('');
         }}/>
+      </Dialog>}
+      {panel === 'courier' && <Dialog title="陌生签收站" kicker="新的委托 · 一份业务，几次行动？" onClose={()=>setPanel(null)} wide>
+        {courierProgress ? <CourierTransfer state={courierProgress.current} exposureHintSeen={courierProgress.hintExposureIds.includes(courierProgress.current.scenarioId)} busy={busy || readOnly || courierBusy} notice={courierNotice} onAction={(action:CourierAction)=>changeCourier(progress=>applyCourierAction(progress,action))} onNewAttempt={()=>changeCourier(progress=>beginCourierAttempt(progress))} onRestoreCheckpoint={()=>changeCourier(restoreCourierCheckpoint)} onMissionChange={(source:CourierSourceId)=>changeCourier(progress=>beginCourierAttempt(progress,source))}/> : <p role="status">{courierNotice || '正在读取独立签收记录…'}</p>}
+        {!courierProgress && <button className="button full" onClick={()=>void readCourierProgress().then(progress=>{setCourierProgress(progress);setCourierNotice('');}).catch(error=>setCourierNotice((error as Error).message))}>重新读取签收记录</button>}
+        <details className="workshop-explainer"><summary>签收站备份与换设备</summary><p>这两份作者委托使用独立规则与存档，不改变84份主线契约，也不发主线奖励。回到旧版时记录保留，但旧版没有本玩法入口；回到支持这一模块的版本才能继续。</p><p>备份包含完整动作，导入前逐步重放。恢复旧备份不会清除本设备看过的提示或已有合法证明。本机文件仍可编辑，不代表人的掌握认证。</p><div className="button-row"><button className="button" disabled={!courierProgress || courierBusy} onClick={exportCourier}><Download size={16}/>导出签收站备份</button><button className="button" disabled={busy || readOnly || courierBusy || !courierProgress} onClick={()=>courierBackupInput.current?.click()}><Upload size={16}/>导入签收站备份</button></div>
+          {pendingCourierBackup && <div className="workshop-import-preview"><p>这份备份包含 {pendingCourierBackup.current.actions.length} 个当前动作、{pendingCourierBackup.deliveries.length} 份迁移行动记录。确认后替换当前尝试，保留本设备已有提示曝光与合法证明。</p><button className="button" disabled={busy || readOnly || courierBusy} onClick={()=>void changeCourier(progress=>mergeCourierBackup(progress,pendingCourierBackup)).then(()=>{setPendingCourierBackup(null);setCourierNotice('签收站备份已恢复，主线与提示记录保留。');}).catch(()=>{})}>确认恢复签收站</button><button className="button ghost" onClick={()=>setPendingCourierBackup(null)}>保留当前签收记录</button></div>}
+        </details><input ref={courierBackupInput} type="file" hidden accept=".json,application/json" aria-label="签收站备份文件" onChange={async event=>{const file=event.target.files?.[0];event.target.value='';if(!file)return;try{if(file.size>MAX_COURIER_BACKUP_BYTES)throw new Error('签收站备份超过容量。');setPendingCourierBackup(validateCourierProgress(JSON.parse(await file.text())));setCourierNotice('备份验证通过，请核对后确认恢复。');}catch(error){setCourierNotice((error as Error).message);}}}/>
+        <button className="button full" onClick={()=>setPanel('atlas')}><BookOpen size={16}/>返回核心学习链<ArrowRight size={16}/></button>
       </Dialog>}
     </div>
   );

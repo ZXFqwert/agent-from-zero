@@ -38,7 +38,7 @@ test('twenty stable IDs describe four stages, with explicit prerequisites and re
     assert.equal(item.routes.revisit.length > 0, true);
     for (const ids of Object.values(item.routes)) for (const id of ids) assert.ok(source(id), id);
     for (const id of item.routes.transfer) assert.equal(source(id).kind, 'transfer', id);
-    if (!item.routes.transfer.length) assert.match(item.transferGap!, /迁移证据尚缺/);
+    if (!item.routes.transfer.length) assert.ok(item.transferGap?.length, 'A supplemental route needs an explicit evidence boundary.');
   }
   assert.ok(empty.concepts.every(item => item.stages.every(stage => stage.status === 'pending' && stage.proofs.length === 0)));
 });
@@ -110,7 +110,7 @@ test('looking at a mission and ordinary victory alone do not supply a different 
   const paired = play('courier-lock');
   assert.equal(stageFor([paired], 'call-correlation', 'transfer').status, 'evidenced');
   assert.equal(stageFor([paired], 'idempotent-effects', 'transfer').status, 'pending');
-  assert.match(stageFor([paired], 'idempotent-effects', 'transfer').gap!, /没有验证同一业务键/);
+  assert.match(stageFor([paired], 'idempotent-effects', 'transfer').gap!, /业务键冲突/);
 });
 
 test('duplicate records and new seeds with identical action IDs cannot manufacture new evidence', () => {

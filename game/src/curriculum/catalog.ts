@@ -34,7 +34,7 @@ export const CORE_CONCEPTS: readonly CoreConceptDefinition[] = [
   define('idempotent-effects', '重试与重复副作用', '丢失回执不代表动作未执行；业务键约束重复副作用，不能拿调用 ID 代替。', ['call-correlation'],
     ['不确定结果', '幂等业务凭证', '重试与副作用', '同凭证参数冲突'], 'idempotency',
     ['missing-crate'], ['doubled-clerk'], [], ['missing-crate', 'doubled-clerk'],
-    '现有陌生签收任务验证回执配对，没有验证同一业务键重试的副作用；该迁移证据尚缺。'),
+    '新的暴雨与夜班签收委托检验丢回执、账本恢复与业务键冲突。完成后由实际行动重放补证据；看过本场提示后只计熟练，可以换另一份作者情境。'),
   define('bounded-feedback', '反馈、预算与停止', '结果改变下一步；请求、工具和整趟资源都有限，永久故障应改方案或停止。', ['agent-cycle', 'goal-contract'],
     ['短暂故障', '有限重试', '反馈与重新决策', '中断恢复', '停止与人工介入'], 'bounded-loop',
     ['cooling-pulse'], ['one-crystal-left', 'broken-escapement', 'endless-warden'], ['rescue-rope', 'fog-bell'], ['one-crystal-left', 'rescue-rope']),
